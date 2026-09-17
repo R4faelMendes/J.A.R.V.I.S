@@ -5,8 +5,16 @@ import { memoryService } from '../services/memoryService';
 import { speechService } from '../services/speechService';
 
 export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeChange }) {
-  const [prefs, setPrefs] = useState(() => memoryService.getPreferences());
+  const [prefs, setPrefs] = useState(() => {
+    try {
+      return memoryService.getPreferences() || {};
+    } catch {
+      return {};
+    }
+  });
   const [savedMessage, setSavedMessage] = useState(false);
+  const [customColor, setCustomColor] = useState('#00f0ff');
+  const [autostartEnabled, setAutostartEnabled] = useState(true);
 
   if (!isOpen) return null;
 
@@ -21,14 +29,39 @@ export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeCha
   const handleSave = (e) => {
     e.preventDefault();
     sounds.playSuccess();
-    memoryService.updatePreferences(prefs);
+    try {
+      memoryService.updatePreferences(prefs);
+    } catch (err) {
+      console.warn('Erro ao salvar preferências:', err);
+    }
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 2000);
   };
 
+  const handleCustomColor = (color) => {
+    setCustomColor(color);
+    try {
+      document.documentElement.style.setProperty('--primary', color);
+      document.documentElement.style.setProperty('--primary-glow', `${color}70`);
+      document.documentElement.style.setProperty('--primary-dim', `${color}25`);
+    } catch (err) {}
+    sounds.playClick();
+  };
+
   const handleTestVoice = () => {
     sounds.playClick();
-    speechService.speak('Olá, Senhor Stark. Todos os módulos vocais e diretivas neurais estão calibrados com perfeição.');
+    try {
+      speechService.speak('Sistemas de síntese vocal calibrados e operando em capacidade total, Senhor.');
+    } catch (e) {}
+  };
+
+  const handleToggleAutostart = async () => {
+    const next = !autostartEnabled;
+    setAutostartEnabled(next);
+    sounds.playClick();
+    if (window.electronAPI?.setAutostart) {
+      await window.electronAPI.setAutostart(next);
+    }
   };
 
   return (
@@ -96,6 +129,44 @@ export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeCha
                 </div>
               ))}
             </div>
+
+            {/* Custom Color Palette Picker */}
+            <div className="mt-3 p-2.5 rounded bg-black/40 border border-cyan-500/30 flex items-center justify-between">
+              <div className="text-xs text-cyan-200 flex items-center gap-2">
+                <span>🎨 Paleta Personalizada Livre (HEX/RGB):</span>
+                <input
+                  type="color"
+                  value={customColor}
+                  onChange={(e) => handleCustomColor(e.target.value)}
+                  className="w-7 h-7 rounded border border-cyan-400 cursor-pointer bg-transparent"
+                />
+                <span className="text-cyan-400 font-mono">{customColor}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Windows Startup Option */}
+          <div className="p-4 rounded-lg bg-cyan-950/20 border border-cyan-500/30 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase text-cyan-300 font-bold flex items-center gap-2">
+                <Shield className="w-4 h-4 text-[var(--primary)]" />
+                Inicialização com o Windows
+              </div>
+              <p className="text-[11px] text-cyan-400/70 mt-0.5">
+                Iniciar o J.A.R.V.I.S. automaticamente ao ligar o computador da escola/pessoal.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleToggleAutostart}
+              className={`px-3 py-1.5 rounded text-xs font-bold font-mono transition-all border ${
+                autostartEnabled
+                  ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_8px_#10b981]'
+                  : 'bg-black/60 text-slate-400 border-slate-600'
+              }`}
+            >
+              {autostartEnabled ? 'ATIVADO' : 'DESATIVADO'}
+            </button>
           </div>
 
           {/* Section 2: User Profile */}

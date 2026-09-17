@@ -5,6 +5,7 @@ class SpeechEngine {
   constructor() {
     this.recognition = null;
     this.isListening = false;
+    this.isListeningDesired = false; // Flag para auto-reconnect incondicional
     this.isSpeaking = false;
     this.onResultCallback = null;
     this.onStatusCallback = null;
@@ -14,6 +15,7 @@ class SpeechEngine {
     this.analyser = null;
     this.microphoneStream = null;
     this.animationFrameId = null;
+    this.restartTimeout = null;
 
     this.initRecognition();
     this.initVoices();
@@ -23,12 +25,14 @@ class SpeechEngine {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       const loadVoices = () => {
         const voices = window.speechSynthesis.getVoices();
-        // Prefer Portuguese voices (pt-BR, pt-PT) or English (en-GB / en-US)
+        // Priorizar vozes neurais ultra-realistas (Microsoft Online Natural, Google Natural, pt-BR)
         this.selectedVoice = 
-          voices.find(v => v.lang.includes('pt-BR') && v.name.includes('Google')) ||
+          voices.find(v => (v.name.includes('Natural') || v.name.includes('Neural')) && v.lang.includes('pt-BR')) ||
+          voices.find(v => v.name.includes('Antonio') && v.lang.includes('pt-BR')) ||
+          voices.find(v => v.name.includes('Francisca') && v.lang.includes('pt-BR')) ||
+          voices.find(v => v.name.includes('Google') && v.lang.includes('pt-BR')) ||
           voices.find(v => v.lang.includes('pt-BR')) ||
-          voices.find(v => v.lang.includes('pt-PT')) ||
-          voices.find(v => v.lang.includes('en-GB')) ||
+          voices.find(v => v.lang.includes('pt')) ||
           voices[0] || null;
       };
 
@@ -57,12 +61,37 @@ class SpeechEngine {
 
       this.recognition.onend = () => {
         this.isListening = false;
-        if (this.onStatusCallback) this.onStatusCallback({ isListening: false });
+        // SE o usuário deseja que o microfone fique ouvindo, reconecta imediatamente!
+        if (this.isListeningDesired) {
+          clearTimeout(this.restartTimeout);
+          this.restartTimeout = setTimeout(() => {
+            if (this.isListeningDesired) {
+              try {
+                this.recognition.start();
+                this.isListening = true;
+                if (this.onStatusCallback) this.onStatusCallback({ isListening: true });
+              } catch (err) {
+                // Se já estiver iniciando, ignora
+              }
+            }
+          }, 200);
+        } else {
+          if (this.onStatusCallback) this.onStatusCallback({ isListening: false });
+        }
       };
 
       this.recognition.onerror = (event) => {
-        console.warn('Speech recognition error:', event.error);
-        if (this.onStatusCallback) this.onStatusCallback({ isListening: false, error: event.error });
+        // 'no-speech' e 'audio-capture' temporário são esperados quando o usuário fica em silêncio.
+        // NUNCA desligue a escuta por causa de silêncio.
+        if (event.error === 'no-speech') {
+          return;
+        }
+        console.warn('Speech recognition warning:', event.error);
+        if (event.error === 'not-allowed') {
+          this.isListeningDesired = false;
+          this.isListening = false;
+          if (this.onStatusCallback) this.onStatusCallback({ isListening: false, error: event.error });
+        }
       };
 
       this.recognition.onresult = (event) => {
@@ -70,17 +99,21 @@ class SpeechEngine {
         let finalTranscript = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const text = event.results[i][0]?.transcript || '';
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+            finalTranscript += text;
           } else {
-            interimTranscript += event.results[i][0].transcript;
+            interimTranscript += text;
           }
         }
 
+        const trimmedFinal = finalTranscript.trim();
+        const trimmedInterim = interimTranscript.trim();
+
         if (this.onResultCallback) {
           this.onResultCallback({
-            final: finalTranscript.trim(),
-            interim: interimTranscript.trim()
+            final: trimmedFinal,
+            interim: trimmedInterim
           });
         }
       };
@@ -90,6 +123,7 @@ class SpeechEngine {
   async startListening(onResult, onStatus) {
     this.onResultCallback = onResult;
     this.onStatusCallback = onStatus;
+    this.isListeningDesired = true;
 
     if (!this.recognition) {
       if (onStatus) onStatus({ isListening: false, unsupported: true });
@@ -100,19 +134,25 @@ class SpeechEngine {
       this.recognition.start();
       this.startAudioAnalyzer();
     } catch (e) {
-      console.warn('Recognition start caught error:', e);
+      // Ignora erro se já estiver iniciado
     }
   }
 
   stopListening() {
-    if (this.recognition && this.isListening) {
-      this.recognition.stop();
+    this.isListeningDesired = false;
+    clearTimeout(this.restartTimeout);
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch (e) {}
     }
+    this.isListening = false;
+    if (this.onStatusCallback) this.onStatusCallback({ isListening: false });
     this.stopAudioAnalyzer();
   }
 
   toggleListening(onResult, onStatus) {
-    if (this.isListening) {
+    if (this.isListening || this.isListeningDesired) {
       this.stopListening();
     } else {
       this.startListening(onResult, onStatus);
@@ -162,7 +202,9 @@ class SpeechEngine {
       this.microphoneStream = null;
     }
     if (this.audioContext) {
-      this.audioContext.close();
+      try {
+        this.audioContext.close();
+      } catch (e) {}
       this.audioContext = null;
     }
   }
@@ -170,16 +212,20 @@ class SpeechEngine {
   speak(text, onStart, onEnd) {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
-    window.speechSynthesis.cancel(); // Stop any pending speech
+    window.speechSynthesis.cancel(); // Para qualquer fala pendente
 
-    const cleanText = text.replace(/[*#_`]/g, '').slice(0, 350); // limit speech chunk
+    // Limpeza de marcações de markdown e quebra em sentenças naturais para respiração humana
+    const cleanText = text.replace(/[*#_`]/g, '').trim();
     const utterance = new SpeechSynthesisUtterance(cleanText);
     
     if (this.selectedVoice) {
       utterance.voice = this.selectedVoice;
     }
-    utterance.rate = 1.05; // slightly faster, tactical pace
-    utterance.pitch = 0.95; // slightly deeper, composed Jarvis persona
+    
+    // Configurações inspiradas na voz calma, natural e dinâmica do ChatGPT / Jarvis
+    utterance.rate = 1.02; // Ritmo natural e fluido
+    utterance.pitch = 0.94; // Tom levemente mais encorpado e sofisticado
+    utterance.volume = 1.0;
 
     utterance.onstart = () => {
       this.isSpeaking = true;

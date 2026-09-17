@@ -136,6 +136,49 @@ class SoundEngine {
       osc.stop(now + 0.45);
     } catch (e) {}
   }
+
+  // Stark / J.A.R.V.I.S. Cinematic Theme Synth Generator
+  playThemeSong() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+    this.stopThemeSong();
+
+    const notes = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63];
+    let step = 0;
+
+    this.themeInterval = setInterval(() => {
+      if (!this.enabled || !this.ctx) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        const now = this.ctx.currentTime;
+        osc.frequency.setValueAtTime(notes[step % notes.length], now);
+        gain.gain.setValueAtTime(0.06, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(650, now);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.5);
+        step++;
+      } catch (e) {}
+    }, 280);
+  }
+
+  stopThemeSong() {
+    if (this.themeInterval) {
+      clearInterval(this.themeInterval);
+      this.themeInterval = null;
+    }
+  }
 }
 
 export const sounds = new SoundEngine();

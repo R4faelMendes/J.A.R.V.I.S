@@ -95,15 +95,6 @@ export default function Header({
         {/* Modals Quick Access Toolbar */}
         <div className="flex items-center bg-black/40 border border-[var(--panel-border)] rounded-md p-1 gap-1">
           <button
-            onClick={() => { sounds.playClick(); onOpenModal('agenda'); }}
-            title="Agenda & Calendário Tático"
-            className="p-1.5 rounded hover:bg-[var(--primary-dim)] text-[var(--primary)] hover:text-white transition-all flex items-center gap-1 text-xs font-mono"
-          >
-            <Calendar className="w-4 h-4" />
-            <span className="hidden md:inline text-[11px]">Agenda</span>
-          </button>
-
-          <button
             onClick={() => { sounds.playClick(); onOpenModal('memory'); }}
             title="Matriz de Memória de Longo Prazo"
             className="p-1.5 rounded hover:bg-[var(--primary-dim)] text-[var(--primary)] hover:text-white transition-all flex items-center gap-1 text-xs font-mono"
@@ -165,10 +156,10 @@ export default function Header({
         <div className="flex items-center space-x-3 pl-2 border-l border-cyan-500/20">
           <div className="text-right font-['JetBrains_Mono']">
             <div className="text-sm sm:text-base font-bold text-[var(--primary)] tracking-wider glow-cyan">
-              {timeUtc}
+              {timeLocal}
             </div>
-            <div className="text-[10px] text-[var(--secondary)] font-semibold tracking-tight uppercase">
-              ACESSO: {userName} [{accessLevel}]
+            <div className="text-[10px] text-cyan-400/80 font-semibold tracking-tight uppercase">
+              HORÁRIO DE BRASÍLIA // GMT-3
             </div>
           </div>
           <div 

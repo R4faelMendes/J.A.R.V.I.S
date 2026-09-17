@@ -177,6 +177,8 @@ export default function App() {
     sounds.enabled = next;
   };
 
+  const [reactorModel, setReactorModel] = useState('mark_3');
+
   return (
     <div className="relative min-h-screen bg-[#02060f] text-[#b8e2f2] p-2 sm:p-4 flex flex-col justify-between overflow-x-hidden selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Background Ambience Overlays */}
@@ -199,7 +201,7 @@ export default function App() {
 
         {/* Workspace 3-Column Holographic Grid */}
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
-          {/* Left Telemetry Column */}
+          {/* Left Column: Agenda/Calendário + Telemetria Real de PC */}
           <aside className="lg:col-span-3 flex flex-col space-y-3">
             <Biometrics />
             <Diagnostics />
@@ -212,7 +214,12 @@ export default function App() {
             <div className="corner-bracket corner-bl"></div>
             <div className="corner-bracket corner-br"></div>
 
-            <ArcReactor isSpeaking={isSpeaking} />
+            <ArcReactor
+              isSpeaking={isSpeaking}
+              isListening={isListening}
+              model={reactorModel}
+              onModelChange={(m) => setReactorModel(m)}
+            />
 
             <AudioVisualizer
               isListening={isListening}
@@ -232,7 +239,6 @@ export default function App() {
 
         {/* Bottom Tactical Console */}
         <TerminalInput
-          onExecuteCommand={handleExecuteCommand}
           isListening={isListening}
           onToggleMic={handleToggleMic}
         />

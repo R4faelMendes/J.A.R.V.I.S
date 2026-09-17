@@ -156,115 +156,61 @@ class CommandExecutor {
     const raw = input.toLowerCase().trim();
     memoryService.logCommand(input);
 
-    // 1. Hibernation / Game Mode
-    if (raw.includes('hibernar') || raw.includes('modo jogo') || raw.includes('game mode') || raw.includes('modo game') || raw.includes('suspender')) {
-      sounds.playPowerPulse();
-      return {
-        action: 'TOGGLE_GAME_MODE',
-        active: true,
-        speech: 'Entrando em Modo Hibernação e Otimização para Jogos. Recursos de GPU e memória liberados. Estarei em escuta passiva, Senhor.'
-      };
-    }
-    if (raw.includes('acordar') || raw.includes('sair da hibernação') || raw.includes('desativar modo jogo') || raw.includes('reativar')) {
-      sounds.playSuccess();
-      return {
-        action: 'TOGGLE_GAME_MODE',
-        active: false,
-        speech: 'Sistemas reativados. Todos os módulos holográficos e telemetria voltando à capacidade máxima.'
-      };
-    }
-
-    // 2. Power Controls & App Exit
-    if (raw.includes('fechar jarvis') || raw.includes('fechar aplicativo') || raw.includes('encerrar') || raw === 'sair' || raw === 'exit') {
-      sounds.playPowerPulse();
-      return {
-        action: 'SYSTEM_POWER',
-        type: 'EXIT_APP',
-        speech: 'Desconectando interface e encerrando o aplicativo. Até breve, Senhor.'
-      };
-    }
-    if (raw.includes('desligar o pc') || raw.includes('desligar o windows') || raw.includes('desligar computador') || raw.includes('shutdown')) {
-      sounds.playAlert();
-      return {
-        action: 'SYSTEM_POWER',
-        type: 'SHUTDOWN',
-        speech: 'Iniciando sequência de desligamento do Windows. Salvando dados de telemetria e desconectando nós neurais. Boa noite, Senhor.'
-      };
-    }
-    if (raw.includes('reiniciar o pc') || raw.includes('reiniciar computador') || raw.includes('restart')) {
-      sounds.playAlert();
-      return {
-        action: 'SYSTEM_POWER',
-        type: 'RESTART',
-        speech: 'Reiniciando o sistema operacional em 5 segundos.'
-      };
-    }
-    if (raw.includes('bloquear tela') || raw.includes('travar pc') || raw.includes('lock')) {
-      sounds.playClick();
-      return {
-        action: 'SYSTEM_POWER',
-        type: 'LOCK',
-        speech: 'Estação de trabalho bloqueada com criptografia quântica Stark.'
-      };
-    }
-
-    // 3. Music Controls
-    if (raw.includes('tocar musica') || raw.includes('play') || raw.includes('despausar musica')) {
-      const res = this.toggleMusic();
-      return { action: 'MUSIC_PLAY', speech: 'Reproduzindo trilha tática.', state: res.state };
-    }
-    if (raw.includes('pausar musica') || raw.includes('pausa') || raw.includes('parar musica') || raw.includes('pause')) {
-      this.musicState.isPlaying = false;
-      return { action: 'MUSIC_PAUSE', speech: 'Áudio pausado.', state: { ...this.musicState } };
-    }
-    if (raw.includes('proxima musica') || raw.includes('pular musica') || raw.includes('next')) {
-      const res = this.nextTrack();
-      return { action: 'MUSIC_NEXT', speech: res.message, state: res.state };
-    }
-    if (raw.includes('aumentar volume') || raw.includes('volume mais alto')) {
-      const res = this.setVolume(this.musicState.volume + 15);
-      return { action: 'MUSIC_VOL', speech: res.message, state: res.state };
-    }
-    if (raw.includes('abaixar volume') || raw.includes('diminuir volume') || raw.includes('volume mais baixo')) {
-      const res = this.setVolume(this.musicState.volume - 15);
-      return { action: 'MUSIC_VOL', speech: res.message, state: res.state };
-    }
-
-    // 4. Memory Recall of Projects
-    if (raw.includes('lembra') || raw.includes('projeto') || raw.includes('temperatura')) {
-      const project = memoryService.findProjectByName('temperatura');
-      if (project) {
-        sounds.playSuccess();
-        const speech = `Sim, Senhor. Lembro-me perfeitamente do projeto "${project.name}". É um ${project.description}. As tecnologias utilizadas são ${project.techStack.join(', ')}. Os arquivos principais incluem ${project.importantFiles.slice(0, 2).join(' e ')}. O último erro registrado foi "${project.lastErrors[0]}".`;
+    // 1. App Process Kill/Close (Explicit distinction)
+    if (raw.includes('fechar') || raw.includes('encerrar') || raw.includes('matar processo')) {
+      if (raw.includes('vscode') || raw.includes('vs code') || raw.includes('código') || raw.includes('codigo')) {
+        sounds.playAlert();
+        if (typeof window !== 'undefined' && window.electronAPI?.processControl) {
+          window.electronAPI.processControl('KILL', 'vscode');
+        }
         return {
-          action: 'MEMORY_RECALL',
-          data: project,
-          speech
+          action: 'PROCESS_KILL',
+          speech: 'Encerrando o Visual Studio Code imediatamente, Senhor.'
         };
+      }
+      if (raw.includes('brave') || raw.includes('navegador')) {
+        sounds.playAlert();
+        if (typeof window !== 'undefined' && window.electronAPI?.processControl) {
+          window.electronAPI.processControl('KILL', 'brave');
+        }
+        return { action: 'PROCESS_KILL', speech: 'Encerrando o navegador Brave, Senhor.' };
+      }
+      if (raw.includes('jarvis') || raw.includes('aplicativo') || raw === 'sair' || raw === 'exit') {
+        sounds.playPowerPulse();
+        return { action: 'SYSTEM_POWER', type: 'EXIT_APP', speech: 'Desconectando interface e encerrando o aplicativo. Até breve, Senhor.' };
       }
     }
 
-    // 5. Automation: Create GitHub Repo
-    if (raw.includes('github') && (raw.includes('crie') || raw.includes('novo repositorio') || raw.includes('criar'))) {
-      let repoName = 'temperatura-mobile';
-      const match = raw.match(/chamado\s+([a-zA-Z0-9_-]+)/i) || raw.match(/repositório\s+([a-zA-Z0-9_-]+)/i);
-      if (match && match[1]) repoName = match[1];
-
-      return {
-        action: 'RUN_AUTOMATION',
-        automationType: 'CREATE_GITHUB_REPO',
-        params: { repoName },
-        speech: `Iniciando automação de navegador para criar o repositório "${repoName}" no GitHub.`
-      };
+    // 2. Music Controls with YouTube Music on Brave
+    if (raw.includes('tocar musica') || raw.includes('play') || raw.includes('despausar') || raw.includes('pausar musica') || raw.includes('pausa')) {
+      if (typeof window !== 'undefined' && window.electronAPI?.mediaControl) {
+        window.electronAPI.mediaControl('PLAY_PAUSE');
+      }
+      const res = this.toggleMusic();
+      return { action: 'MUSIC_PLAY_PAUSE', speech: 'Sinal de reprodução enviado ao YouTube Music no Brave.', state: res.state };
+    }
+    if (raw.includes('proxima musica') || raw.includes('pular musica') || raw.includes('next')) {
+      if (typeof window !== 'undefined' && window.electronAPI?.mediaControl) {
+        window.electronAPI.mediaControl('NEXT');
+      }
+      const res = this.nextTrack();
+      return { action: 'MUSIC_NEXT', speech: 'Avançando faixa no YouTube Music.', state: res.state };
+    }
+    if (raw.includes('musica anterior') || raw.includes('voltar musica')) {
+      if (typeof window !== 'undefined' && window.electronAPI?.mediaControl) {
+        window.electronAPI.mediaControl('PREV');
+      }
+      const res = this.previousTrack();
+      return { action: 'MUSIC_PREV', speech: 'Retornando faixa no YouTube Music.', state: res.state };
     }
 
-    // 6. Open VS Code
-    if (raw.includes('vscode') || raw.includes('vs code') || raw.includes('abrir codigo') || raw.includes('abrir código') || raw.includes('abrir no vscode')) {
+    // 3. Open VS Code (ONLY when NOT closing)
+    if ((raw.includes('abrir vscode') || raw.includes('abrir vs code') || raw.includes('abrir codigo') || raw.includes('abrir código')) && !raw.includes('fechar')) {
       return {
         action: 'RUN_AUTOMATION',
         automationType: 'OPEN_VSCODE',
         params: { project: 'temperatura-mobile' },
-        speech: 'Abrindo o ambiente de desenvolvimento Visual Studio Code com o projeto selecionado.'
+        speech: 'Abrindo o ambiente de desenvolvimento Visual Studio Code, Senhor.'
       };
     }
 

@@ -1,85 +1,116 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Radio, ShieldCheck } from 'lucide-react';
+import { Layers, XCircle, Sparkles, RefreshCw } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 
 export default function TacticalMap() {
-  const [uplink, setUplink] = useState(99.98);
-  const [activeNode, setActiveNode] = useState(0);
+  const [activeApps, setActiveApps] = useState([
+    { id: 'code', name: 'Code', process: 'Code.exe', pid: '1420', memory: '185.000 K', status: 'Ativo' },
+    { id: 'brave', name: 'Brave', process: 'brave.exe', pid: '8920', memory: '320.000 K', status: 'Ativo' },
+    { id: 'electron', name: 'J.A.R.V.I.S.', process: 'electron.exe', pid: '4102', memory: '120.000 K', status: 'Ativo' },
+  ]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchProcesses = async () => {
+    setIsRefreshing(true);
+    if (window.electronAPI?.getRunningProcesses) {
+      try {
+        const list = await window.electronAPI.getRunningProcesses();
+        if (list && list.length > 0) {
+          setActiveApps(list);
+        }
+      } catch (e) {
+        console.warn('Erro ao ler processos do Windows:', e);
+      }
+    }
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setUplink(prev => +(99.90 + Math.random() * 0.09).toFixed(2));
-      setActiveNode(prev => (prev + 1) % 6);
-    }, 2000);
+    fetchProcesses();
+    const interval = setInterval(fetchProcesses, 5000);
     return () => clearInterval(interval);
   }, []);
 
+  const handleKillProcess = (app) => {
+    sounds.playAlert();
+    if (window.electronAPI?.processControl) {
+      window.electronAPI.processControl('KILL', app.process);
+    }
+    setActiveApps(prev => prev.filter(a => a.pid !== app.pid));
+  };
+
+  const handleOptimizeRAM = () => {
+    sounds.playPowerPulse();
+    fetchProcesses();
+  };
+
   return (
-    <section
-      onClick={() => sounds.playClick()}
-      className="hud-panel rounded-lg p-3 sm:p-4 border-[var(--panel-border)] group cursor-pointer"
-    >
+    <section className="hud-panel rounded-lg p-3 sm:p-4 border-[var(--panel-border)] flex flex-col justify-between">
       <div className="corner-bracket corner-tl"></div>
       <div className="corner-bracket corner-tr"></div>
       <div className="corner-bracket corner-bl"></div>
       <div className="corner-bracket corner-br"></div>
 
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2">
+      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2 font-['JetBrains_Mono']">
         <h2 className="text-xs uppercase font-['Orbitron'] tracking-wider text-[var(--primary)] flex items-center gap-1.5 glow-cyan">
-          <Globe className="w-3.5 h-3.5 text-[var(--primary)]" />
-          Malha de Nós Táticos
+          <Layers className="w-3.5 h-3.5 text-[var(--primary)]" />
+          Gerenciador de Tarefas do Windows
         </h2>
-        <span className="text-[10px] text-cyan-400 font-['JetBrains_Mono'] bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-500/30">
-          7/7 SATÉLITES
-        </span>
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={fetchProcesses}
+            title="Atualizar lista de processos"
+            className="text-[10px] bg-cyan-950/40 hover:bg-[var(--primary)] hover:text-black p-1 rounded border border-cyan-500/30 text-cyan-300 transition-colors"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={handleOptimizeRAM}
+            className="text-[10px] bg-cyan-950/40 hover:bg-[var(--primary)] hover:text-black px-1.5 py-0.5 rounded border border-cyan-500/30 text-cyan-300 transition-colors flex items-center gap-1"
+          >
+            <Sparkles className="w-2.5 h-2.5" /> Otimizar
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center space-x-3">
-        {/* Geometric Node Constellation Diagram */}
-        <div className="w-24 h-24 relative flex-shrink-0 bg-cyan-950/30 rounded border border-cyan-500/30 flex items-center justify-center overflow-hidden">
-          <svg className="w-full h-full p-2 text-cyan-400" viewBox="0 0 100 100">
-            {/* Connective polygon paths */}
-            <polygon
-              fill="rgba(0, 240, 255, 0.08)"
-              points="50,15 85,38 72,82 28,82 15,38"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <line stroke="currentColor" strokeDasharray="2 2" strokeWidth="1" x1="50" y1="15" x2="50" y2="50" />
-            <line stroke="currentColor" strokeDasharray="2 2" strokeWidth="1" x1="85" y1="38" x2="50" y2="50" />
-            <line stroke="currentColor" strokeDasharray="2 2" strokeWidth="1" x1="72" y1="82" x2="50" y2="50" />
-            <line stroke="currentColor" strokeDasharray="2 2" strokeWidth="1" x1="28" y1="82" x2="50" y2="50" />
-            <line stroke="currentColor" strokeDasharray="2 2" strokeWidth="1" x1="15" y1="38" x2="50" y2="50" />
+      {/* Process list */}
+      <div className="space-y-1.5 font-['JetBrains_Mono'] text-xs max-h-48 overflow-y-auto scrollbar-none">
+        {activeApps.map(app => (
+          <div
+            key={app.pid || app.id}
+            className="p-1.5 rounded bg-cyan-950/20 border border-cyan-500/20 flex items-center justify-between hover:border-[var(--primary)] transition-all"
+          >
+            <div className="overflow-hidden">
+              <div className="font-semibold text-cyan-200 truncate text-[11px] flex items-center gap-1.5">
+                <span>{app.name}</span>
+                {app.pid && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-black/50 text-cyan-400 border border-cyan-500/30">
+                    PID {app.pid}
+                  </span>
+                )}
+              </div>
+              <div className="text-[9px] text-cyan-500 truncate flex items-center gap-2">
+                <span>{app.process}</span>
+                {app.memory && <span className="text-amber-300 font-semibold">{app.memory}</span>}
+              </div>
+            </div>
 
-            {/* Node points */}
-            <circle cx="50" cy="15" r={activeNode === 0 ? "5" : "3.5"} className="fill-amber-400 text-amber-400" />
-            <circle cx="85" cy="38" r={activeNode === 1 ? "5" : "3"} className="fill-cyan-300 text-cyan-300" />
-            <circle cx="72" cy="82" r={activeNode === 2 ? "5" : "3"} className="fill-cyan-300 text-cyan-300" />
-            <circle cx="28" cy="82" r={activeNode === 3 ? "5" : "3"} className="fill-cyan-300 text-cyan-300" />
-            <circle cx="15" cy="38" r={activeNode === 4 ? "5" : "3"} className="fill-cyan-300 text-cyan-300" />
+            <button
+              onClick={() => handleKillProcess(app)}
+              title={`Finalizar ${app.name}`}
+              className="p-1 text-rose-400/70 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors ml-2"
+            >
+              <XCircle className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
 
-            {/* Center Master Node */}
-            <circle cx="50" cy="50" r="4.5" className="fill-cyan-100 animate-ping" />
-            <circle cx="50" cy="50" r="3" className="fill-cyan-200" />
-          </svg>
-        </div>
-
-        {/* Constellation Metadata Status */}
-        <div className="text-xs font-['JetBrains_Mono'] space-y-1">
-          <div className="text-[11px] text-cyan-400/80">REDE GLOBAL:</div>
-          <div className="text-cyan-200 font-bold tracking-tight">
-            VERÔNICA // ÓRBITA GEO
-          </div>
-          <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            UPLINK SEGURO ({uplink}%)
-          </div>
-          <div className="text-[10px] text-[var(--secondary)] pt-0.5 flex items-center gap-1">
-            <ShieldCheck className="w-3 h-3 text-[var(--secondary)]" />
-            AMEAÇA AMBIENTAL: NULA
-          </div>
-        </div>
+      {/* Quick Status */}
+      <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between text-[10px] font-['JetBrains_Mono'] text-cyan-400/80">
+        <span>{activeApps.length} APPS MONITORADOS</span>
+        <span className="text-emerald-400 font-bold">PROCESSO REAL DO PC</span>
       </div>
     </section>
   );

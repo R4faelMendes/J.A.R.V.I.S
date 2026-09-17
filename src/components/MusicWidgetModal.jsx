@@ -1,174 +1,191 @@
 import React, { useState } from 'react';
-import { X, Music, Play, Pause, SkipForward, SkipBack, Volume2, Disc, Radio } from 'lucide-react';
+import { X, Music, Play, Pause, SkipForward, SkipBack, Volume2, Disc, Radio, ExternalLink, Globe } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
-import { commandExecutor } from '../services/commandExecutor';
 
 export default function MusicWidgetModal({ isOpen, onClose }) {
-  const [musicState, setMusicState] = useState(() => commandExecutor.musicState);
+  const [isPlayingTheme, setIsPlayingTheme] = useState(false);
+  const [activeTab, setActiveTab] = useState('ytmusic'); // 'ytmusic' ou 'jarvis_theme'
+  const [ytUrl, setYtUrl] = useState('https://music.youtube.com');
 
   if (!isOpen) return null;
 
-  const handlePlayPause = () => {
-    const res = commandExecutor.toggleMusic();
-    setMusicState({ ...res.state });
+  const handleToggleThemeSong = () => {
+    if (isPlayingTheme) {
+      sounds.stopThemeSong();
+      setIsPlayingTheme(false);
+    } else {
+      sounds.playThemeSong();
+      setIsPlayingTheme(true);
+    }
   };
 
-  const handleNext = () => {
-    const res = commandExecutor.nextTrack();
-    setMusicState({ ...res.state });
-  };
-
-  const handlePrev = () => {
-    const res = commandExecutor.previousTrack();
-    setMusicState({ ...res.state });
-  };
-
-  const handleVolume = (e) => {
-    const val = Number(e.target.value);
-    const res = commandExecutor.setVolume(val);
-    setMusicState({ ...res.state });
-  };
-
-  const handleSelectTrack = (idx) => {
+  const handleMediaKey = (action) => {
     sounds.playClick();
-    commandExecutor.musicState.trackIndex = idx;
-    commandExecutor.musicState.currentTrack = commandExecutor.musicState.playlist[idx];
-    commandExecutor.musicState.isPlaying = true;
-    setMusicState({ ...commandExecutor.musicState });
+    if (window.electronAPI?.mediaControl) {
+      window.electronAPI.mediaControl(action);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-xl flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="hud-panel rounded-xl w-full max-w-4xl h-[85vh] flex flex-col border-[var(--primary)] shadow-[0_0_45px_var(--primary-glow)] overflow-hidden">
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>
         <div className="corner-bracket corner-br"></div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/20 bg-slate-950/60">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-cyan-500/20 bg-slate-950/80">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded bg-cyan-950/60 border border-[var(--primary)] text-[var(--primary)]">
               <Music className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-['Orbitron'] text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
-                CONTROLE DE ÁUDIO & MÍDIA
+              <h2 className="font-['Orbitron'] text-base sm:text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
+                YOUTUBE MUSIC & CENTRAL DE ÁUDIO
               </h2>
               <p className="text-xs text-cyan-400/80 font-['JetBrains_Mono']">
-                STREAMING INTEGRADO // SPOTIFY & STARK SOUND SYSTEM
+                JANELA INTERATIVA EMBUTIDA NO J.A.R.V.I.S.
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() => { sounds.playClick(); onClose(); }}
-            className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition-all"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Tabs */}
+            <div className="flex bg-black/60 border border-cyan-500/30 rounded p-0.5 text-xs font-['JetBrains_Mono']">
+              <button
+                onClick={() => { sounds.playClick(); setActiveTab('ytmusic'); }}
+                className={`px-3 py-1 rounded transition-all ${
+                  activeTab === 'ytmusic'
+                    ? 'bg-[var(--primary)] text-black font-bold shadow-[0_0_8px_var(--primary)]'
+                    : 'text-cyan-400 hover:text-white'
+                }`}
+              >
+                YouTube Music
+              </button>
+              <button
+                onClick={() => { sounds.playClick(); setActiveTab('jarvis_theme'); }}
+                className={`px-3 py-1 rounded transition-all ${
+                  activeTab === 'jarvis_theme'
+                    ? 'bg-amber-500 text-black font-bold shadow-[0_0_8px_#f59e0b]'
+                    : 'text-amber-400 hover:text-white'
+                }`}
+              >
+                Tema Stark/Jarvis
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                sounds.playClick();
+                sounds.stopThemeSong();
+                setIsPlayingTheme(false);
+                onClose();
+              }}
+              className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          {/* Active Track Showcase */}
-          <div className="p-4 rounded-xl bg-cyan-950/30 border border-cyan-500/30 flex items-center space-x-4 relative overflow-hidden">
-            <div className="relative w-16 h-16 rounded-lg bg-black border border-[var(--primary)] flex items-center justify-center text-[var(--primary)] shadow-[0_0_15px_var(--primary-glow)] flex-shrink-0">
-              <Disc className={`w-10 h-10 ${musicState.isPlaying ? 'animate-spin-slow' : ''}`} />
-            </div>
-
-            <div className="flex-1 overflow-hidden font-['JetBrains_Mono']">
-              <div className="text-[10px] text-emerald-400 flex items-center gap-1 font-bold">
-                <Radio className="w-3 h-3 animate-pulse" />
-                {musicState.isPlaying ? 'REPRODUZINDO' : 'EM PAUSA'}
-              </div>
-              <div className="text-base font-bold text-cyan-100 truncate glow-cyan">
-                {musicState.currentTrack}
-              </div>
-              <div className="text-xs text-cyan-400/70">
-                Qualidade: Hi-Res FLAC 96kHz / 24-bit
-              </div>
-            </div>
-          </div>
-
-          {/* Equalizer Wave simulation */}
-          <div className="flex items-center justify-center gap-1 h-8 px-2">
-            {Array.from({ length: 28 }).map((_, i) => (
-              <span
-                key={i}
-                className="w-1 rounded-full bg-[var(--primary)] transition-all duration-150"
-                style={{
-                  height: musicState.isPlaying ? `${Math.floor(Math.random() * 24) + 6}px` : '4px',
-                  opacity: musicState.isPlaying ? 0.9 : 0.3
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Playback Controls */}
-          <div className="flex items-center justify-center space-x-6">
-            <button
-              onClick={handlePrev}
-              className="p-3 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 hover:text-white hover:border-cyan-400 transition-all"
-            >
-              <SkipBack className="w-5 h-5" />
-            </button>
-
-            <button
-              onClick={handlePlayPause}
-              className="p-4 rounded-full bg-[var(--primary)] text-black font-bold shadow-[0_0_20px_var(--primary-glow)] hover:scale-110 transition-transform"
-            >
-              {musicState.isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
-            </button>
-
-            <button
-              onClick={handleNext}
-              className="p-3 rounded-full bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 hover:text-white hover:border-cyan-400 transition-all"
-            >
-              <SkipForward className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Volume Control */}
-          <div className="flex items-center space-x-3 bg-black/40 p-3 rounded-lg border border-cyan-500/20 font-['JetBrains_Mono']">
-            <Volume2 className="w-4 h-4 text-cyan-400" />
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={musicState.volume}
-              onChange={handleVolume}
-              className="flex-1 accent-[var(--primary)] cursor-pointer"
-            />
-            <span className="text-xs text-cyan-200 font-bold w-10 text-right">
-              {musicState.volume}%
-            </span>
-          </div>
-
-          {/* Playlist Queue */}
-          <div className="space-y-1.5 font-['JetBrains_Mono']">
-            <div className="text-[11px] text-cyan-400/80 uppercase font-bold">
-              LISTA DE REPRODUÇÃO TÁTICA
-            </div>
-            <div className="max-h-36 overflow-y-auto space-y-1">
-              {musicState.playlist.map((track, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => handleSelectTrack(idx)}
-                  className={`p-2 rounded text-xs flex items-center justify-between cursor-pointer border transition-all ${
-                    idx === musicState.trackIndex
-                      ? 'bg-[var(--primary-dim)] border-[var(--primary)] text-cyan-100 font-bold'
-                      : 'bg-cyan-950/20 border-cyan-500/10 text-cyan-400/80 hover:bg-cyan-950/40 hover:text-cyan-200'
-                  }`}
-                >
-                  <span className="truncate">{track}</span>
-                  {idx === musicState.trackIndex && (
-                    <span className="text-[10px] text-emerald-400 font-bold ml-2">TOCANDO</span>
-                  )}
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden bg-black/60 relative">
+          {activeTab === 'ytmusic' ? (
+            <div className="flex-1 flex flex-col h-full">
+              {/* Toolbar */}
+              <div className="px-4 py-2 border-b border-cyan-500/20 bg-slate-950/60 flex items-center justify-between font-['JetBrains_Mono'] text-xs">
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleMediaKey('PREV')}
+                    className="p-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-300"
+                    title="Música Anterior"
+                  >
+                    <SkipBack className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleMediaKey('PLAY_PAUSE')}
+                    className="px-3 py-1.5 rounded bg-[var(--primary)] text-black font-bold hover:bg-white transition-all flex items-center gap-1.5"
+                    title="Play / Pause Global"
+                  >
+                    <Play className="w-4 h-4" /> Play / Pause
+                  </button>
+                  <button
+                    onClick={() => handleMediaKey('NEXT')}
+                    className="p-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-300"
+                    title="Próxima Música"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => {
+                      sounds.playSuccess();
+                      if (window.electronAPI?.openYouTubeWindow) {
+                        window.electronAPI.openYouTubeWindow();
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
+                    title="Abrir Janela Direta do YouTube Music"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir Janela do YouTube Music
+                  </button>
+                  <div className="text-[11px] text-cyan-400/80 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-[var(--primary)]" />
+                    <span>music.youtube.com</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* YouTube Music Embedded Interactive Window */}
+              <div className="flex-1 relative w-full h-full bg-slate-950 flex flex-col items-center justify-center">
+                <iframe
+                  src="https://music.youtube.com"
+                  title="YouTube Music Interactive Player"
+                  className="w-full h-full border-0 absolute inset-0 z-10"
+                  allow="autoplay; encrypted-media; clipboard-write; microphone"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* Jarvis Cinematic Theme Generator */
+            <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6 text-center">
+              <div className="relative w-32 h-32 rounded-full border-4 border-amber-500/50 flex items-center justify-center shadow-[0_0_35px_rgba(245,158,11,0.5)]">
+                <Disc className={`w-20 h-20 text-amber-400 ${isPlayingTheme ? 'animate-spin-slow' : ''}`} />
+              </div>
+
+              <div>
+                <h3 className="font-['Orbitron'] text-xl font-bold text-amber-300 glow-amber">
+                  TRILHA SONORA CINEMÁTICA // STARK SUITE
+                </h3>
+                <p className="text-xs text-amber-200/70 font-['JetBrains_Mono'] mt-1 max-w-md">
+                  Sintetizador Web Audio nativo reproduzindo progressão orquestral sci-fi de baixa latência em tempo real.
+                </p>
+              </div>
+
+              <button
+                onClick={handleToggleThemeSong}
+                className={`px-8 py-3 rounded-xl font-['Orbitron'] font-bold text-sm uppercase transition-all shadow-lg flex items-center gap-3 border ${
+                  isPlayingTheme
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.6)]'
+                    : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]'
+                }`}
+              >
+                {isPlayingTheme ? (
+                  <>
+                    <Pause className="w-5 h-5" /> Pausar Trilha Temática
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" /> Tocar Música do J.A.R.V.I.S.
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
