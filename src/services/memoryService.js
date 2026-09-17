@@ -1,0 +1,217 @@
+// J.A.R.V.I.S. Core Neural Memory Matrix (Short-Term & Long-Term Persistence)
+
+const STORAGE_KEYS = {
+  LONG_TERM_PROJECTS: 'jarvis_longterm_projects',
+  SHORT_TERM_CONTEXT: 'jarvis_shortterm_context',
+  COMMAND_HISTORY: 'jarvis_command_history',
+  PREFERENCES: 'jarvis_preferences',
+  AGENDA_TASKS: 'jarvis_agenda_tasks',
+  AGENDA_ALARMS: 'jarvis_agenda_alarms',
+};
+
+const DEFAULT_PROJECTS = [
+  {
+    id: 'proj_temp_01',
+    name: 'temperatura-mobile',
+    description: 'Sistema IoT mobile para monitoramento e telemetria térmica em tempo real.',
+    techStack: ['React Native', 'Expo', 'Node.js', 'MQTT', 'Tailwind CSS'],
+    importantFiles: ['App.js', 'src/screens/Dashboard.js', 'src/services/sensorApi.js', 'server/mqttBroker.js'],
+    lastErrors: [
+      'MQTT Connection Timeout no broker local (Port 1883)',
+      'Sensor calibration offset de +1.4°C em leituras analógicas'
+    ],
+    lastModified: '2026-09-15 17:40',
+    commandsUsed: ['npm start', 'npx expo start --android', 'node server/mqttBroker.js'],
+    gitBranch: 'feature/thermal-sensors-v2',
+    status: 'Em Desenvolvimento'
+  },
+  {
+    id: 'proj_jarvis_02',
+    name: 'jarvis-tactical-os',
+    description: 'Painel holográfico tático com controle por voz, IA integrada e automação Windows.',
+    techStack: ['React', 'JSX', 'Tailwind CSS', 'Web Speech API', 'Web Audio API', 'Gemini AI'],
+    importantFiles: ['src/App.jsx', 'src/services/speechService.js', 'src/services/aiService.js'],
+    lastErrors: [],
+    lastModified: '2026-09-17 14:00',
+    commandsUsed: ['npm run dev', 'npm run build'],
+    gitBranch: 'main',
+    status: 'Ativo'
+  }
+];
+
+class MemoryMatrix {
+  constructor() {
+    this.shortTermSession = [];
+    this.initStorage();
+  }
+
+  initStorage() {
+    if (typeof window === 'undefined') return;
+
+    if (!localStorage.getItem(STORAGE_KEYS.LONG_TERM_PROJECTS)) {
+      localStorage.setItem(STORAGE_KEYS.LONG_TERM_PROJECTS, JSON.stringify(DEFAULT_PROJECTS));
+    }
+
+    if (!localStorage.getItem(STORAGE_KEYS.PREFERENCES)) {
+      const defaultPrefs = {
+        userName: 'Tony Stark',
+        accessLevel: 'NÍVEL ALPHA',
+        voiceSpeed: 1.05,
+        theme: 'cyan', // cyan, amber, crimson, emerald, purple
+        soundEnabled: true,
+        aiProvider: 'gemini', // gemini, openai, local
+        geminiApiKey: '',
+        openAiApiKey: '',
+        autoListen: false,
+        gameModeActive: false,
+        standbyMode: false
+      };
+      localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(defaultPrefs));
+    }
+
+    if (!localStorage.getItem(STORAGE_KEYS.COMMAND_HISTORY)) {
+      localStorage.setItem(STORAGE_KEYS.COMMAND_HISTORY, JSON.stringify([]));
+    }
+  }
+
+  // ---- Long Term Projects Memory ----
+  getProjects() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.LONG_TERM_PROJECTS);
+      return raw ? JSON.parse(raw) : DEFAULT_PROJECTS;
+    } catch {
+      return DEFAULT_PROJECTS;
+    }
+  }
+
+  saveProject(project) {
+    const projects = this.getProjects();
+    const index = projects.findIndex(p => p.name.toLowerCase() === project.name.toLowerCase() || p.id === project.id);
+    if (index >= 0) {
+      projects[index] = { ...projects[index], ...project, lastModified: new Date().toLocaleString('pt-BR') };
+    } else {
+      projects.unshift({
+        id: `proj_${Date.now()}`,
+        name: project.name,
+        description: project.description || 'Novo projeto registrado pelo J.A.R.V.I.S.',
+        techStack: project.techStack || ['JavaScript'],
+        importantFiles: project.importantFiles || ['index.js'],
+        lastErrors: project.lastErrors || [],
+        lastModified: new Date().toLocaleString('pt-BR'),
+        commandsUsed: project.commandsUsed || [],
+        gitBranch: project.gitBranch || 'main',
+        status: project.status || 'Ativo'
+      });
+    }
+    localStorage.setItem(STORAGE_KEYS.LONG_TERM_PROJECTS, JSON.stringify(projects));
+  }
+
+  findProjectByName(query) {
+    const projects = this.getProjects();
+    const clean = query.toLowerCase();
+    return projects.find(p => p.name.toLowerCase().includes(clean) || (p.description && p.description.toLowerCase().includes(clean)));
+  }
+
+  // ---- Short-Term Context ----
+  addShortTermLog(role, message) {
+    const entry = { role, message, timestamp: new Date().toISOString() };
+    this.shortTermSession.push(entry);
+    if (this.shortTermSession.length > 50) {
+      this.shortTermSession.shift();
+    }
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.SHORT_TERM_CONTEXT, JSON.stringify(this.shortTermSession));
+    } catch {}
+  }
+
+  getShortTermContext() {
+    return this.shortTermSession;
+  }
+
+  // ---- Command History ----
+  logCommand(command) {
+    try {
+      const history = this.getCommandHistory();
+      history.unshift({ command, timestamp: new Date().toLocaleString('pt-BR') });
+      if (history.length > 100) history.pop();
+      localStorage.setItem(STORAGE_KEYS.COMMAND_HISTORY, JSON.stringify(history));
+    } catch {}
+  }
+
+  getCommandHistory() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.COMMAND_HISTORY);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // ---- Preferences & System State ----
+  getPreferences() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.PREFERENCES);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  updatePreferences(patch) {
+    const current = this.getPreferences();
+    const updated = { ...current, ...patch };
+    localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(updated));
+    return updated;
+  }
+
+  // ---- Agenda Tasks & Alarms ----
+  getTasks() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.AGENDA_TASKS);
+      if (raw) return JSON.parse(raw);
+      // Default Stark tactical tasks
+      const defaultTasks = [
+        {
+          id: 'task_1',
+          title: 'Sincronizar Telemetria do Reator ARC',
+          description: 'Ajustar fluxo magnético das bobinas de confinamento.',
+          date: new Date().toISOString().split('T')[0],
+          time: '14:30',
+          priority: 'ALTA', // CRITICA, ALTA, MEDIA, BAIXA
+          completed: false,
+          category: 'SISTEMA'
+        },
+        {
+          id: 'task_2',
+          title: 'Compilar Módulo Temperatura Mobile',
+          description: 'Testar conexão MQTT no broker de testes.',
+          date: new Date().toISOString().split('T')[0],
+          time: '16:00',
+          priority: 'MEDIA',
+          completed: true,
+          category: 'PROJETO'
+        },
+        {
+          id: 'task_3',
+          title: 'Verificação dos Satélites Verônica',
+          description: 'Diagnóstico de transponders em órbita geoestacionária.',
+          date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
+          time: '09:00',
+          priority: 'CRITICA',
+          completed: false,
+          category: 'DEFESA'
+        }
+      ];
+      localStorage.setItem(STORAGE_KEYS.AGENDA_TASKS, JSON.stringify(defaultTasks));
+      return defaultTasks;
+    } catch {
+      return [];
+    }
+  }
+
+  saveTasks(tasks) {
+    localStorage.setItem(STORAGE_KEYS.AGENDA_TASKS, JSON.stringify(tasks));
+  }
+}
+
+export const memoryService = new MemoryMatrix();

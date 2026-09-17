@@ -1,0 +1,58 @@
+O QUE SERA NECESSARIO PARA O J.A.R.V.I.S:
+
+Precisa entender comandos por voz através do microfone do PC
+Tem que ser compatível com aplicativo de musica 
+tem que ter acesso completo ao computador (para poder desativar e ativar dispositivos do sistema apenas por comandos de voz)
+não pode ser um site web (tem que ser um aplicativo funcional que inicia junto com o Windows)
+Precisa desligar o Windows com comando de voz
+Precisa ter acesso aos aplicativos do computador (poder abrir e fechar qualquer aplicativo por comando de voz)
+Precisa ser Leve e Bem optimizado
+Ter modo de "Hibernação" para liberar espaço quando for jogar ou quando não for necessário (ativado e desativado por voz)
+Ter uma agenda integrada no aplicativo podendo ser customizada de acordo com tarefas a cumprir e cumpridas (a agenda tem que ter todos os dias da semana e deve mostrar os respectivos dias do mês) e com alarmes e notificações
+O Jarvis tem que ter uma voz e deve responder a cada comando por voz, e também ter a comunicação com alguma IA de vdd (exemplo: Chatgpt, Gemini, ou antigravity) para caso seja feito alguma pergunta ele consiga responder imediatamente sem precisar abrir um navegador e digitar a pergunta
+Abrir arquivos no VScode
+ Controle completo do mouse e teclado “Abra o GitHub e crie um novo repositório chamado temperatura-mobile.”
+
+O JARVIS poderia:
+
+abrir o navegador;
+navegar;
+clicar;
+digitar;
+identificar elementos da tela;
+confirmar ações;
+detectar erros.
+Memória de longo prazo
+
+Você poderia conversar normalmente durante meses.
+
+Exemplo:
+
+“JARVIS, lembra daquele projeto de temperatura que eu estava fazendo?”
+
+E ele saberia:
+
+nome do projeto;
+tecnologias utilizadas;
+arquivos importantes;
+últimos erros;
+últimas alterações;
+comandos utilizados.
+
+Uma arquitetura interessante seria:
+
+JARVIS
+   │
+   ├── Memória curta
+   │
+   ├── Memória longa
+   │
+   ├── Histórico de comandos
+   │
+   ├── Preferências
+   │
+   └── Banco de dados
+
+DESIGN:
+
+deve ter uma aparecia futurista, permitindo que troque cores conforme o gosto do usuário e com animação de um reator arc 
