@@ -3,14 +3,14 @@ import { X, Database, Search, Code, FileText, AlertTriangle, Terminal, Plus, Spa
 import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 
-export default function MemoryModal({ isOpen, onClose }) {
+export default function MemoryModal({ isOpen, onClose, embedded = false }) {
   const [projects, setProjects] = useState(() => memoryService.getProjects());
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('projects'); // 'projects', 'commands'
   const [commandHistory] = useState(() => memoryService.getCommandHistory());
   const [selectedProject, setSelectedProject] = useState(projects[0] || null);
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   const filteredProjects = projects.filter(p => 
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -19,8 +19,8 @@ export default function MemoryModal({ isOpen, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden">
+    <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"}>
+      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden"}>
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>

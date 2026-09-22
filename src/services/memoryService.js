@@ -128,7 +128,16 @@ class MemoryMatrix {
         aiProvider: 'free', // free (nuvem gratuita, sem chave) | local (offline)
         autoListen: true,
         gameModeActive: false,
-        standbyMode: false
+        standbyMode: false,
+        musicVolume: 75,
+        musicDock: false,
+        musicMode: 'ytmusic',
+        lastMusicQuery: 'jarvis cinematic soundtrack',
+        musicQueue: [
+          { id: 'jarvis-suite', title: 'Stark Suite', query: 'jarvis cinematic soundtrack' },
+          { id: 'focus', title: 'Focus Mode', query: 'ambient electronic focus music' },
+          { id: 'travel', title: 'Launch Sequence', query: 'epic sci fi instrumental' }
+        ]
       };
       localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(defaultPrefs));
     } else {

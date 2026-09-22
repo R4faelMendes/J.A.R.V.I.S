@@ -155,6 +155,9 @@ function createWindow() {
     }
   });
 
+  // Inicia com a tela preenchida (maximizada)
+  mainWindow.maximize();
+
   // Interceptar requisições para remover restrições de X-Frame-Options do YouTube Music
   mainWindow.webContents.session.webRequest.onHeadersReceived({ urls: ['*://*/*'] }, (details, callback) => {
     const responseHeaders = { ...details.responseHeaders };

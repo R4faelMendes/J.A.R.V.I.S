@@ -1,196 +1,210 @@
-import React, { useState } from 'react';
-import { X, Music, Play, Pause, SkipForward, SkipBack, Volume2, Disc, Radio, Globe } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Music, Search, Minimize2, Maximize2 } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
+import { memoryService } from '../services/memoryService';
 
-const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
-const CHROME_UA = (typeof window !== 'undefined' && window.electronAPI?.chromeUserAgent) || '';
+const YT_MUSIC_HOME = 'https://music.youtube.com';
+const buildYtMusicUrl = (term = '') => {
+  const normalized = term.trim();
+  if (!normalized) return YT_MUSIC_HOME;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  return `${YT_MUSIC_HOME}/search?q=${encodeURIComponent(normalized)}`;
+};
 
-export default function MusicWidgetModal({ isOpen, onClose }) {
-  const [isPlayingTheme, setIsPlayingTheme] = useState(false);
-  const [activeTab, setActiveTab] = useState('ytmusic'); // 'ytmusic' ou 'jarvis_theme'
-  const [ytUrl, setYtUrl] = useState('https://music.youtube.com');
+const DEFAULT_STREAMS = [
+  {
+    id: 'stark-suite',
+    title: 'Stark Suite',
+    artist: 'J.A.R.V.I.S.',
+    query: 'jarvis cinematic soundtrack',
+    src: buildYtMusicUrl('jarvis cinematic soundtrack')
+  },
+  {
+    id: 'focus-mode',
+    title: 'Focus Mode',
+    artist: 'J.A.R.V.I.S.',
+    query: 'ambient electronic focus music',
+    src: buildYtMusicUrl('ambient electronic focus music')
+  },
+  {
+    id: 'launch-sequence',
+    title: 'Launch Sequence',
+    artist: 'J.A.R.V.I.S.',
+    query: 'epic sci fi instrumental',
+    src: buildYtMusicUrl('epic sci fi instrumental')
+  }
+];
 
-  if (!isOpen) return null;
+export default function MusicWidgetModal({ isOpen, onClose, embedded = false, searchQuery = '' }) {
+  const prefs = memoryService.getPreferences();
+  const initialQueue = Array.isArray(prefs.musicQueue) && prefs.musicQueue.length ? prefs.musicQueue : DEFAULT_STREAMS;
+  const initialTrack = initialQueue.find((item) => item.src === prefs.lastMusicQuery) || initialQueue[0];
 
-  const handleToggleThemeSong = () => {
-    if (isPlayingTheme) {
-      sounds.stopThemeSong();
-      setIsPlayingTheme(false);
-    } else {
-      sounds.playThemeSong();
-      setIsPlayingTheme(true);
+  const [queue, setQueue] = useState(initialQueue);
+  const [currentIndex, setCurrentIndex] = useState(Math.max(0, queue.findIndex((item) => item.id === initialTrack?.id)));
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isDocked, setIsDocked] = useState(Boolean(prefs.musicDock));
+  const [customUrl, setCustomUrl] = useState('');
+  const [query, setQuery] = useState(searchQuery || initialTrack?.query || '');
+  const [currentSrc, setCurrentSrc] = useState(initialTrack?.src || buildYtMusicUrl('jarvis cinematic soundtrack'));
+  const boxRef = useRef(null);
+  const [dims, setDims] = useState('');
+
+  const activeTrack = queue[currentIndex] || queue[0] || DEFAULT_STREAMS[0];
+
+  useEffect(() => {
+    const nextSrc = activeTrack?.src || buildYtMusicUrl(query);
+    setCurrentSrc(nextSrc);
+    setQuery(activeTrack?.query || query || '');
+  }, [activeTrack, query]);
+
+  useEffect(() => {
+    if (searchQuery && searchQuery.trim()) {
+      const sanitized = searchQuery.trim();
+      setQuery(sanitized);
+      setCurrentSrc(buildYtMusicUrl(sanitized));
     }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    memoryService.updatePreferences({
+      musicDock: isDocked,
+      musicMode: 'ytmusic',
+      lastMusicQuery: currentSrc || buildYtMusicUrl('jarvis cinematic soundtrack'),
+      musicQueue: queue.slice(0, 8)
+    });
+  }, [isDocked, currentSrc, queue]);
+
+  useEffect(() => {
+    if (!embedded) return undefined;
+    const measure = () => {
+      const box = boxRef.current;
+      if (box) setDims(`box ${Math.round(box.clientWidth)}x${Math.round(box.clientHeight)}`);
+    };
+    measure();
+    const t = setTimeout(measure, 1500);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(t); window.removeEventListener('resize', measure); };
+  }, [embedded]);
+
+  if (!isOpen && !embedded) return null;
+
+  const handlePlayPause = () => {
+    setIsPlaying((prev) => !prev);
+    setCurrentSrc(buildYtMusicUrl(query || activeTrack?.query || ''));
+    sounds.playClick();
   };
 
-  const handleMediaKey = (action) => {
-    sounds.playClick();
-    if (window.electronAPI?.mediaControl) {
-      window.electronAPI.mediaControl(action);
-    }
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % queue.length);
+    setIsPlaying(true);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + queue.length) % queue.length);
+    setIsPlaying(true);
+  };
+
+  const handleAddCustomStream = () => {
+    const trimmed = customUrl.trim();
+    if (!trimmed) return;
+    const normalized = trimmed.startsWith('http') ? trimmed : buildYtMusicUrl(trimmed);
+    const newTrack = {
+      id: `custom-${Date.now()}`,
+      title: trimmed,
+      artist: 'YouTube Music',
+      query: trimmed,
+      src: normalized
+    };
+    setQueue((prev) => [newTrack, ...prev].slice(0, 8));
+    setCurrentIndex(0);
+    setCurrentSrc(normalized);
+    setQuery(trimmed);
+    setCustomUrl('');
+    setIsPlaying(true);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-4xl h-[85vh] flex flex-col border-[var(--primary)] shadow-[0_0_45px_var(--primary-glow)] overflow-hidden">
+    <div className={embedded ? (isDocked ? "flex-1 min-h-0 flex flex-col w-full h-[340px]" : "flex-1 min-h-0 flex flex-col w-full h-full") : "fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"}>
+      <div ref={boxRef} className={embedded ? (isDocked ? "hud-panel rounded-xl w-full h-[340px] flex flex-col border-[var(--primary)] overflow-hidden shadow-[0_0_24px_var(--primary-glow)]" : "hud-panel rounded-xl w-full h-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden") : "hud-panel rounded-xl w-full max-w-[98vw] h-[95vh] flex flex-col border-[var(--primary)] shadow-[0_0_45px_var(--primary-glow)] overflow-hidden"}>
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>
         <div className="corner-bracket corner-br"></div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-cyan-500/20 bg-slate-950/80">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded bg-cyan-950/60 border border-[var(--primary)] text-[var(--primary)]">
-              <Music className="w-5 h-5" />
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-cyan-500/20 bg-slate-950/80">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1.5 rounded bg-cyan-950/60 border border-[var(--primary)] text-[var(--primary)]">
+              <Music className="w-4 h-4" />
             </div>
-            <div>
-              <h2 className="font-['Orbitron'] text-base sm:text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
-                YOUTUBE MUSIC & CENTRAL DE ÁUDIO
+            <div className="min-w-0">
+              <h2 className="font-['Orbitron'] text-[10px] sm:text-xs font-bold text-[var(--primary)] tracking-wider truncate">
+                YT MUSIC // FULLSCREEN
               </h2>
-              <p className="text-xs text-cyan-400/80 font-['JetBrains_Mono']">
-                JANELA INTERATIVA EMBUTIDA NO J.A.R.V.I.S.
-              </p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Tabs */}
-            <div className="flex bg-black/60 border border-cyan-500/30 rounded p-0.5 text-xs font-['JetBrains_Mono']">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-slate-900/80 border border-cyan-500/30 rounded px-2 py-1">
+              <input
+                value={customUrl}
+                onChange={(e) => setCustomUrl(e.target.value)}
+                placeholder="Buscar no YouTube Music"
+                className="w-40 sm:w-56 bg-transparent text-[10px] text-cyan-100 placeholder:text-cyan-500/40 outline-none"
+              />
               <button
-                onClick={() => { sounds.playClick(); setActiveTab('ytmusic'); }}
-                className={`px-3 py-1 rounded transition-all ${
-                  activeTab === 'ytmusic'
-                    ? 'bg-[var(--primary)] text-black font-bold shadow-[0_0_8px_var(--primary)]'
-                    : 'text-cyan-400 hover:text-white'
-                }`}
+                onClick={() => {
+                  if (!customUrl.trim()) return;
+                  const next = customUrl.trim();
+                  const normalized = next.startsWith('http') ? next : buildYtMusicUrl(next);
+                  setQuery(next);
+                  setCurrentSrc(normalized);
+                  setCustomUrl('');
+                  setIsPlaying(true);
+                  sounds.playClick();
+                }}
+                className="p-1 rounded bg-[var(--primary)] text-black font-bold"
+                title="Buscar"
               >
-                YouTube Music
-              </button>
-              <button
-                onClick={() => { sounds.playClick(); setActiveTab('jarvis_theme'); }}
-                className={`px-3 py-1 rounded transition-all ${
-                  activeTab === 'jarvis_theme'
-                    ? 'bg-amber-500 text-black font-bold shadow-[0_0_8px_#f59e0b]'
-                    : 'text-amber-400 hover:text-white'
-                }`}
-              >
-                Tema Stark/Jarvis
+                <Search className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {/* Player embutido: música dentro do app, sem janela extra */}
+            <button
+              onClick={() => setIsDocked((prev) => !prev)}
+              className="p-1.5 rounded-lg border border-cyan-500/30 bg-cyan-950/40 text-cyan-200 hover:bg-cyan-900/70 transition-all"
+              title={isDocked ? 'Expandir player' : 'Minimizar player'}
+            >
+              {isDocked ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+            </button>
 
             <button
               onClick={() => {
                 sounds.playClick();
-                sounds.stopThemeSong();
-                setIsPlayingTheme(false);
                 onClose();
               }}
-              className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition-all"
+              className="p-1.5 rounded-lg border border-white/15 text-slate-400 hover:text-red-300 hover:border-red-400/50 hover:bg-red-500/10 transition-all"
+              title="Voltar"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col overflow-hidden bg-black/60 relative">
-          {activeTab === 'ytmusic' ? (
-            <div className="flex-1 flex flex-col h-full">
-              {/* Toolbar */}
-              <div className="px-4 py-2 border-b border-cyan-500/20 bg-slate-950/60 flex items-center justify-between font-['JetBrains_Mono'] text-xs">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={() => handleMediaKey('PREV')}
-                    className="p-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-300"
-                    title="Música Anterior"
-                  >
-                    <SkipBack className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleMediaKey('PLAY_PAUSE')}
-                    className="px-3 py-1.5 rounded bg-[var(--primary)] text-black font-bold hover:bg-white transition-all flex items-center gap-1.5"
-                    title="Play / Pause Global"
-                  >
-                    <Play className="w-4 h-4" /> Play / Pause
-                  </button>
-                  <button
-                    onClick={() => handleMediaKey('NEXT')}
-                    className="p-1.5 rounded bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-500/30 text-cyan-300"
-                    title="Próxima Música"
-                  >
-                    <SkipForward className="w-4 h-4" />
-                  </button>
-                </div>
+        <div className="flex-1 min-h-0 overflow-hidden bg-black relative">
+          <div className="w-full h-full">
+            <iframe
+              key={currentSrc}
+              src={currentSrc}
+              title="YouTube Music full screen"
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-presentation"
+            />
+          </div>
 
-                <div className="flex items-center space-x-2">
-                  <div className="text-[11px] text-cyan-400/80 flex items-center gap-1">
-                    <Globe className="w-3.5 h-3.5 text-[var(--primary)]" />
-                    <span>music.youtube.com — embutido, sem janela extra</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* YouTube Music Embedded Interactive Window */}
-              <div className="flex-1 relative w-full h-full bg-slate-950 flex flex-col items-center justify-center">
-                {IS_ELECTRON ? (
-                  // <webview> permite o login da conta Google/YouTube (iframe dava erro 401)
-                  <webview
-                    src="https://music.youtube.com"
-                    useragent={CHROME_UA}
-                    allowpopups="true"
-                    className="border-0 absolute inset-0 z-10"
-                    style={{ width: '100%', height: '100%', display: 'block' }}
-                    title="YouTube Music Interactive Player"
-                  />
-                ) : (
-                  <iframe
-                    src="https://music.youtube.com"
-                    title="YouTube Music Interactive Player"
-                    className="w-full h-full border-0 absolute inset-0 z-10"
-                    allow="autoplay; encrypted-media; clipboard-write; microphone"
-                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-                  />
-                )}
-              </div>
-            </div>
-          ) : (
-            /* Jarvis Cinematic Theme Generator */
-            <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-6 text-center">
-              <div className="relative w-32 h-32 rounded-full border-4 border-amber-500/50 flex items-center justify-center shadow-[0_0_35px_rgba(245,158,11,0.5)]">
-                <Disc className={`w-20 h-20 text-amber-400 ${isPlayingTheme ? 'animate-spin-slow' : ''}`} />
-              </div>
-
-              <div>
-                <h3 className="font-['Orbitron'] text-xl font-bold text-amber-300 glow-amber">
-                  TRILHA SONORA CINEMÁTICA // STARK SUITE
-                </h3>
-                <p className="text-xs text-amber-200/70 font-['JetBrains_Mono'] mt-1 max-w-md">
-                  Sintetizador Web Audio nativo reproduzindo progressão orquestral sci-fi de baixa latência em tempo real.
-                </p>
-              </div>
-
-              <button
-                onClick={handleToggleThemeSong}
-                className={`px-8 py-3 rounded-xl font-['Orbitron'] font-bold text-sm uppercase transition-all shadow-lg flex items-center gap-3 border ${
-                  isPlayingTheme
-                    ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.6)]'
-                    : 'bg-amber-500 hover:bg-amber-400 text-black border-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.6)]'
-                }`}
-              >
-                {isPlayingTheme ? (
-                  <>
-                    <Pause className="w-5 h-5" /> Pausar Trilha Temática
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5" /> Tocar Música do J.A.R.V.I.S.
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          {dims ? <span className="absolute bottom-2 right-2 text-[10px] text-amber-300/80 bg-black/50 px-1.5 py-0.5 rounded border border-amber-500/30">{dims}</span> : null}
         </div>
       </div>
     </div>

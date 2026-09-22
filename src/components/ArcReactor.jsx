@@ -218,7 +218,8 @@ export default function ArcReactor({
   isSpeaking = false,
   isListening = false,
   model = 'mark_3', // 'mark_1', 'mark_3', 'mark_50', 'mark_85'
-  onModelChange
+  onModelChange,
+  compact = false
 }) {
   const [pulseBoost, setPulseBoost] = useState(false);
   const current = MARKS[model] || MARKS.mark_3;
@@ -231,6 +232,90 @@ export default function ArcReactor({
 
   const isReactive = isListening || isSpeaking || pulseBoost;
 
+  // Versão compacta e alinhada para a sidebar (sem callouts laterais, sem overflow)
+  if (compact) {
+    const shortLabels = { mark_1: 'I', mark_3: 'III', mark_50: 'L', mark_85: 'LXXXV' };
+    return (
+      <div className="flex flex-col items-center px-2 py-3 select-none" data-purpose="arc-reactor-core">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${isReactive ? 'bg-emerald-400 animate-pulse' : 'bg-[var(--secondary)]'}`} />
+          <span className="text-[10px] font-bold tracking-[0.22em] text-[var(--primary)] font-['JetBrains_Mono']">
+            REATOR ARC
+          </span>
+        </div>
+
+        <div
+          onClick={handleCoreClick}
+          title="Núcleo do reator — clique para pulso de energia"
+          className="relative w-[196px] h-[196px] my-2 cursor-pointer"
+        >
+          {/* Brilho contido */}
+          <div
+            className="absolute inset-6 rounded-full blur-2xl opacity-25 pointer-events-none"
+            style={{ backgroundColor: current.accentGlow }}
+          />
+          {isReactive && (
+            <div
+              className="absolute inset-0 rounded-full border animate-ping opacity-20 pointer-events-none"
+              style={{ borderColor: current.accent }}
+            />
+          )}
+
+          {model === 'mark_1' && <Mark1Assembly isReactive={isReactive} />}
+          {model === 'mark_3' && <Mark3Assembly isReactive={isReactive} />}
+          {model === 'mark_50' && <Mark50Assembly isReactive={isReactive} />}
+          {model === 'mark_85' && <Mark85Assembly isReactive={isReactive} />}
+
+          {/* Anel de progresso */}
+          <svg viewBox="0 0 100 100" className="absolute inset-[21%] -rotate-90 z-[5]">
+            <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3" />
+            <circle
+              cx="50" cy="50" r="46" fill="none"
+              stroke={current.accent} strokeWidth="3" strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 46}
+              strokeDashoffset={isReactive ? 2 * Math.PI * 46 * 0.08 : 2 * Math.PI * 46 * 0.32}
+              className="transition-all duration-700"
+              style={{ filter: `drop-shadow(0 0 3px ${current.accent})` }}
+            />
+          </svg>
+
+          {/* Núcleo central */}
+          <div
+            className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-gradient-to-br from-cyan-950 via-slate-900 to-black border-2 flex flex-col items-center justify-center z-10 overflow-hidden"
+            style={{ borderColor: current.accent, boxShadow: `0 0 16px ${current.accentGlow}` }}
+          >
+            <span className="text-[8px] font-bold tracking-widest font-['JetBrains_Mono']" style={{ color: current.accent }}>JARVIS</span>
+            <span className="text-xs font-extrabold text-cyan-100 font-['Orbitron']">
+              {isReactive ? '100%' : '98.4%'}
+            </span>
+            <span className="text-[7px] font-bold font-['JetBrains_Mono']" style={{ color: current.secondary }}>
+              {isListening ? 'ESCUTANDO' : isSpeaking ? 'TRANSMITINDO' : 'ESTÁVEL'}
+            </span>
+          </div>
+        </div>
+
+        {/* Seletor de modelo compacto */}
+        <div className="flex items-center bg-black/50 border border-white/10 rounded-md p-0.5 font-['JetBrains_Mono']">
+          {Object.entries(MARKS).map(([id, m]) => (
+            <button
+              key={id}
+              title={m.label}
+              onClick={() => { sounds.playClick(); onModelChange?.(id); }}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${model === id ? 'text-black' : 'text-cyan-300/70 hover:text-white'}`}
+              style={model === id ? { backgroundColor: m.accent } : undefined}
+            >
+              {shortLabels[id]}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-1.5 text-[9px] tracking-widest text-cyan-200/50 font-['JetBrains_Mono']">
+          {isListening ? 'ESCUTANDO DIRETIVA' : isSpeaking ? 'TRANSMITINDO RESPOSTA' : current.caption}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex flex-col justify-between flex-1 overflow-hidden" data-purpose="arc-reactor-core">
       {/* Header Telemetry & Reactor Model Switcher */}
@@ -242,7 +327,7 @@ export default function ArcReactor({
             NÚCLEO ORBITAL // REATOR DE ARCO HOLOGRÁFICO
           </div>
           <div className="text-xs text-cyan-300/70">
-            {isListening ? '🔥 REAÇÃO DE VOZ ATIVA: ESCUTANDO DIRETIVA' : 'CAMPO MAGNÉTICO SINCRONIZADO'}
+            {isListening ? 'REAÇÃO DE VOZ ATIVA // ESCUTANDO DIRETIVA' : 'CAMPO MAGNÉTICO SINCRONIZADO'}
           </div>
         </div>
 

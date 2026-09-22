@@ -3,15 +3,16 @@ import { X, PlayCircle, CheckCircle, Loader2, Sparkles, Terminal, ArrowRight } f
 import { sounds } from '../services/soundEffects';
 import { AutomationStatus } from '../services/commandExecutor';
 
-export default function AutomationModal({ isOpen, onClose, automationState }) {
-  if (!isOpen || !automationState) return null;
+export default function AutomationModal({ isOpen, onClose, automationState, embedded = false }) {
+  if (!isOpen && !embedded) return null;
+  if (!automationState) return null;
 
   const { status, currentStep, totalSteps, stepData } = automationState;
   const progressPercent = Math.min(100, Math.round((currentStep / totalSteps) * 100));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-lg animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-2xl flex flex-col border-[var(--primary)] shadow-[0_0_50px_var(--primary-glow)] overflow-hidden">
+    <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-lg animate-in fade-in duration-200"}>
+      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-2xl flex flex-col border-[var(--primary)] shadow-[0_0_50px_var(--primary-glow)] overflow-hidden"}>
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>

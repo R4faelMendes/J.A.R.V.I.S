@@ -4,7 +4,7 @@ import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 import { speechService } from '../services/speechService';
 
-export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeChange }) {
+export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeChange, embedded = false }) {
   const [prefs, setPrefs] = useState(() => {
     try {
       return memoryService.getPreferences() || {};
@@ -60,7 +60,7 @@ export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeCha
     return undefined;
   }, [prefs, isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   const themes = [
     { id: 'cyan', name: 'Cyan Stark (Clássico)', border: 'border-cyan-400', color: 'bg-cyan-400' },
@@ -180,8 +180,8 @@ export default function SettingsModal({ isOpen, onClose, activeTheme, onThemeCha
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden">
+    <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"}>
+      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden"}>
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>

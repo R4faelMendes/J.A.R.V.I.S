@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar as CalIcon, Plus, CheckCircle, Circle, Clock, AlertCircle, Trash2, Bell, ChevronLeft, ChevronRight, Archive } from 'lucide-react';
+import { X, Calendar as CalIcon, Plus, CheckCircle, Circle, Clock, AlertCircle, Trash2, Bell, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 
@@ -19,7 +19,7 @@ function isPastDay(year, month, day) {
   return toLocalISO(new Date(year, month, day)) < TODAY_ISO;
 }
 
-export default function AgendaModal({ isOpen, onClose }) {
+export default function AgendaModal({ isOpen, onClose, embedded = false }) {
   const [tasks, setTasks] = useState(() => memoryService.getTasks());
   const [viewMode, setViewMode] = useState('tasks'); // 'tasks', 'calendar'
   const [newTitle, setNewTitle] = useState('');
@@ -27,7 +27,7 @@ export default function AgendaModal({ isOpen, onClose }) {
   const [newTime, setNewTime] = useState('15:00');
   const [newPriority, setNewPriority] = useState('ALTA');
   const [newCategory, setNewCategory] = useState('PROJETO');
-  const [showArchive, setShowArchive] = useState(false);
+  const [showDayPicker, setShowDayPicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(TODAY_ISO);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
@@ -35,7 +35,7 @@ export default function AgendaModal({ isOpen, onClose }) {
   });
   const [formError, setFormError] = useState('');
 
-  if (!isOpen) return null;
+  if (!isOpen && !embedded) return null;
 
   const now = new Date();
   const todayISO = toLocalISO(now);
@@ -97,6 +97,7 @@ export default function AgendaModal({ isOpen, onClose }) {
     }
 
     setFormError('');
+    setShowDayPicker(false);
     sounds.playSuccess();
     const newTask = {
       id: `task_${Date.now()}`,
@@ -121,8 +122,6 @@ export default function AgendaModal({ isOpen, onClose }) {
     });
 
   const upcomingTasks = sortTasks(tasks.filter(t => t.date >= todayISO));
-  const archivedTasks = sortTasks(tasks.filter(t => t.date < todayISO));
-  const visibleTasks = showArchive ? sortTasks(tasks) : upcomingTasks;
   const tasksOnSelectedDate = sortTasks(tasks.filter(t => t.date === selectedDate && t.date >= todayISO));
 
   const dateLabel = (iso) => {
@@ -131,9 +130,22 @@ export default function AgendaModal({ isOpen, onClose }) {
     return null;
   };
 
+  const [newHour, newMinute] = String(newTime || '15:00').split(':');
+
+  const newDateLabel = (() => {
+    const tag = dateLabel(newDate);
+    try {
+      const d = new Date(`${newDate}T12:00:00`);
+      const short = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      return tag ? `${short} • ${tag}` : short;
+    } catch {
+      return newDate;
+    }
+  })();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="hud-panel rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden">
+    <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"}>
+      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden"}>
         <div className="corner-bracket corner-tl"></div>
         <div className="corner-bracket corner-tr"></div>
         <div className="corner-bracket corner-bl"></div>
@@ -147,7 +159,7 @@ export default function AgendaModal({ isOpen, onClose }) {
             </div>
             <div>
               <h2 className="font-['Orbitron'] text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
-                AGENDA & CRONOGRAMA TÁTICO
+                AGENDA & CRONOGRAMA
               </h2>
               <p className="text-xs text-cyan-400/80 font-['JetBrains_Mono']">
                 DIRETIVAS OPERACIONAIS • DIAS PASSADOS BLOQUEADOS
@@ -178,7 +190,8 @@ export default function AgendaModal({ isOpen, onClose }) {
 
             <button
               onClick={() => { sounds.playClick(); onClose(); }}
-              className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-black transition-all"
+              title="Voltar à Central de Voz"
+              className="p-1.5 rounded-lg border border-white/15 text-slate-400 hover:text-red-300 hover:border-red-400/50 hover:bg-red-500/10 transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -201,21 +214,104 @@ export default function AgendaModal({ isOpen, onClose }) {
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="Descrição da tarefa (ex: 'Compilar kernel Stark', 'Reunião Pepper')..."
-                    className="md:col-span-5 bg-black/60 border border-cyan-500/40 rounded px-3 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
+                    className="md:col-span-4 bg-black/60 border border-cyan-500/40 rounded px-3 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
                   />
-                  <input
-                    type="date"
-                    value={newDate}
-                    min={todayISO}
-                    onChange={(e) => { setNewDate(e.target.value); setFormError(''); }}
-                    className="md:col-span-2 bg-black/60 border border-cyan-500/40 rounded px-2 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
-                  />
-                  <input
-                    type="time"
-                    value={newTime}
-                    onChange={(e) => setNewTime(e.target.value)}
-                    className="md:col-span-2 bg-black/60 border border-cyan-500/40 rounded px-2 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
-                  />
+                  {/* Seletor de dia com calendário (somente hoje e futuro) */}
+                  <div className="md:col-span-2 relative">
+                    <button
+                      type="button"
+                      onClick={() => { sounds.playClick(); setShowDayPicker(v => !v); }}
+                      title="Escolher o dia no calendário"
+                      className="w-full bg-black/60 border border-cyan-500/40 rounded px-2 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)] flex items-center justify-between gap-1"
+                    >
+                      <span className="flex items-center gap-1 truncate">
+                        <CalIcon className="w-3.5 h-3.5 text-[var(--primary)] shrink-0" />
+                        {newDateLabel}
+                      </span>
+                      <ChevronRight className="w-3 h-3 rotate-90 opacity-60 shrink-0" />
+                    </button>
+                    {showDayPicker && (
+                      <div className="absolute z-30 top-full mt-1 left-0 w-64 rounded-lg border border-[var(--primary)] bg-[#03101d] p-3 shadow-2xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <button
+                            type="button"
+                            onClick={goPrev}
+                            disabled={!canGoBack}
+                            title={canGoBack ? 'Mês anterior' : 'Meses passados bloqueados'}
+                            className={`p-1 rounded border transition-all ${canGoBack ? 'border-cyan-500/40 text-cyan-300 hover:border-[var(--primary)]' : 'border-slate-700 text-slate-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-[11px] font-bold font-['Orbitron'] text-[var(--primary)] uppercase">
+                            {MONTH_NAMES[cursor.month]} {cursor.year}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={goNext}
+                            disabled={!canGoForward}
+                            title={canGoForward ? 'Próximo mês' : 'Limite de 12 meses à frente'}
+                            className={`p-1 rounded border transition-all ${canGoForward ? 'border-cyan-500/40 text-cyan-300 hover:border-[var(--primary)]' : 'border-slate-700 text-slate-600 cursor-not-allowed opacity-50'}`}
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-0.5 text-center font-['JetBrains_Mono'] text-[9px] text-cyan-400/70 font-bold mb-1">
+                          {weekDays.map((d, i) => (
+                            <div key={i}>{d}</div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-0.5 font-['JetBrains_Mono'] text-[11px]">
+                          {dayCells.map((day, index) => {
+                            if (day === null) return <div key={`pk-blank-${index}`} />;
+                            const iso = toLocalISO(new Date(cursor.year, cursor.month, day));
+                            if (isPastDay(cursor.year, cursor.month, day)) {
+                              return (
+                                <div key={iso} title="Dia que já passou" className="p-1 text-center text-slate-600 line-through select-none">
+                                  {day}
+                                </div>
+                              );
+                            }
+                            const sel = iso === newDate;
+                            return (
+                              <button
+                                key={iso}
+                                type="button"
+                                onClick={() => { sounds.playClick(); setNewDate(iso); setFormError(''); setShowDayPicker(false); }}
+                                className={`p-1 rounded text-center transition-all ${sel ? 'bg-[var(--primary)] text-black font-bold' : 'text-cyan-200 hover:bg-[var(--primary-dim)]'}`}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Horário em selects de hora e minuto */}
+                  <div className="md:col-span-3 flex gap-1">
+                    <select
+                      value={newHour}
+                      onChange={(e) => setNewTime(`${e.target.value}:${newMinute}`)}
+                      title="Hora"
+                      className="flex-1 min-w-0 bg-black/60 border border-cyan-500/40 rounded px-1.5 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
+                    >
+                      {Array.from({ length: 24 }, (_, h) => {
+                        const v = String(h).padStart(2, '0');
+                        return <option key={v} value={v}>{v}h</option>;
+                      })}
+                    </select>
+                    <select
+                      value={newMinute}
+                      onChange={(e) => setNewTime(`${newHour}:${e.target.value}`)}
+                      title="Minutos"
+                      className="flex-1 min-w-0 bg-black/60 border border-cyan-500/40 rounded px-1.5 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
+                    >
+                      {Array.from({ length: 60 }, (_, m) => {
+                        const v = String(m).padStart(2, '0');
+                        return <option key={v} value={v}>{v}m</option>;
+                      })}
+                    </select>
+                  </div>
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value)}
@@ -243,47 +339,31 @@ export default function AgendaModal({ isOpen, onClose }) {
               {/* Tasks List */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-['JetBrains_Mono'] text-cyan-400/80 border-b border-cyan-500/20 pb-1">
-                  <span>DIRETIVAS AGENDADAS ({upcomingTasks.length} pendentes / {archivedTasks.length} no arquivo)</span>
-                  <button
-                    type="button"
-                    onClick={() => { sounds.playClick(); setShowArchive(v => !v); }}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded border transition-all ${
-                      showArchive
-                        ? 'bg-amber-950/60 border-amber-500/60 text-amber-300'
-                        : 'bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:border-cyan-300'
-                    }`}
-                    title="Exibir tarefas de dias que já passaram"
-                  >
-                    <Archive className="w-3 h-3" />
-                    {showArchive ? 'OCULTAR ARQUIVO' : 'ARQUIVO'}
-                  </button>
+                  <span>DIRETIVAS AGENDADAS ({upcomingTasks.length})</span>
                 </div>
 
-                {visibleTasks.length === 0 && (
+                {upcomingTasks.length === 0 && (
                   <div className="p-4 text-center text-xs font-['JetBrains_Mono'] text-cyan-400/70 border border-dashed border-cyan-500/20 rounded-lg">
                     Nenhuma diretiva registrada para os próximos dias, Senhor.
                   </div>
                 )}
 
-                {visibleTasks.map(task => {
+                {upcomingTasks.map(task => {
                   const priorityColors = {
                     CRITICA: 'bg-red-950/60 border-red-500 text-red-300 shadow-[0_0_8px_#ef4444]',
                     ALTA: 'bg-amber-950/60 border-amber-500 text-amber-300 shadow-[0_0_8px_#ffb020]',
                     MEDIA: 'bg-cyan-950/60 border-cyan-500 text-cyan-300',
                     BAIXA: 'bg-slate-900 border-slate-600 text-slate-300'
                   };
-                  const isArchived = task.date < todayISO;
                   const dayTag = dateLabel(task.date);
 
                   return (
                     <div
                       key={task.id}
                       className={`p-3 rounded-lg border transition-all flex items-center justify-between gap-3 ${
-                        isArchived
-                          ? 'bg-slate-950/60 border-slate-600/60 opacity-70'
-                          : task.completed
-                            ? 'bg-emerald-950/10 border-emerald-500/30 opacity-60'
-                            : 'bg-cyan-950/30 border-cyan-500/30 hover:border-[var(--primary)]'
+                        task.completed
+                          ? 'bg-emerald-950/10 border-emerald-500/30 opacity-60'
+                          : 'bg-cyan-950/30 border-cyan-500/30 hover:border-[var(--primary)]'
                       }`}
                     >
                       <div className="flex items-center space-x-3 flex-1">
@@ -299,7 +379,7 @@ export default function AgendaModal({ isOpen, onClose }) {
                         </button>
                         <div>
                           <div className={`font-['JetBrains_Mono'] text-sm font-semibold ${
-                            task.completed ? 'line-through text-cyan-500/60' : isArchived ? 'text-slate-400' : 'text-cyan-100'
+                            task.completed ? 'line-through text-cyan-500/60' : 'text-cyan-100'
                           }`}>
                             {task.title}
                           </div>
@@ -315,9 +395,6 @@ export default function AgendaModal({ isOpen, onClose }) {
                             </span>
                             {dayTag && !task.completed && (
                               <span className="text-[10px] px-1 rounded bg-[var(--primary)] text-black font-bold">{dayTag}</span>
-                            )}
-                            {isArchived && (
-                              <span className="text-[10px] px-1 rounded bg-slate-800 border border-slate-600 text-slate-300">ARQUIVADA</span>
                             )}
                           </div>
                         </div>

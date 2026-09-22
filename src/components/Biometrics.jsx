@@ -90,7 +90,7 @@ export default function AgendaPanel() {
         <div className="flex items-center space-x-2">
           <CalendarIcon className="w-4 h-4 text-[var(--primary)]" />
           <span className="text-xs uppercase font-['Orbitron'] font-bold text-[var(--primary)] glow-cyan">
-            Agenda Tática
+            Agenda
           </span>
         </div>
 

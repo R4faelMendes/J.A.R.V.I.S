@@ -48,11 +48,26 @@ const TAIL_PHRASES = [
 
 // Alvos internos do painel (não são programas do Windows)
 const INTERNAL_TARGETS = [
-  { keys: ['agenda', 'calendario', 'calendário', 'tarefas', 'tarefa', 'compromissos', 'compromisso', 'lembretes', 'lembrete'], modal: 'agenda', speech: 'Abrindo a agenda tática, Senhor.' },
+  { keys: ['agenda', 'calendario', 'calendário', 'tarefas', 'tarefa', 'compromissos', 'compromisso', 'lembretes', 'lembrete'], modal: 'agenda', speech: 'Abrindo a agenda, Senhor.' },
   { keys: ['memoria', 'memória', 'memorias', 'memórias', 'historico', 'histórico'], modal: 'memory', speech: 'Abrindo a matriz de memória de longo prazo, Senhor.' },
   { keys: ['configuracao', 'configurações', 'configuracoes', 'configurar', 'ajustes', 'ajuste', 'preferencias', 'preferências', 'opcões', 'opcoes'], modal: 'settings', speech: 'Abrindo o painel de configurações, Senhor.' },
-  { keys: ['musica', 'música', 'midia', 'mídia', 'player', 'tocador'], modal: 'music', speech: 'Abrindo o controle de mídia, Senhor.' }
+  { keys: ['musica', 'música', 'midia', 'mídia', 'player', 'tocador'], modal: 'music', speech: 'Abrindo o controle de mídia, Senhor.' },
+  { keys: ['automacao', 'automação', 'rotina', 'rotinas'], modal: 'automation', speech: 'Abrindo o pipeline de automação, Senhor.' },
+  { keys: ['tatico', 'tático', 'mapa'], modal: 'tactical', speech: 'Abrindo o mapa tático, Senhor.' },
+  { keys: ['esquema', 'esquemas', 'esquematico', 'esquemático', 'esquematicos', 'diagrama'], modal: 'schematics', speech: 'Abrindo o módulo esquemático, Senhor.' },
+  { keys: ['inicio', 'início', 'central', 'home', 'principal'], modal: 'home', speech: 'Voltando à central de voz, Senhor.' }
 ];
+
+const CLOSE_MODAL_NAMES = {
+  agenda: 'a agenda',
+  memory: 'a matriz de memória',
+  settings: 'as configurações',
+  music: 'o controle de mídia',
+  automation: 'o pipeline de automação',
+  tactical: 'o mapa tático',
+  schematics: 'o módulo esquemático',
+  home: 'a central de voz'
+};
 
 function normalizeText(text) {
   return String(text || '')
@@ -269,7 +284,7 @@ class CommandExecutor {
         return {
           action: 'CLOSE_MODAL',
           modal: closeInternal.modal,
-          speech: `Encerrando ${closeInternal.modal === 'agenda' ? 'a agenda' : 'o painel'}, Senhor.`
+          speech: `Encerrando ${CLOSE_MODAL_NAMES[closeInternal.modal] || 'o painel'}, Senhor.`
         };
       }
 
@@ -417,7 +432,7 @@ class CommandExecutor {
       sounds.playClick();
       return {
         action: 'OPEN_AGENDA',
-        speech: 'Abrindo a agenda tática. Você possui tarefas pendentes de alta prioridade para sincronização de reator e verificação orbital.'
+        speech: 'Abrindo a agenda. Você possui tarefas pendentes de alta prioridade para sincronização de reator e verificação orbital.'
       };
     }
 

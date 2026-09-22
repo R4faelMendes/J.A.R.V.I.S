@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Header from './components/Header';
-import Biometrics from './components/Biometrics';
-import Diagnostics from './components/Diagnostics';
-import ArcReactor from './components/ArcReactor';
+import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import MiniHeader from './components/MiniHeader';
 import AudioVisualizer from './components/AudioVisualizer';
-import SchematicViewer from './components/SchematicViewer';
-import MusicBox from './components/MusicBox';
-import ResizableBox from './components/ResizableBox';
 import TerminalInput from './components/TerminalInput';
+import TacticalMap from './components/TacticalMap';
+import SchematicViewer from './components/SchematicViewer';
 import AgendaModal from './components/AgendaModal';
 import MemoryModal from './components/MemoryModal';
 import MusicWidgetModal from './components/MusicWidgetModal';
@@ -17,16 +14,15 @@ import GameModeOverlay from './components/GameModeOverlay';
 
 import { speechService } from './services/speechService';
 import { sounds } from './services/soundEffects';
-import { commandExecutor, AutomationStatus } from './services/commandExecutor';
+import { commandExecutor } from './services/commandExecutor';
 import { aiService } from './services/aiService';
 import { memoryService } from './services/memoryService';
-import { runSmokeTest } from './services/selfTest';
 
 export default function App() {
   const [activeTheme, setActiveTheme] = useState(() => {
     return memoryService.getPreferences().theme || 'cyan';
   });
-  const [soundEnabled, setSoundEnabled] = useState(() => (memoryService.getPreferences().soundEnabled !== false));
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -34,41 +30,22 @@ export default function App() {
     'Pronto, Senhor. Todos os protocolos de combate e telemetria estão sincronizados.'
   );
 
-  // Modals state
-  const [activeModal, setActiveModal] = useState(null); // 'agenda', 'memory', 'music', 'settings', 'automation'
+  // Novo layout estilo Codex: sidebar + área escura
+  const [activeView, setActiveView] = useState('home'); // home, agenda, music, memory, automation, tactical, schematics, settings
   const [automationState, setAutomationState] = useState(null);
   const [gameModeActive, setGameModeActive] = useState(false);
-  const [ytMusicSearch, setYtMusicSearch] = useState(null); // comando de voz "tocar X"
+  const [reactorModel, setReactorModel] = useState('mark_3');
+  const [textCommand, setTextCommand] = useState('');
+  const [ytSearch, setYtSearch] = useState('');
 
-  // Load preferences
   const prefs = memoryService.getPreferences();
   const userName = prefs.userName || 'Tony Stark';
   const accessLevel = prefs.accessLevel || 'NÍVEL ALPHA';
 
-  const [micPhase, setMicPhase] = useState('idle');
-  const [engineInfo, setEngineInfo] = useState(() => speechService.getEngineInfo());
-
-  // Apply theme to document
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', activeTheme);
   }, [activeTheme]);
 
-  // Calibra o motor de voz com as preferências salvas
-  useEffect(() => {
-    const p = memoryService.getPreferences() || {};
-    speechService.configure({
-      voiceEngine: p.voiceEngine || 'neural',
-      voiceId: p.voiceId || 'pt-BR-AntonioNeural',
-      localVoiceName: p.localVoiceName || '',
-      voiceSpeed: p.voiceSpeed || 1.05,
-      voicePitch: p.voicePitch || 0.85,
-      sttModel: p.sttModel || 'base'
-    });
-    setEngineInfo(speechService.getEngineInfo());
-    sounds.enabled = (memoryService.getPreferences().soundEnabled !== false);
-  }, []);
-
-  // Initial greeting once on mount
   useEffect(() => {
     const timer = setTimeout(() => {
       sounds.playPowerPulse();
@@ -81,88 +58,55 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Escuta contínua ativada automaticamente (preferência "autoListen")
-  useEffect(() => {
-    const shouldAutoListen = (memoryService.getPreferences() || {}).autoListen !== false;
-    if (!shouldAutoListen) return undefined;
-    const timer = setTimeout(() => {
-      handleToggleMic();
-    }, 4500);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const speakJarvis = (text) => {
+    speechService.speak(
+      text,
+      () => setIsSpeaking(true),
+      () => setIsSpeaking(false)
+    );
+  };
 
-  // Autoteste ponta-a-ponta (J.A.R.V.I.S com ?smoke=1) — valida voz, microfone e controle do PC
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has('smoke')) return undefined;
-    const autoclose = params.has('autoclose');
-    const timer = setTimeout(async () => {
-      try {
-        const res = await runSmokeTest();
-        if (autoclose) {
-          setTimeout(() => { try { window.close(); } catch { /* ignora */ } }, 1500);
-        }
-        return res;
-      } catch (err) {
-        console.error('[SMOKE] erro no autoteste:', err);
-        if (autoclose) setTimeout(() => { try { window.close(); } catch { /* ignora */ } }, 1500);
-      }
-      return null;
-    }, 6500); // aguarda saudação, worker Whisper (4s) e índice de apps (6s)
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Abre um painel específico via URL (?modal=settings / ?modal=music) — usado pelo autoteste
-  useEffect(() => {
-    const modal = new URLSearchParams(window.location.search).get('modal');
-    if (!modal) return undefined;
-    const timer = setTimeout(() => setActiveModal(modal), 6000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Handle Voice Input
   const handleToggleMic = () => {
     speechService.toggleListening(
       (result) => {
-        if (result.interim) {
-          setInterimTranscript(result.interim);
-        }
+        if (result.interim) setInterimTranscript(result.interim);
         if (result.final) {
           setInterimTranscript('');
           handleExecuteCommand(result.final);
         }
       },
-      (status) => {
-        setIsListening(!!status.isListening);
-        setMicPhase(status.phase || (status.isListening ? 'listening' : 'idle'));
-        setEngineInfo(speechService.getEngineInfo());
-        if (status.phase === 'recording') setInterimTranscript('');
-        if (status.error && status.message) {
-          setLastDirective(status.message);
-        }
-      }
+      (status) => setIsListening(status.isListening)
     );
   };
 
-  // Central Command Execution Pipeline
+  const runAutomation = async (automationType, params, speech) => {
+    if (speech) speakJarvis(speech);
+    setActiveView('automation');
+    if (window.electronAPI && window.electronAPI.runAutomation) {
+      window.electronAPI.runAutomation(automationType, params);
+    }
+    await commandExecutor.runAutomationSequence(
+      automationType,
+      params,
+      (step) => setAutomationState(step)
+    );
+  };
+
+  // Pipeline central de comandos — mesma essência, agora navegando na área escura
   const handleExecuteCommand = async (commandText) => {
     if (!commandText.trim()) return;
 
     setLastDirective(commandText);
     sounds.playClick();
 
-    // Parse command
     const res = commandExecutor.parseAndExecute(commandText);
 
-    // 1. Game / Hibernation Mode
     if (res.action === 'TOGGLE_GAME_MODE') {
       setGameModeActive(res.active);
       speakJarvis(res.speech);
       return;
     }
 
-    // 2. Power Actions (Windows Integration / Simulation)
     if (res.action === 'SYSTEM_POWER') {
       speakJarvis(res.speech);
       if (window.electronAPI && window.electronAPI.systemPower) {
@@ -171,83 +115,80 @@ export default function App() {
       return;
     }
 
-    // 2.1 Autostart with Windows Integration
-    if (res.action === 'AUTOSTART_TOGGLE') {
-      speakJarvis(res.speech);
-      if (window.electronAPI && window.electronAPI.setAutostart) {
-        window.electronAPI.setAutostart(res.enable);
-      }
-      return;
-    }
-
-    // 3. Music Actions
     if (res.action?.startsWith('MUSIC_')) {
-      // Busca por voz preenche o box do YouTube Music (sem abrir janela extra)
-      if (res.action === 'MUSIC_SEARCH_YT') {
-        setYtMusicSearch({ q: res.query, ts: Date.now() });
-      }
       speakJarvis(res.speech);
+      setActiveView('music');
       return;
     }
 
-    // 4. Memory Recall
     if (res.action === 'MEMORY_RECALL') {
       speakJarvis(res.speech);
-      setActiveModal('memory');
+      setActiveView('memory');
       return;
     }
 
-    // 5. Automation Sequence (e.g. GitHub Repo / VS Code via Brave/Browser)
     if (res.action === 'RUN_AUTOMATION') {
-      speakJarvis(res.speech);
-      setActiveModal('automation');
-
-      // Check if Electron native automation is available
-      if (window.electronAPI && window.electronAPI.runAutomation) {
-        window.electronAPI.runAutomation(res.automationType, res.params);
-      }
-
-      await commandExecutor.runAutomationSequence(
-        res.automationType,
-        res.params,
-        (step) => setAutomationState(step)
-      );
+      await runAutomation(res.automationType, res.params, res.speech);
       return;
     }
 
-    // 6. Tactical Actions
-    if (['SCAN_ALL', 'DIVERT_POWER', 'SENTINEL_PROTOCOL'].includes(res.action)) {
-      speakJarvis(res.speech);
-      return;
-    }
-
-    // 6.5 Painéis internos (agenda, memória, configurações, mídia)
     if (res.action === 'OPEN_MODAL') {
       speakJarvis(res.speech);
-      setActiveModal(res.modal);
+      setActiveView(res.modal);
       return;
     }
+
     if (res.action === 'CLOSE_MODAL') {
       speakJarvis(res.speech);
-      setActiveModal(null);
+      goHome();
       return;
     }
 
-    // 6.6 Controle de aplicativos, documentos e projetos do PC
-    if (res.action === 'OPEN_RESOURCE' || res.action === 'CLOSE_RESOURCE') {
-      await handlePcControl(res);
+    if (res.action === 'AUTOSTART_TOGGLE') {
+      if (window.electronAPI?.setAutostart) {
+        await window.electronAPI.setAutostart(res.enable);
+      }
       return;
     }
 
-    // 7. Agenda
+    if (res.action === 'MUSIC_SEARCH_YT') {
+      setYtSearch(res.query || '');
+      setActiveView('music');
+      speakJarvis(res.speech);
+      return;
+    }
+
+    if (res.action === 'OPEN_RESOURCE') {
+      setLastDirective(`Localizando ${res.query}...`);
+      try {
+        if (window.electronAPI?.pcControl) {
+          const r = await window.electronAPI.pcControl(res.mode || 'open', res.query);
+          const msg = r?.description || (r?.opened ? `Aberto: ${res.query}, Senhor.` : `Não encontrei ${res.query}, Senhor.`);
+          setLastDirective(msg);
+          speakJarvis(msg);
+        } else {
+          speakJarvis('Controle do PC disponível apenas no aplicativo desktop, Senhor.');
+        }
+      } catch {
+        speakJarvis('Falha ao acessar o controle do PC, Senhor.');
+      }
+      return;
+    }
+
+    if (['SCAN_ALL', 'DIVERT_POWER', 'SENTINEL_PROTOCOL'].includes(res.action)) {
+      speakJarvis(res.speech);
+      setActiveView('tactical');
+      return;
+    }
+
     if (res.action === 'OPEN_AGENDA') {
       speakJarvis(res.speech);
-      setActiveModal('agenda');
+      setActiveView('agenda');
       return;
     }
 
-    // 8. General AI Query (Nuvem gratuita / Cérebro local)
     if (res.action === 'QUERY_AI') {
+      setActiveView('home');
       setLastDirective('Consultando matriz cognitiva...');
       try {
         const aiAnswer = await aiService.query(commandText);
@@ -261,126 +202,128 @@ export default function App() {
     }
   };
 
-  const speakJarvis = (text) => {
-    speechService.speak(
-      text,
-      () => setIsSpeaking(true),
-      () => setIsSpeaking(false)
-    );
-  };
-
-  // Busca e abre/encerra recursos reais do computador (apps, docs e projetos)
-  const handlePcControl = async (res) => {
-    const isClose = res.action === 'CLOSE_RESOURCE';
-
-    if (!window.electronAPI?.pcControl) {
-      const msg = 'Senhor, o controle de arquivos e aplicativos só está disponível na versão desktop do J.A.R.V.I.S.';
-      setLastDirective(msg);
-      speakJarvis(msg);
-      return;
-    }
-
-    setLastDirective(res.speech);
-    speakJarvis(res.speech);
-
-    try {
-      const action = isClose ? 'close' : (res.mode === 'search' ? 'find' : 'open');
-      const result = await window.electronAPI.pcControl(action, res.query);
-
-      if (!result || result.error) {
-        const msg = `Senhor, o subsistema de busca do computador retornou uma falha (${result?.error || 'desconhecida'}).`;
-        setLastDirective(msg);
-        speakJarvis(msg);
-        return;
-      }
-
-      let message;
-      if (isClose) {
-        message = result.found
-          ? `${result.name} foi encerrado, Senhor.`
-          : `Não encontrei nenhum processo "${res.query}" em execução, Senhor.`;
-      } else if (!result.found) {
-        message = `Senhor, pesquisei por "${res.query}" nos seus aplicativos, documentos e projetos e não localizei nada. Posso verificar outro nome?`;
-      } else if (action === 'find') {
-        message = `Encontrei ${result.name}, Senhor. ${result.description || ''}${result.path ? ` Localização: ${result.path}.` : ''}`;
-      } else if (result.kind === 'running') {
-        message = `${result.name} já estava em execução, Senhor. Coloquei a janela em foco.`;
-      } else if (result.opened) {
-        message = `Abrindo ${result.name} agora, Senhor. ${result.description || ''}`;
-      } else {
-        message = `Encontrei ${result.name}, mas o Windows recusou a abertura, Senhor. Verifiquei em ${result.path || 'caminho desconhecido'}.`;
-      }
-
-      setLastDirective(message);
-      sounds.playSuccess?.();
-      speakJarvis(message);
-    } catch (err) {
-      const msg = `Senhor, falha ao controlar o computador: ${err?.message || 'erro desconhecido'}.`;
-      setLastDirective(msg);
-      speakJarvis(msg);
-    }
-  };
-
   const handleToggleSound = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
     sounds.enabled = next;
-    memoryService.updatePreferences({ soundEnabled: next });
   };
 
-  const handleThemeChange = (t) => {
-    setActiveTheme(t);
-    memoryService.updatePreferences({ theme: t });
-  };
+  const goHome = () => setActiveView('home');
 
-  const [reactorModel, setReactorModel] = useState(() => memoryService.getPreferences().reactorModel || 'mark_3');
-
-  return (
-    <div className="relative min-h-screen bg-[#02060f] text-[#b8e2f2] p-2 sm:p-4 flex flex-col justify-between overflow-x-hidden selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* Background Ambience Overlays */}
-      <div className="fixed inset-0 pointer-events-none cyber-grid z-0 opacity-50" />
-      <div className="fixed inset-0 pointer-events-none bg-gradient-to-t from-[#010611] via-transparent to-[#020b18]/80 z-0" />
-
-      {/* Main Container */}
-      <div className="relative z-10 flex flex-col min-h-[96vh] space-y-3">
-        {/* Top Header Bar */}
-        <Header
-          onOpenModal={(modal) => setActiveModal(modal)}
-          activeTheme={activeTheme}
-          onThemeChange={handleThemeChange}
-          userName={userName}
-          accessLevel={accessLevel}
-          soundEnabled={soundEnabled}
-          onToggleSound={handleToggleSound}
-          onToggleGameMode={() => setGameModeActive(true)}
-        />
-
-        {/* Workspace 3-Column Holographic Grid
-            <768px: coluna única | 768–1279px: 2 colunas (laterais em cima, reator embaixo)
-            ≥1280px: 3 colunas clássicas */}
-        <main className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-3 flex-1">
-          {/* Left Column: Agenda/Calendário + Telemetria Real de PC */}
-          <aside className="md:col-span-1 xl:col-span-3 flex flex-col space-y-3 min-w-0">
-            <ResizableBox id="biometrics"><Biometrics /></ResizableBox>
-            <ResizableBox id="diagnostics"><Diagnostics /></ResizableBox>
-          </aside>
-
-          {/* Center Orbital Core & Voice Visualizer */}
-          <section className="md:col-span-2 xl:col-span-6 md:order-last xl:order-none flex flex-col justify-between hud-panel rounded-lg p-3 sm:p-5 overflow-hidden border-[var(--panel-border)] min-h-[480px] min-w-0">
+  const renderView = () => {
+    switch (activeView) {
+      case 'agenda':
+        return (
+          <div className="h-full min-h-0 flex flex-col">
+            <AgendaModal isOpen embedded onClose={goHome} />
+          </div>
+        );
+      case 'music':
+        return (
+          <div className="flex-1 min-h-0 flex flex-col h-full">
+            <MusicWidgetModal isOpen embedded onClose={goHome} searchQuery={ytSearch} />
+          </div>
+        );
+      case 'memory':
+        return (
+          <div className="h-full min-h-0 flex flex-col">
+            <MemoryModal isOpen embedded onClose={goHome} />
+          </div>
+        );
+      case 'automation':
+        if (automationState) {
+          return (
+            <div className="h-full min-h-0 flex flex-col">
+              <AutomationModal isOpen embedded automationState={automationState} onClose={goHome} />
+            </div>
+          );
+        }
+        return (
+          <div className="hud-panel rounded-xl p-6 max-w-2xl mx-auto font-['JetBrains_Mono']">
             <div className="corner-bracket corner-tl"></div>
             <div className="corner-bracket corner-tr"></div>
             <div className="corner-bracket corner-bl"></div>
             <div className="corner-bracket corner-br"></div>
-
-            <ArcReactor
-              isSpeaking={isSpeaking}
-              isListening={isListening}
-              model={reactorModel}
-              onModelChange={(m) => {
-                setReactorModel(m);
-                memoryService.updatePreferences({ reactorModel: m });
+            <h2 className="font-['Orbitron'] text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider mb-2">
+              PIPELINE DE AUTOMAÇÃO
+            </h2>
+            <p className="text-xs text-cyan-300/80 mb-4">
+              Nenhuma sequência em execução. Inicie por voz ou pelos atalhos abaixo, Senhor.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleExecuteCommand('abrir vscode')}
+                className="px-4 py-2 rounded bg-[var(--primary)] text-black font-bold text-xs hover:bg-white transition-all"
+              >
+                Abrir VS Code
+              </button>
+              <button
+                onClick={() => runAutomation('CREATE_GITHUB_REPO', { repoName: 'temperatura-mobile' }, 'Iniciando sequência de criação de repositório no GitHub, Senhor.')}
+                className="px-4 py-2 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-200 font-bold text-xs hover:border-[var(--primary)] transition-all"
+              >
+                Criar repo GitHub
+              </button>
+            </div>
+          </div>
+        );
+      case 'tactical':
+        return (
+          <div className="max-w-3xl mx-auto">
+            <TacticalMap />
+          </div>
+        );
+      case 'schematics':
+        return (
+          <div className="max-w-3xl mx-auto h-full">
+            <SchematicViewer />
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="h-full min-h-0 flex flex-col">
+            <SettingsModal
+              isOpen
+              embedded
+              onClose={goHome}
+              activeTheme={activeTheme}
+              onThemeChange={(t) => {
+                setActiveTheme(t);
+                memoryService.updatePreferences({ theme: t });
               }}
             />
+          </div>
+        );
+      case 'home':
+      default: {
+        const tasks = memoryService.getTasks();
+        const pending = tasks.filter((t) => !t.completed).length;
+        const projects = memoryService.getProjects();
+        return (
+          <div className="max-w-3xl mx-auto flex flex-col gap-3">
+            {/* Status da diretiva */}
+            <div className="hud-panel rounded-xl p-4 relative overflow-hidden">
+              <div className="corner-bracket corner-tl"></div>
+              <div className="corner-bracket corner-tr"></div>
+              <div className="corner-bracket corner-bl"></div>
+              <div className="corner-bracket corner-br"></div>
+              <div className="text-[10px] font-['JetBrains_Mono'] tracking-widest text-cyan-400/70 mb-1">
+                ÚLTIMA DIRETIVA
+              </div>
+              <p className="font-['JetBrains_Mono'] text-sm text-cyan-100 italic">
+                &ldquo;{lastDirective}&rdquo;
+              </p>
+              <div className="mt-3 flex gap-2 text-[10px] font-['JetBrains_Mono']">
+                <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20 text-cyan-200">
+                  {pending} TAREFAS PENDENTES
+                </span>
+                <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20 text-cyan-200">
+                  {projects.length} PROJETOS
+                </span>
+                <span className={`px-2 py-0.5 rounded border ${isListening ? 'bg-red-500/20 border-red-500/40 text-red-300' : 'bg-white/5 border-emerald-500/30 text-emerald-300'}`}>
+                  {isListening ? 'ESCUTANDO' : isSpeaking ? 'TRANSMITINDO' : 'PRONTO'}
+                </span>
+              </div>
+            </div>
 
             <AudioVisualizer
               isListening={isListening}
@@ -388,55 +331,89 @@ export default function App() {
               onToggleMic={handleToggleMic}
               lastDirective={lastDirective}
               interimTranscript={interimTranscript}
-              micPhase={micPhase}
-              engineInfo={engineInfo}
             />
-          </section>
 
-          {/* Right Schematics & Satellite Column */}
-          <aside className="md:col-span-1 xl:col-span-3 flex flex-col space-y-3 min-w-0">
-            <ResizableBox id="schematic"><SchematicViewer /></ResizableBox>
-            <ResizableBox id="musicbox"><MusicBox search={ytMusicSearch} /></ResizableBox>
-          </aside>
-        </main>
+            {/* Entrada de texto + ações rápidas */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleExecuteCommand(textCommand);
+                setTextCommand('');
+              }}
+              className="hud-panel rounded-xl p-3 flex items-center gap-2"
+            >
+              <span className="text-[var(--primary)] font-['JetBrains_Mono'] text-sm font-bold pl-1">&gt;</span>
+              <input
+                value={textCommand}
+                onChange={(e) => setTextCommand(e.target.value)}
+                placeholder="Digite uma diretiva ou fale com o microfone..."
+                className="flex-1 bg-transparent outline-none text-sm font-['JetBrains_Mono'] text-cyan-100 placeholder:text-cyan-400/40"
+              />
+              <button
+                type="submit"
+                className="px-4 py-1.5 rounded bg-[var(--primary)] text-black text-xs font-bold font-['Orbitron'] hover:bg-white transition-all"
+              >
+                EXECUTAR
+              </button>
+            </form>
 
-        {/* Bottom Tactical Console */}
-        <TerminalInput
-          isListening={isListening}
-          onToggleMic={handleToggleMic}
+            <div className="flex flex-wrap gap-2 font-['JetBrains_Mono'] text-[11px]">
+              {[
+                { label: 'Varredura completa', cmd: 'varredura completa dos sistemas' },
+                { label: 'Divertir energia', cmd: 'redirecionar energia para os propulsores' },
+                { label: 'Protocolo sentinela', cmd: 'ativar protocolo sentinela' },
+                { label: 'Abrir agenda', cmd: 'abrir agenda' },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => handleExecuteCommand(a.cmd)}
+                  className="px-3 py-1.5 rounded bg-white/5 border border-cyan-500/25 text-cyan-200 hover:border-[var(--primary)] hover:text-white transition-all"
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+
+            <TerminalInput isListening={isListening} onToggleMic={handleToggleMic} />
+          </div>
+        );
+      }
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0b0e1a] text-[#b8e2f2] selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* Sidebar estilo Codex — Reator ARC + conteúdos */}
+      <Sidebar
+        activeView={activeView}
+        onSelect={(v) => setActiveView(v)}
+        isSpeaking={isSpeaking}
+        isListening={isListening}
+        reactorModel={reactorModel}
+        onModelChange={(m) => setReactorModel(m)}
+        userName={userName}
+        accessLevel={accessLevel}
+      />
+
+      {/* Área escura — mini header + conteúdo selecionado */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
+        <MiniHeader
+          activeView={activeView}
+          activeTheme={activeTheme}
+          onThemeChange={(t) => {
+            setActiveTheme(t);
+            memoryService.updatePreferences({ theme: t });
+          }}
+          soundEnabled={soundEnabled}
+          onToggleSound={handleToggleSound}
+          onOpenSettings={() => setActiveView('settings')}
+          onToggleGameMode={() => setGameModeActive(true)}
         />
+        <main className="flex-1 flex flex-col min-h-0 p-4">
+          {renderView()}
+        </main>
       </div>
 
-      {/* Holographic Modals */}
-      <AgendaModal
-        isOpen={activeModal === 'agenda'}
-        onClose={() => setActiveModal(null)}
-      />
-
-      <MemoryModal
-        isOpen={activeModal === 'memory'}
-        onClose={() => setActiveModal(null)}
-      />
-
-      <MusicWidgetModal
-        isOpen={activeModal === 'music'}
-        onClose={() => setActiveModal(null)}
-      />
-
-      <SettingsModal
-        isOpen={activeModal === 'settings'}
-        onClose={() => setActiveModal(null)}
-        activeTheme={activeTheme}
-        onThemeChange={handleThemeChange}
-      />
-
-      <AutomationModal
-        isOpen={activeModal === 'automation'}
-        onClose={() => setActiveModal(null)}
-        automationState={automationState}
-      />
-
-      {/* Game Mode / Hibernation Overlay */}
       <GameModeOverlay
         isActive={gameModeActive}
         onWakeUp={() => {
@@ -449,4 +426,3 @@ export default function App() {
     </div>
   );
 }
-
