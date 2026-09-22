@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Plus, CheckCircle2, Trash2, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Plus, CheckCircle2, Trash2, X, ExternalLink } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 
@@ -12,7 +12,19 @@ export default function AgendaPanel() {
   const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newDesc, setNewDesc] = useState('');
 
+  // Abre a MINHA agenda do Google: dispara a guia "Agenda" do emulador
+  // (Google Calendar com login da conta — a sessão é a mesma da guia Música)
+  const openGoogleAgenda = () => {
+    sounds.playClick();
+    window.dispatchEvent(new CustomEvent('jarvis-open-tab', { detail: 'agenda' }));
+    try {
+      document.querySelector('[data-emulator]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch { /* ignora */ }
+  };
+
   // Calcular data ativa baseada no offset de dias (permite navegar para o futuro!)
+  const today = new Date();
+  const days = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
   const activeDate = new Date();
   activeDate.setDate(activeDate.getDate() + selectedDayOffset);
   const activeDateISO = activeDate.toISOString().split('T')[0];
@@ -67,7 +79,7 @@ export default function AgendaPanel() {
   const displayedTasks = tasks.filter(t => !t.date || t.date === activeDateISO);
 
   return (
-    <section className="hud-panel rounded-lg p-3 border-[var(--panel-border)] flex flex-col flex-1 min-h-[320px]">
+    <section className="hud-panel rounded-2xl p-3 border-[var(--panel-border)] flex flex-col flex-1 min-h-[320px]">
       <div className="corner-bracket corner-tl"></div>
       <div className="corner-bracket corner-tr"></div>
       <div className="corner-bracket corner-bl"></div>
@@ -103,6 +115,15 @@ export default function AgendaPanel() {
           </div>
         </div>
       </div>
+
+      {/* Acesso à MINHA agenda do Google (guia "Agenda" no emulador da direita) */}
+      <button
+        onClick={openGoogleAgenda}
+        title="Abre a guia Agenda no emulador com o Google Calendar — faça login uma vez e a sessão fica salva"
+        className="w-full mb-2 px-2 py-1 rounded border border-amber-400/50 bg-amber-500/10 hover:bg-amber-500/25 text-amber-200 text-[10px] font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 transition-all font-['JetBrains_Mono']"
+      >
+        <ExternalLink className="w-3 h-3 text-amber-300" /> Agenda do Google
+      </button>
 
       {/* New Task Inline Creator Form */}
       {isAddingTask && (

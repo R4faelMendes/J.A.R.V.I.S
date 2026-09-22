@@ -7,9 +7,23 @@ export default function AudioVisualizer({
   isSpeaking = false,
   onToggleMic,
   lastDirective = 'Pronto, Senhor. Todos os protocolos de combate e telemetria estão sincronizados.',
-  interimTranscript = ''
+  interimTranscript = '',
+  micPhase = 'idle',
+  engineInfo = null
 }) {
   const [bars, setBars] = useState(Array(24).fill(12));
+
+  const isRecording = micPhase === 'recording';
+  const isTranscribing = micPhase === 'transcribing';
+
+  const engineLabel = (() => {
+    if (!engineInfo) return 'MOTOR DE VOZ: INICIALIZANDO';
+    const stt = engineInfo.stt === 'local'
+      ? `WHISPER LOCAL (${String(engineInfo.model || 'base').toUpperCase()})`
+      : engineInfo.stt === 'webspeech' ? 'WEB SPEECH' : 'INDISPONÍVEL';
+    const tts = engineInfo.tts === 'neural' ? 'VOZ NEURAL ATIVA' : 'VOZ LOCAL';
+    return `${stt} // ${tts}`;
+  })();
 
   // Dynamic bar height animation
   useEffect(() => {
@@ -56,14 +70,18 @@ export default function AudioVisualizer({
           }`}>
             <Radio className="w-3.5 h-3.5 animate-pulse text-[var(--primary)]" />
             {isListening 
-              ? 'CANAL DE ÁUDIO TÁTICO • J.A.R.V.I.S. ESCUTANDO...' 
+              ? isRecording
+                ? 'GRAVANDO COMANDO • FALE NORMALMENTE...'
+                : isTranscribing
+                  ? 'INTERPRETANDO ÁUDIO • J.A.R.V.I.S. PROCESSANDO...'
+                  : 'CANAL DE ÁUDIO TÁTICO • J.A.R.V.I.S. ESCUTANDO...' 
               : isSpeaking 
                 ? 'J.A.R.V.I.S. TRANSMITINDO VOZ...' 
                 : 'CANAL DE ÁUDIO EM ESPERA • MICROFONE PRONTO'}
           </span>
         </div>
-        <span className="text-[11px] font-['JetBrains_Mono'] text-cyan-400/80 hidden sm:inline">
-          48.000 kHz // 24-BIT HI-RES
+        <span className="text-[11px] font-['JetBrains_Mono'] text-cyan-400/80 hidden sm:inline" title="Motor de reconhecimento e síntese de voz">
+          {engineLabel}
         </span>
       </div>
 
@@ -91,6 +109,14 @@ export default function AudioVisualizer({
           {interimTranscript ? (
             <span className="text-amber-300 font-semibold animate-pulse">
               &gt; Ouvindo: "{interimTranscript}..."
+            </span>
+          ) : isRecording ? (
+            <span className="text-red-300 font-semibold animate-pulse">
+              &gt; ▌ Gravando... fale agora
+            </span>
+          ) : isTranscribing ? (
+            <span className="text-amber-300 font-semibold animate-pulse">
+              &gt; Decodificando comando de voz...
             </span>
           ) : (
             <span className="italic">

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { X, Music, Play, Pause, SkipForward, SkipBack, Volume2, Disc, Radio, ExternalLink, Globe } from 'lucide-react';
+import { X, Music, Play, Pause, SkipForward, SkipBack, Volume2, Disc, Radio, Globe } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
+
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
+const CHROME_UA = (typeof window !== 'undefined' && window.electronAPI?.chromeUserAgent) || '';
 
 export default function MusicWidgetModal({ isOpen, onClose }) {
   const [isPlayingTheme, setIsPlayingTheme] = useState(false);
@@ -75,6 +78,8 @@ export default function MusicWidgetModal({ isOpen, onClose }) {
               </button>
             </div>
 
+            {/* Player embutido: música dentro do app, sem janela extra */}
+
             <button
               onClick={() => {
                 sounds.playClick();
@@ -120,34 +125,34 @@ export default function MusicWidgetModal({ isOpen, onClose }) {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => {
-                      sounds.playSuccess();
-                      if (window.electronAPI?.openYouTubeWindow) {
-                        window.electronAPI.openYouTubeWindow();
-                      }
-                    }}
-                    className="px-3 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold transition-all flex items-center gap-1.5 shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                    title="Abrir Janela Direta do YouTube Music"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" /> Abrir Janela do YouTube Music
-                  </button>
                   <div className="text-[11px] text-cyan-400/80 flex items-center gap-1">
                     <Globe className="w-3.5 h-3.5 text-[var(--primary)]" />
-                    <span>music.youtube.com</span>
+                    <span>music.youtube.com — embutido, sem janela extra</span>
                   </div>
                 </div>
               </div>
 
               {/* YouTube Music Embedded Interactive Window */}
               <div className="flex-1 relative w-full h-full bg-slate-950 flex flex-col items-center justify-center">
-                <iframe
-                  src="https://music.youtube.com"
-                  title="YouTube Music Interactive Player"
-                  className="w-full h-full border-0 absolute inset-0 z-10"
-                  allow="autoplay; encrypted-media; clipboard-write; microphone"
-                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
-                />
+                {IS_ELECTRON ? (
+                  // <webview> permite o login da conta Google/YouTube (iframe dava erro 401)
+                  <webview
+                    src="https://music.youtube.com"
+                    useragent={CHROME_UA}
+                    allowpopups="true"
+                    className="border-0 absolute inset-0 z-10"
+                    style={{ width: '100%', height: '100%', display: 'block' }}
+                    title="YouTube Music Interactive Player"
+                  />
+                ) : (
+                  <iframe
+                    src="https://music.youtube.com"
+                    title="YouTube Music Interactive Player"
+                    className="w-full h-full border-0 absolute inset-0 z-10"
+                    allow="autoplay; encrypted-media; clipboard-write; microphone"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-modals"
+                  />
+                )}
               </div>
             </div>
           ) : (

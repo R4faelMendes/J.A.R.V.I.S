@@ -23,7 +23,7 @@ export default function SchematicViewer() {
   };
 
   return (
-    <section className="hud-panel rounded-lg p-3 sm:p-4 flex-1 flex flex-col border-[var(--panel-border)] group">
+    <section className="hud-panel rounded-2xl p-3 sm:p-4 flex-1 flex flex-col border-[var(--panel-border)] group">
       <div className="corner-bracket corner-tl"></div>
       <div className="corner-bracket corner-tr"></div>
       <div className="corner-bracket corner-bl"></div>

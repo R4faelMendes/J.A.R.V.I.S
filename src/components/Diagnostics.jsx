@@ -48,7 +48,7 @@ export default function Diagnostics() {
   return (
     <section 
       onClick={() => sounds.playClick()}
-      className="hud-panel rounded-lg p-3 sm:p-4 flex-1 flex flex-col justify-between border-[var(--panel-border)] group"
+      className="hud-panel rounded-2xl p-3 sm:p-4 flex-1 flex flex-col justify-between border-[var(--panel-border)] group"
     >
       <div className="corner-bracket corner-tl"></div>
       <div className="corner-bracket corner-tr"></div>

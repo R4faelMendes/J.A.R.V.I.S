@@ -7,7 +7,46 @@ const STORAGE_KEYS = {
   PREFERENCES: 'jarvis_preferences',
   AGENDA_TASKS: 'jarvis_agenda_tasks',
   AGENDA_ALARMS: 'jarvis_agenda_alarms',
+  BOX_SIZES: 'jarvis_box_sizes'
 };
+
+// Chaves gravadas também em arquivo no disco (memória permanente do J.A.R.V.I.S)
+const PERSISTENT_KEYS = [
+  STORAGE_KEYS.LONG_TERM_PROJECTS,
+  STORAGE_KEYS.COMMAND_HISTORY,
+  STORAGE_KEYS.PREFERENCES,
+  STORAGE_KEYS.AGENDA_TASKS,
+  STORAGE_KEYS.BOX_SIZES
+];
+
+const fileAPI = typeof window !== 'undefined' ? window.electronAPI : null;
+
+function buildDiskBundle() {
+  const bundle = {};
+  for (const key of PERSISTENT_KEYS) {
+    try {
+      const value = localStorage.getItem(key);
+      if (value != null) bundle[key] = value;
+    } catch { /* ignora */ }
+  }
+  return bundle;
+}
+
+let persistTimer = null;
+function persistToDisk(immediate = false) {
+  if (!fileAPI || (!fileAPI.memorySave && !fileAPI.memorySaveSync)) return;
+  if (persistTimer) clearTimeout(persistTimer);
+  const write = () => {
+    persistTimer = null;
+    try {
+      const bundle = buildDiskBundle();
+      if (immediate && fileAPI.memorySaveSync) fileAPI.memorySaveSync(bundle);
+      else if (fileAPI.memorySave) fileAPI.memorySave(bundle);
+    } catch { /* ignora */ }
+  };
+  if (immediate) write();
+  else persistTimer = setTimeout(write, 300);
+}
 
 const DEFAULT_PROJECTS = [
   {
@@ -29,7 +68,7 @@ const DEFAULT_PROJECTS = [
     id: 'proj_jarvis_02',
     name: 'jarvis-tactical-os',
     description: 'Painel holográfico tático com controle por voz, IA integrada e automação Windows.',
-    techStack: ['React', 'JSX', 'Tailwind CSS', 'Web Speech API', 'Web Audio API', 'Gemini AI'],
+    techStack: ['React', 'JSX', 'Tailwind CSS', 'Web Speech API', 'Web Audio API', 'IA Nuvem Gratuita'],
     importantFiles: ['src/App.jsx', 'src/services/speechService.js', 'src/services/aiService.js'],
     lastErrors: [],
     lastModified: '2026-09-17 14:00',
@@ -48,6 +87,26 @@ class MemoryMatrix {
   initStorage() {
     if (typeof window === 'undefined') return;
 
+    // 1) Memória permanente: arquivo no disco (perfil do usuário) vence o localStorage
+    try {
+      const disk = fileAPI && fileAPI.memoryLoadSync ? fileAPI.memoryLoadSync() : null;
+      if (disk && typeof disk === 'object') {
+        for (const key of PERSISTENT_KEYS) {
+          if (typeof disk[key] === 'string' && disk[key]) localStorage.setItem(key, disk[key]);
+        }
+      }
+    } catch { /* ignora */ }
+
+    // Grava imediatamente ao fechar/recarregar/minimizar para não perder nada
+    try {
+      window.addEventListener('pagehide', () => persistToDisk(true));
+      window.addEventListener('beforeunload', () => persistToDisk(true));
+      window.addEventListener('unload', () => persistToDisk(true));
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') persistToDisk(true);
+      });
+    } catch { /* ignora */ }
+
     if (!localStorage.getItem(STORAGE_KEYS.LONG_TERM_PROJECTS)) {
       localStorage.setItem(STORAGE_KEYS.LONG_TERM_PROJECTS, JSON.stringify(DEFAULT_PROJECTS));
     }
@@ -56,22 +115,77 @@ class MemoryMatrix {
       const defaultPrefs = {
         userName: 'Tony Stark',
         accessLevel: 'NÍVEL ALPHA',
-        voiceSpeed: 1.05,
+        voiceSpeed: 1.05,          // tom J.A.R.V.I.S. (leitura um pouco mais ágil)
+        voicePitch: 0.85,          // voz mais profunda, estilo Jarvis do filme
+        voiceEngine: 'neural', // neural (Microsoft Edge, fluída) | local (vozes do Windows)
+        voiceId: 'pt-BR-AntonioNeural',
+        jarvisVoicePreset: 'classico',
+        localVoiceName: '',
+        sttModel: 'base', // tiny | base | small (Whisper local offline)
+        micDeviceId: '', // '' = microfone padrão do Windows
         theme: 'cyan', // cyan, amber, crimson, emerald, purple
         soundEnabled: true,
-        aiProvider: 'gemini', // gemini, openai, local
-        geminiApiKey: '',
-        openAiApiKey: '',
-        autoListen: false,
+        aiProvider: 'free', // free (nuvem gratuita, sem chave) | local (offline)
+        autoListen: true,
         gameModeActive: false,
         standbyMode: false
       };
       localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(defaultPrefs));
+    } else {
+      // Migração: preferências gravadas antes da reformulação do motor de voz
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.PREFERENCES) || '{}');
+        let changed = false;
+        if (parsed && typeof parsed === 'object') {
+          if (!('voiceEngine' in parsed)) {
+            parsed.voiceEngine = 'neural';
+            parsed.voiceId = 'pt-BR-AntonioNeural';
+            parsed.localVoiceName = '';
+            parsed.sttModel = 'base';
+            parsed.autoListen = true; // nunca havia opção de ativar antes
+            changed = true;
+          }
+
+          // IA: opções com chave (token) foram removidas — tudo migra para a nuvem gratuita
+          if (!parsed.aiProvider || parsed.aiProvider === 'gemini' || parsed.aiProvider === 'openai') {
+            parsed.aiProvider = 'free';
+            changed = true;
+          }
+          if ('geminiApiKey' in parsed || 'openAiApiKey' in parsed) {
+            delete parsed.geminiApiKey;
+            delete parsed.openAiApiKey;
+            changed = true;
+          }
+
+          // Voz: aplica o preset J.A.R.V.I.S. (voz mais profunda) se ainda estiver no padrão antigo
+          if (!('jarvisVoicePreset' in parsed)) {
+            parsed.jarvisVoicePreset = 'classico';
+            if (parsed.voicePitch == null || parsed.voicePitch === 1.0) parsed.voicePitch = 0.85;
+            if (parsed.voiceSpeed == null) parsed.voiceSpeed = 1.05;
+            changed = true;
+          }
+
+          // Player do YouTube Music: o padrão antigo era a janela externa do Brave
+          // ('brave'); a partir desta versão o padrão é o Brave EMULADO dentro do
+          // box. Limpa a escolha legada uma única vez — trocas feitas depois
+          // (inclusive voltar para BRAVE) continuam persistindo normalmente.
+          if (parsed.ytPlayerModeMigrated == null) {
+            if (parsed.ytPlayerMode === 'brave') delete parsed.ytPlayerMode;
+            parsed.ytPlayerModeMigrated = true;
+            changed = true;
+          }
+
+          if (changed) localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(parsed));
+        }
+      } catch { /* ignora */ }
     }
 
     if (!localStorage.getItem(STORAGE_KEYS.COMMAND_HISTORY)) {
       localStorage.setItem(STORAGE_KEYS.COMMAND_HISTORY, JSON.stringify([]));
     }
+
+    // 2) Sincroniza a memória em disco com o estado atual (primeira execução / migrações)
+    persistToDisk();
   }
 
   // ---- Long Term Projects Memory ----
@@ -104,6 +218,7 @@ class MemoryMatrix {
       });
     }
     localStorage.setItem(STORAGE_KEYS.LONG_TERM_PROJECTS, JSON.stringify(projects));
+    persistToDisk();
   }
 
   findProjectByName(query) {
@@ -135,6 +250,7 @@ class MemoryMatrix {
       history.unshift({ command, timestamp: new Date().toLocaleString('pt-BR') });
       if (history.length > 100) history.pop();
       localStorage.setItem(STORAGE_KEYS.COMMAND_HISTORY, JSON.stringify(history));
+      persistToDisk();
     } catch {}
   }
 
@@ -161,7 +277,30 @@ class MemoryMatrix {
     const current = this.getPreferences();
     const updated = { ...current, ...patch };
     localStorage.setItem(STORAGE_KEYS.PREFERENCES, JSON.stringify(updated));
+    // Gravação SÍNRONA no disco: a configuração vale imediatamente e não se
+    // perde nem se o app for fechado no mesmo instante
+    persistToDisk(true);
     return updated;
+  }
+
+  // ---- Tamanho dos boxes (arraste com o mouse, estilo janelas do Windows) ----
+  getBoxSizes() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.BOX_SIZES);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  setBoxSize(id, size) {
+    try {
+      const sizes = this.getBoxSizes();
+      if (size && size.width > 0 && size.height > 0) sizes[id] = size;
+      else delete sizes[id];
+      localStorage.setItem(STORAGE_KEYS.BOX_SIZES, JSON.stringify(sizes));
+      persistToDisk();
+    } catch { /* ignora */ }
   }
 
   // ---- Agenda Tasks & Alarms ----
@@ -211,6 +350,7 @@ class MemoryMatrix {
 
   saveTasks(tasks) {
     localStorage.setItem(STORAGE_KEYS.AGENDA_TASKS, JSON.stringify(tasks));
+    persistToDisk();
   }
 }
 

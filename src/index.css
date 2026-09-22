@@ -181,3 +181,181 @@ body {
   animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
+/* ------------------------------------------------------------------
+   Boxes redimensionáveis com o mouse (estilo janelas do Windows)
+   Arraste a borda direita, a inferior ou o canto inferior direito.
+   Duplo clique no canto restaura o tamanho automático.
+------------------------------------------------------------------- */
+.resizable-box {
+  position: relative;
+  min-width: 0;
+}
+
+.resizable-box.has-explicit-size {
+  flex-shrink: 0;
+}
+
+.resizable-box > .resizable-content {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.resizable-box.has-explicit-size > .resizable-content > * {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+}
+
+.resizable-box.resizing {
+  user-select: none;
+}
+
+.resizable-box.resizing > .resizable-content {
+  pointer-events: none;
+}
+
+.resizable-handle {
+  position: absolute;
+  z-index: 30;
+  transition: background 0.15s ease;
+}
+
+/* Borda direita (largura) */
+.resizable-handle-e {
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: ew-resize;
+}
+.resizable-handle-e:hover {
+  background: linear-gradient(to right, transparent, var(--primary-glow));
+}
+
+/* Borda inferior (altura) */
+.resizable-handle-s {
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 7px;
+  cursor: ns-resize;
+}
+.resizable-handle-s:hover {
+  background: linear-gradient(to bottom, transparent, var(--primary-glow));
+}
+
+/* Canto inferior direito (largura + altura) */
+.resizable-handle-se {
+  right: -2px;
+  bottom: -2px;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+}
+.resizable-handle-se:hover {
+  background: var(--primary-dim);
+  border-right: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Pegador visual sempre visível no canto */
+.resizable-handle-se::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Borda esquerda (largura) */
+.resizable-handle-w {
+  top: 0;
+  left: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: ew-resize;
+}
+.resizable-handle-w:hover {
+  background: linear-gradient(to left, transparent, var(--primary-glow));
+}
+
+/* Borda superior (altura) */
+.resizable-handle-n {
+  left: 0;
+  top: -3px;
+  width: 100%;
+  height: 7px;
+  cursor: ns-resize;
+}
+.resizable-handle-n:hover {
+  background: linear-gradient(to top, transparent, var(--primary-glow));
+}
+
+/* Cantos superiores */
+.resizable-handle-ne {
+  right: -2px;
+  top: -2px;
+  width: 16px;
+  height: 16px;
+  cursor: nesw-resize;
+}
+.resizable-handle-nw {
+  left: -2px;
+  top: -2px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+.resizable-handle-ne:hover,
+.resizable-handle-nw:hover {
+  background: var(--primary-dim);
+  border-top: 2px solid var(--primary);
+}
+.resizable-handle-ne:hover { border-right: 2px solid var(--primary); }
+.resizable-handle-nw:hover { border-left: 2px solid var(--primary); }
+
+/* Canto inferior esquerdo */
+.resizable-handle-sw {
+  left: -2px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  cursor: nesw-resize;
+}
+.resizable-handle-sw:hover {
+  background: var(--primary-dim);
+  border-left: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+}
+
+/* Cantos acompanham painéis mais arredondados (rounded-2xl) */
+.rounded-2xl .corner-tl { top: 5px; left: 5px; }
+.rounded-2xl .corner-tr { top: 5px; right: 5px; }
+.rounded-2xl .corner-bl { bottom: 5px; left: 5px; }
+.rounded-2xl .corner-br { bottom: 5px; right: 5px; }
+
+/* Toque/mouse: a alça responde sem rolar a página durante o arrasto */
+.resizable-handle {
+  touch-action: none;
+}
+
+/* Alça acessível por teclado (Tab) */
+.resizable-handle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+/* Durante o arrasto o cursor é uniforme e nada é selecionado */
+body.box-resizing {
+  user-select: none;
+}
+body.box-resizing * {
+  cursor: inherit !important;
+}
+

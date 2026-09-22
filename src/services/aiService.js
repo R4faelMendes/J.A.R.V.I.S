@@ -1,5 +1,10 @@
-// J.A.R.V.I.S. Cognitive Core & Cloud AI Integration (Gemini, OpenAI & Local Brain)
+// J.A.R.V.I.S. Cognitive Core & Cloud AI Integration
+// Provedores, nesta ordem de prioridade:
+//   1. Nuvem gratuita     — SEM chave de API (pollinations.ai) — padrão
+//   2. Cérebro local      — offline, respostas programadas
 import { memoryService } from './memoryService';
+
+const FREE_CLOUD_TIMEOUT_MS = 15000;
 
 class AIService {
   constructor() {
@@ -13,75 +18,52 @@ Responda sempre em português do Brasil de forma concisa e direta.`;
     const prefs = memoryService.getPreferences();
     memoryService.addShortTermLog('user', prompt);
 
-    // 1. Try Gemini API if key is provided
-    if (prefs.aiProvider === 'gemini' && prefs.geminiApiKey) {
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${prefs.geminiApiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [{ text: `${this.systemPrompt}\n\nPergunta do Senhor: ${prompt}` }]
-              }
-            ],
-            generationConfig: {
-              maxOutputTokens: 250,
-              temperature: 0.7
-            }
-          })
-        });
+    const providers = [];
 
-        if (response.ok) {
-          const data = await response.json();
-          const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (answer) {
-            memoryService.addShortTermLog('jarvis', answer);
-            return answer.trim();
-          }
+    // Nuvem gratuita sem chave (padrão) — opções com token foram removidas
+    if (prefs.aiProvider !== 'local') {
+      providers.push({ nome: 'nuvem gratuita', run: () => this.queryFreeCloud(prompt) });
+    }
+
+    for (const provider of providers) {
+      try {
+        const answer = await provider.run();
+        if (answer) {
+          const clean = String(answer).trim();
+          memoryService.addShortTermLog('jarvis', clean);
+          return clean;
         }
       } catch (err) {
-        console.warn('Gemini API call failed, falling back to local neural brain:', err);
+        console.warn(`[J.A.R.V.I.S.] ${provider.nome} falhou, tentando o próximo:`, err?.message || err);
       }
     }
 
-    // 2. Try OpenAI API if key is provided
-    if (prefs.aiProvider === 'openai' && prefs.openAiApiKey) {
-      try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${prefs.openAiApiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              { role: 'system', content: this.systemPrompt },
-              { role: 'user', content: prompt }
-            ],
-            max_tokens: 250
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const answer = data.choices?.[0]?.message?.content;
-          if (answer) {
-            memoryService.addShortTermLog('jarvis', answer);
-            return answer.trim();
-          }
-        }
-      } catch (err) {
-        console.warn('OpenAI API call failed, falling back to local neural brain:', err);
-      }
-    }
-
-    // 3. Smart Local Neural Engine
+    // Cérebro local (offline)
     const localAnswer = this.generateLocalResponse(prompt);
     memoryService.addShortTermLog('jarvis', localAnswer);
     return localAnswer;
+  }
+
+  // -------------------------------------------------------------------------
+  // Nuvem gratuita — não exige chave nem cadastro
+  // -------------------------------------------------------------------------
+  async queryFreeCloud(prompt) {
+    const input = `${this.systemPrompt}\n\nPergunta do Senhor: ${prompt}\nResposta:`;
+    const url = `https://text.pollinations.ai/${encodeURIComponent(input)}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FREE_CLOUD_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'text/plain' }
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const text = (await response.text()).trim();
+      if (!text || text.replace(/\s/g, '').length < 2) throw new Error('resposta vazia');
+      return text;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   generateLocalResponse(prompt) {
@@ -128,9 +110,9 @@ Responda sempre em português do Brasil de forma concisa e direta.`;
         const result = Function(`'use strict'; return (${sanitized})`)();
         return `O cálculo de ${sanitized} resulta em ${result}, Senhor.`;
       }
-    } catch {}
+    } catch { /* ignora */ }
 
-    return `Entendido, Senhor. Processei a instrução "${prompt}". Se desejar conectar a chave de API do Google Gemini ou OpenAI para raciocínio ilimitado de IA, acesse o painel de configurações no canto superior.`;
+    return `Entendido, Senhor. Processei a instrução "${prompt}" nos módulos locais. A nuvem gratuita de IA está indisponível no momento — posso tentar novamente quando a conexão retornar.`;
   }
 }
 
