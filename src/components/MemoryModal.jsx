@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { X, Database, Search, Code, FileText, AlertTriangle, Terminal, Plus, Sparkles, GitBranch } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
+import { SynapseGraph, SynAccent } from './synapse';
 
 export default function MemoryModal({ isOpen, onClose, embedded = false }) {
-  const [projects, setProjects] = useState(() => memoryService.getProjects());
+  const [projects] = useState(() => memoryService.getProjects());
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('projects'); // 'projects', 'commands'
+  const [activeTab, setActiveTab] = useState('projects'); // 'projects', 'graph', 'commands'
   const [commandHistory] = useState(() => memoryService.getCommandHistory());
   const [selectedProject, setSelectedProject] = useState(projects[0] || null);
+  const [entities, setEntities] = useState(() => memoryService.getEntities());
+  const [newLabel, setNewLabel] = useState('');
+  const [newType, setNewType] = useState('person');
+  const [graphTick, setGraphTick] = useState(0);
+  const graph = memoryService.getMemoryGraph();
+  void graphTick;
 
   if (!isOpen && !embedded) return null;
 
@@ -20,11 +27,11 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
 
   return (
     <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"}>
-      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden"}>
-        <div className="corner-bracket corner-tl"></div>
-        <div className="corner-bracket corner-tr"></div>
-        <div className="corner-bracket corner-bl"></div>
-        <div className="corner-bracket corner-br"></div>
+      <div className={embedded ? "syn-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "syn-panel rounded-xl w-full max-w-5xl max-h-[90vh] flex flex-col border-[var(--primary)] shadow-[0_0_40px_var(--primary-glow)] overflow-hidden"}>
+
+
+
+
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/20 bg-slate-950/60">
@@ -33,32 +40,37 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
               <Database className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-['Orbitron'] text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
-                MATRIZ DE MEMÓRIA DE LONGO PRAZO
+              <h2 className="font-syn-title text-lg font-bold" style={{ color: '#eaf8f4' }}>
+                Matriz de memória
               </h2>
-              <p className="text-xs text-cyan-400/80 font-['JetBrains_Mono']">
-                BANCO DE DADOS PERSISTENTE // PROJETOS, HISTÓRICO & ERROS REGISTRADOS
+              <p className="font-syn-body text-xs font-light" style={{ color: '#9aa6c9' }}>
+                Projetos, constelação de ideias e histórico de comandos
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
-            <div className="flex bg-cyan-950/50 border border-cyan-500/30 rounded p-0.5 text-xs font-['JetBrains_Mono']">
+            <div className="flex syn-pill p-1 gap-1 text-xs font-syn-body" style={{ background: 'rgba(10,6,32,0.6)', border: '1px solid rgba(45,253,212,0.2)' }}>
               <button
                 onClick={() => { sounds.playClick(); setActiveTab('projects'); }}
-                className={`px-3 py-1 rounded transition-all ${
-                  activeTab === 'projects' ? 'bg-[var(--primary)] text-black font-bold' : 'text-cyan-300 hover:text-white'
-                }`}
+                className="syn-pill px-3 py-1 transition-all"
+                style={activeTab === 'projects' ? { background: 'rgba(45,253,212,0.2)', color: '#eaf8f4' } : { color: '#9aa6c9' }}
               >
-                Projetos Memorizados
+                Projetos
+              </button>
+              <button
+                onClick={() => { sounds.playClick(); setActiveTab('graph'); }}
+                className="syn-pill px-3 py-1 transition-all"
+                style={activeTab === 'graph' ? { background: 'rgba(45,253,212,0.2)', color: '#eaf8f4' } : { color: '#9aa6c9' }}
+              >
+                Constelação
               </button>
               <button
                 onClick={() => { sounds.playClick(); setActiveTab('commands'); }}
-                className={`px-3 py-1 rounded transition-all ${
-                  activeTab === 'commands' ? 'bg-[var(--primary)] text-black font-bold' : 'text-cyan-300 hover:text-white'
-                }`}
+                className="syn-pill px-3 py-1 transition-all"
+                style={activeTab === 'commands' ? { background: 'rgba(45,253,212,0.2)', color: '#eaf8f4' } : { color: '#9aa6c9' }}
               >
-                Histórico de Comandos
+                Comandos
               </button>
             </div>
 
@@ -73,7 +85,58 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
 
         {/* Body */}
         <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-          {activeTab === 'projects' ? (
+          {activeTab === 'graph' ? (
+            <div className="flex-1 p-6 overflow-y-auto space-y-4 font-syn-body relative">
+              <SynAccent />
+              <div className="font-syn-body text-xs font-light" style={{ color: '#9aa6c9' }}>
+                Projetos, pessoas e decisões como uma constelação viva — cada fio é uma relação.
+              </div>
+              <div className="p-4" style={{ borderRadius: '22px 26px 20px 28px', background: 'rgba(5,3,17,0.55)', border: '1px solid rgba(138,92,255,0.25)' }}>
+                <SynapseGraph nodes={graph.nodes} links={graph.links} width={graph.W} height={graph.H} />
+              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newLabel.trim()) return;
+                  sounds.playSuccess();
+                  memoryService.saveEntity({ label: newLabel.trim(), type: newType, detail: '' });
+                  setEntities(memoryService.getEntities());
+                  setGraphTick((t) => t + 1);
+                  setNewLabel('');
+                }}
+                className="flex flex-wrap gap-2 items-center"
+              >
+                <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Nova entidade (pessoa, decisão, nota)…"
+                  className="syn-input flex-1 min-w-[180px] px-3 py-2 text-xs font-light" style={{ color: '#eaf8f4' }} />
+                <div className="flex gap-1.5">
+                  {['person', 'decision', 'project', 'note'].map((t) => (
+                    <button key={t} type="button" onClick={() => setNewType(t)} className="syn-pill px-2.5 py-1.5 text-[11px]"
+                      style={newType === t ? { background: 'rgba(45,253,212,0.18)', color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.45)' } : { color: '#9aa6c9', border: '1px solid rgba(154,166,201,0.25)' }}>
+                      {t === 'person' ? 'pessoa' : t === 'decision' ? 'decisão' : t === 'project' ? 'projeto' : 'nota'}
+                    </button>
+                  ))}
+                </div>
+                <button type="submit" className="syn-pill font-syn-title px-4 py-1.5 text-xs font-medium"
+                  style={{ background: 'rgba(45,253,212,0.18)', color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.45)' }}>
+                  Tecer fio
+                </button>
+              </form>
+              <div className="space-y-1.5">
+                {entities.map((e) => (
+                  <div key={e.id} className="flex items-center justify-between gap-2 p-2"
+                    style={{ borderRadius: '16px 14px 18px 12px', background: 'rgba(10,6,32,0.5)', border: '1px solid rgba(45,253,212,0.15)' }}>
+                    <span className="text-xs font-light truncate" style={{ color: '#eaf8f4' }}>
+                      {e.label} <span style={{ color: '#9aa6c9' }}>· {e.type}</span>
+                    </span>
+                    <button onClick={() => { sounds.playAlert(); memoryService.deleteEntity(e.id); setEntities(memoryService.getEntities()); setGraphTick((t) => t + 1); }}
+                      className="syn-pill px-2.5 py-1 text-[11px]" style={{ color: '#ff5c7a', border: '1px solid rgba(255,92,122,0.3)' }}>
+                      desfazer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : activeTab === 'projects' ? (
             <>
               {/* Left Projects List */}
               <div className="w-full md:w-1/3 border-r border-cyan-500/20 p-4 flex flex-col space-y-3 bg-black/20">
@@ -85,7 +148,7 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Filtrar por nome ou stack..."
-                    className="w-full bg-slate-950/80 border border-cyan-500/40 rounded pl-9 pr-3 py-1.5 text-xs font-['JetBrains_Mono'] text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
+                    className="w-full bg-slate-950/80 border border-cyan-500/40 rounded pl-9 pr-3 py-1.5 text-xs font-syn-body text-cyan-200 focus:outline-none focus:border-[var(--primary)]"
                   />
                 </div>
 
@@ -101,14 +164,14 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-['Orbitron'] text-xs font-bold text-cyan-200 glow-cyan truncate">
+                        <span className="font-syn-title text-xs font-bold text-cyan-200 glow-cyan truncate">
                           {proj.name}
                         </span>
                         <span className="text-[10px] text-emerald-400 font-mono font-semibold">
                           {proj.status}
                         </span>
                       </div>
-                      <p className="text-[11px] text-cyan-400/70 font-['JetBrains_Mono'] truncate mt-1">
+                      <p className="text-[11px] text-cyan-400/70 font-syn-body truncate mt-1">
                         {proj.description}
                       </p>
                       <div className="flex items-center gap-1 mt-2 flex-wrap">
@@ -124,12 +187,12 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
               </div>
 
               {/* Right Project Details */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-5 bg-slate-950/40 font-['JetBrains_Mono']">
+              <div className="flex-1 p-6 overflow-y-auto space-y-5 bg-slate-950/40 font-syn-body">
                 {selectedProject ? (
                   <>
                     <div className="border-b border-cyan-500/20 pb-3 flex items-start justify-between">
                       <div>
-                        <h3 className="font-['Orbitron'] text-xl font-bold text-[var(--primary)] glow-cyan flex items-center gap-2">
+                        <h3 className="font-syn-title text-xl font-bold text-[var(--primary)] glow-cyan flex items-center gap-2">
                           <Code className="w-5 h-5 text-[var(--primary)]" />
                           {selectedProject.name}
                         </h3>
@@ -222,7 +285,7 @@ export default function MemoryModal({ isOpen, onClose, embedded = false }) {
             </>
           ) : (
             /* Command History List */
-            <div className="flex-1 p-6 overflow-y-auto space-y-2 font-['JetBrains_Mono']">
+            <div className="flex-1 p-6 overflow-y-auto space-y-2 font-syn-body">
               <div className="text-xs uppercase text-cyan-400 font-bold border-b border-cyan-500/20 pb-2 mb-3">
                 REGISTRO DE INSTRUÇÕES E DIRETIVAS RECENTES ({commandHistory.length})
               </div>

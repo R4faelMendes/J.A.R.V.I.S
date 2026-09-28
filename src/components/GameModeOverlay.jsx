@@ -1,70 +1,41 @@
 import React from 'react';
-import { Gamepad2, Power, Zap, Mic, ShieldAlert } from 'lucide-react';
+import { Mic } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 
 export default function GameModeOverlay({ isActive, onWakeUp, isListening, onToggleMic }) {
   if (!isActive) return null;
-
   return (
-    <div className="fixed inset-0 z-40 bg-black/95 flex flex-col items-center justify-between p-6 select-none animate-in fade-in duration-300">
-      {/* Top minimal status */}
-      <div className="w-full flex items-center justify-between border-b border-amber-500/20 pb-3 font-['JetBrains_Mono'] text-xs">
-        <div className="flex items-center space-x-2 text-amber-400 font-bold">
-          <Gamepad2 className="w-5 h-5 animate-pulse" />
-          <span className="font-['Orbitron'] text-sm tracking-wider">MODO HIBERNAÇÃO // OTIMIZAÇÃO PARA JOGOS ATIVA</span>
-        </div>
-        <div className="text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-950/40 px-3 py-1 rounded border border-emerald-500/30">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          2.8 GB RAM &amp; 95% GPU LIBERADOS
-        </div>
+    <div className="fixed inset-0 z-40 flex flex-col items-center justify-between p-6 select-none" style={{ background: 'rgba(5,3,17,0.96)' }}>
+      <div className="w-full flex items-center justify-between pb-3 font-syn-body text-xs" style={{ borderBottom: '1px solid rgba(138,92,255,0.25)' }}>
+        <span className="font-syn-title text-sm font-medium tracking-wide" style={{ color: '#9aa6c9' }}>Hibernação · organismo em repouso</span>
+        <span className="syn-pill font-syn-body text-[11px] px-3 py-1" style={{ border: '1px solid rgba(45,253,212,0.3)', color: '#2dfdd4', background: 'rgba(45,253,212,0.07)' }}>
+          escuta passiva · recursos liberados
+        </span>
       </div>
 
-      {/* Center Minimalist Pulsing Ring */}
-      <div className="flex flex-col items-center space-y-6 text-center">
-        <div 
-          onClick={() => { sounds.playSuccess(); onWakeUp(); }}
-          className="relative w-48 h-48 rounded-full border-2 border-dashed border-amber-400/40 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform group"
-          title="Clique para acordar o J.A.R.V.I.S."
-        >
-          <div className="absolute inset-4 rounded-full border border-amber-400/60 animate-spin-slow"></div>
-          <div className="w-24 h-24 rounded-full bg-amber-950/40 border-2 border-amber-400 flex flex-col items-center justify-center text-amber-300 shadow-[0_0_25px_rgba(255,176,32,0.4)] group-hover:bg-amber-500 group-hover:text-black transition-colors">
-            <Power className="w-8 h-8 mb-1" />
-            <span className="text-[10px] font-['Orbitron'] font-bold">ACORDAR</span>
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div onClick={() => { sounds.playSuccess(); onWakeUp(); }} className="relative w-52 h-52 cursor-pointer" title="Toque para despertar">
+          <div className="syn-blob absolute inset-2" style={{ background: 'radial-gradient(circle, rgba(138,92,255,0.4), rgba(45,253,212,0.15) 60%, transparent 70%)', animationDuration: '14s', opacity: 0.5 }} />
+          <div className="syn-core-slow absolute inset-8 flex flex-col items-center justify-center"
+            style={{ borderRadius: '44% 56% 58% 42% / 50% 46% 54% 50%', background: 'radial-gradient(circle at 45% 40%, rgba(138,92,255,0.35), #0a0620 65%)', border: '1.5px solid rgba(138,92,255,0.5)', boxShadow: '0 0 30px rgba(138,92,255,0.35), inset 0 0 24px rgba(138,92,255,0.15)' }}>
+            <span className="font-syn-title text-[11px] font-medium" style={{ color: '#eaf8f4' }}>despertar</span>
+            <span className="font-syn-body text-[10px] font-light" style={{ color: '#9aa6c9' }}>toque para respirar fundo</span>
           </div>
         </div>
-
-        <div className="space-y-2 font-['JetBrains_Mono'] max-w-md">
-          <div className="text-sm font-bold text-amber-300 glow-amber">
-            J.A.R.V.I.S. EM ESCUTA PASSIVA
-          </div>
-          <p className="text-xs text-amber-200/70">
-            Renderizações complexas e atualizações de telemetria foram suspensas para garantir taxa máxima de quadros (FPS) no seu jogo.
+        <div className="font-syn-body max-w-md">
+          <div className="font-syn-title text-sm font-medium" style={{ color: '#eaf8f4' }}>J.A.R.V.I.S. dormindo, ouvido entreaberto</div>
+          <p className="text-xs font-light mt-1" style={{ color: '#9aa6c9' }}>
+            Renderizações e telemetria desaceleraram para uma respiração de 8 segundos. Diga “Jarvis, acordar” ou toque o núcleo.
           </p>
-          <div className="text-[11px] text-cyan-300 bg-cyan-950/40 px-3 py-1.5 rounded border border-cyan-500/30 mt-2">
-            💡 Diga: <span className="font-bold text-white">"Jarvis, acordar"</span> ou clique no núcleo acima.
-          </div>
         </div>
       </div>
 
-      {/* Bottom Minimal Bar */}
-      <div className="w-full flex items-center justify-between border-t border-amber-500/20 pt-3 font-['JetBrains_Mono'] text-xs">
-        <button
-          onClick={() => { sounds.playClick(); onToggleMic(); }}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${
-            isListening 
-              ? 'bg-amber-500 text-black font-bold border-amber-400' 
-              : 'bg-black border-amber-500/30 text-amber-300 hover:border-amber-400'
-          }`}
-        >
-          <Mic className="w-4 h-4" />
-          <span>{isListening ? 'Microfone Ouvindo...' : 'Ativar Microfone'}</span>
+      <div className="w-full flex items-center justify-between pt-3 font-syn-body text-xs" style={{ borderTop: '1px solid rgba(138,92,255,0.25)' }}>
+        <button onClick={() => { sounds.playClick(); onToggleMic(); }} className="syn-pill flex items-center gap-2 px-3 py-1.5" style={{ border: '1px solid rgba(45,253,212,0.35)', color: '#2dfdd4', background: isListening ? 'rgba(45,253,212,0.15)' : 'transparent' }}>
+          <Mic className="w-4 h-4" /> {isListening ? 'Ouvindo…' : 'Ativar escuta'}
         </button>
-
-        <button
-          onClick={() => { sounds.playSuccess(); onWakeUp(); }}
-          className="px-5 py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-black font-['Orbitron'] font-bold text-xs uppercase shadow-[0_0_15px_rgba(255,176,32,0.5)] transition-all"
-        >
-          Restaurar Painel Completo
+        <button onClick={() => { sounds.playSuccess(); onWakeUp(); }} className="syn-pill font-syn-title px-5 py-1.5 text-xs font-medium" style={{ background: 'rgba(45,253,212,0.18)', color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.45)', boxShadow: '0 0 16px rgba(45,253,212,0.35)' }}>
+          Restaurar organismo
         </button>
       </div>
     </div>

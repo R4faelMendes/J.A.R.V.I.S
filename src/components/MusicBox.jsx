@@ -7,7 +7,8 @@ import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 
 const IS_ELECTRON = typeof window !== 'undefined' && !!window.electronAPI?.isElectron;
-// User-Agent padrão Chrome para o emulador (o Google recusa Electron)
+// User-Agent padrão Chrome/Brave (idênticos no desktop) para o emulador
+// (o Google recusa Electron); as marcas sec-ch-ua saem como "Brave"
 const CHROME_UA = (typeof window !== 'undefined' && window.electronAPI?.chromeUserAgent) || '';
 
 const YT_HOME = 'https://music.youtube.com';
@@ -160,15 +161,15 @@ export default function MusicBox({ search }) {
   );
 
   return (
-    <section data-emulator className="hud-panel rounded-2xl p-3 sm:p-4 border-[var(--panel-border)] flex flex-col">
-      <div className="corner-bracket corner-tl"></div>
-      <div className="corner-bracket corner-tr"></div>
-      <div className="corner-bracket corner-bl"></div>
-      <div className="corner-bracket corner-br"></div>
+    <section data-emulator className="syn-panel rounded-2xl p-3 sm:p-4 border-[var(--panel-border)] flex flex-col">
+
+
+
+
 
       {/* Header: emulador + guias (Música | Agenda Google | Processos) */}
-      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2 font-['JetBrains_Mono'] gap-1">
-        <h2 className="text-xs uppercase font-['Orbitron'] tracking-wider text-[var(--primary)] flex items-center gap-1.5 glow-cyan shrink-0">
+      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2 font-syn-body gap-1">
+        <h2 className="text-xs uppercase font-syn-title tracking-wider text-[var(--primary)] flex items-center gap-1.5 glow-cyan shrink-0">
           <Globe className="w-3.5 h-3.5 text-[var(--primary)]" />
           Emulador
         </h2>
@@ -197,7 +198,7 @@ export default function MusicBox({ search }) {
             </button>
           </div>
 
-          <div className="space-y-1.5 font-['JetBrains_Mono'] text-xs h-56 sm:h-64 overflow-y-auto scrollbar-none">
+          <div className="space-y-1.5 font-syn-body text-xs h-56 sm:h-64 overflow-y-auto scrollbar-none">
             {processes.map(app => (
               <div
                 key={app.pid || app.id}
@@ -304,7 +305,7 @@ export default function MusicBox({ search }) {
       )}
 
       {/* Rodapé: Shields na guia Música / status da guia ativa */}
-      <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between gap-2 text-[10px] font-['JetBrains_Mono'] text-cyan-400/80">
+      <div className="mt-2 pt-2 border-t border-cyan-500/20 flex items-center justify-between gap-2 text-[10px] font-syn-body text-cyan-400/80">
         {tab === 'agenda' ? (
           <>
             <span className="truncate">GUIA AGENDA • GOOGLE CALENDAR</span>

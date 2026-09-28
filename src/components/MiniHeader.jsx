@@ -3,33 +3,19 @@ import { Settings, Volume2, VolumeX, Gamepad2 } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 
 const VIEW_TITLES = {
-  home: 'CENTRAL DE VOZ',
-  agenda: 'AGENDA',
-  music: 'YT MUSIC // ÁUDIO',
-  memory: 'MATRIZ DE MEMÓRIA',
-  automation: 'PIPELINE DE AUTOMAÇÃO',
-  tactical: 'MAPA TÁTICO // PROCESSOS',
-  schematics: 'MÓDULO ESQUEMÁTICO',
-  settings: 'CONFIGURAÇÕES',
+  home: 'Central de voz', agenda: 'Agenda', music: 'YT Music', memory: 'Matriz de memória',
+  automation: 'Automação', rules: 'Reflexos', tactical: 'Tecido tático', schematics: 'Membrana', settings: 'Ajustes',
 };
 
 const THEMES = [
-  { id: 'cyan', name: 'Cyan Stark', color: 'bg-cyan-400' },
-  { id: 'amber', name: 'Mark III Gold', color: 'bg-amber-400' },
-  { id: 'crimson', name: 'Hulkbuster Red', color: 'bg-rose-500' },
-  { id: 'emerald', name: 'Time Stone', color: 'bg-emerald-400' },
-  { id: 'purple', name: 'Power Stone', color: 'bg-purple-400' },
+  { id: 'cyan', name: 'Sinapse teal', color: '#2dfdd4' },
+  { id: 'amber', name: 'Âmbar suave', color: '#ffcf5c' },
+  { id: 'crimson', name: 'Coral', color: '#ff5c7a' },
+  { id: 'emerald', name: 'Menta', color: '#2dfdd4' },
+  { id: 'purple', name: 'Violeta profundo', color: '#8a5cff' },
 ];
 
-export default function MiniHeader({
-  activeView,
-  activeTheme,
-  onThemeChange,
-  soundEnabled,
-  onToggleSound,
-  onOpenSettings,
-  onToggleGameMode,
-}) {
+export default function MiniHeader({ activeView, activeTheme, onThemeChange, soundEnabled, onToggleSound, onOpenSettings, onToggleGameMode, localMode = false }) {
   const [clock, setClock] = useState('');
   const [metrics, setMetrics] = useState({ memPercent: 0, cpuLoad: 0, coolingTemp: 0 });
 
@@ -45,19 +31,11 @@ export default function MiniHeader({
       if (window.electronAPI?.getSystemMetrics) {
         try {
           const data = await window.electronAPI.getSystemMetrics();
-          setMetrics({
-            memPercent: Number(data.memPercent) || 0,
-            cpuLoad: Math.round(15 + Math.random() * 20),
-            coolingTemp: Math.round(44 + Math.random() * 6),
-          });
+          setMetrics({ memPercent: Number(data.memPercent) || 0, cpuLoad: Math.round(15 + Math.random() * 20), coolingTemp: Math.round(44 + Math.random() * 6) });
           return;
-        } catch { /* fallback abaixo */ }
+        } catch { /* fallback */ }
       }
-      setMetrics({
-        memPercent: Math.round(55 + Math.random() * 20),
-        cpuLoad: Math.round(15 + Math.random() * 20),
-        coolingTemp: Math.round(44 + Math.random() * 6),
-      });
+      setMetrics({ memPercent: Math.round(55 + Math.random() * 20), cpuLoad: Math.round(15 + Math.random() * 20), coolingTemp: Math.round(44 + Math.random() * 6) });
     };
     fetchMetrics();
     const t = setInterval(fetchMetrics, 4000);
@@ -65,69 +43,38 @@ export default function MiniHeader({
   }, []);
 
   return (
-    <header className="h-12 shrink-0 flex items-center justify-between gap-3 px-4 bg-[#0d0d0f] border-b border-[var(--primary)]/20 font-['JetBrains_Mono'] relative z-10">
-      {/* Título da view ativa */}
+    <header className="h-14 shrink-0 flex items-center justify-between gap-3 px-4 font-syn-body relative z-10" style={{ background: 'rgba(5,3,17,0.85)', borderBottom: '1px solid rgba(45,253,212,0.15)', backdropFilter: 'blur(20px)' }}>
       <div className="flex items-center gap-2 min-w-0">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-        <span className="text-[11px] font-bold tracking-widest text-[var(--primary)] glow-cyan truncate">
+        <span className="w-2 h-2 syn-core shrink-0" style={{ borderRadius: '50%', background: localMode ? '#8a5cff' : '#2dfdd4', boxShadow: `0 0 8px ${localMode ? '#8a5cff' : '#2dfdd4'}` }} />
+        <span className="font-syn-title text-[12px] font-medium tracking-wide truncate" style={{ color: '#eaf8f4' }}>
           {VIEW_TITLES[activeView] || 'J.A.R.V.I.S.'}
         </span>
+        {localMode && <span className="syn-pill text-[10px] px-2 py-0.5" style={{ border: '1px solid rgba(138,92,255,0.5)', color: '#8a5cff' }}>cérebro local</span>}
       </div>
 
-      {/* Telemetria compacta do PC */}
-      <div className="hidden md:flex items-center gap-2 text-[10px] text-cyan-200/80">
-        <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20">
-          RAM <strong className="text-[var(--primary)]">{metrics.memPercent}%</strong>
-        </span>
-        <span className="px-2 py-0.5 rounded bg-white/5 border border-amber-500/20">
-          CPU <strong className="text-[var(--secondary)]">{metrics.cpuLoad}%</strong>
-        </span>
-        <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20">
-          {metrics.coolingTemp}°C
-        </span>
-        <span className="text-cyan-400/70 tabular-nums">{clock}</span>
+      <div className="hidden md:flex items-center gap-2 font-syn-body text-[11px] font-light" style={{ color: '#9aa6c9' }}>
+        <span className="syn-pill px-2.5 py-1">ram <strong className="font-medium" style={{ color: '#2dfdd4' }}>{metrics.memPercent}%</strong></span>
+        <span className="syn-pill px-2.5 py-1">cpu <strong className="font-medium" style={{ color: '#ffcf5c' }}>{metrics.cpuLoad}%</strong></span>
+        <span className="syn-pill px-2.5 py-1">{metrics.coolingTemp}°C</span>
+        <span className="tabular-nums">{clock}</span>
       </div>
 
-      {/* Ações: temas + som + game + config */}
       <div className="flex items-center gap-1.5">
-        <div className="hidden sm:flex items-center gap-1 mr-1">
+        <div className="hidden sm:flex items-center gap-1.5 mr-1 syn-pill px-2 py-1.5" style={{ border: '1px solid rgba(45,253,212,0.18)', background: 'rgba(10,6,32,0.6)' }}>
           {THEMES.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => { sounds.playClick(); onThemeChange(t.id); }}
-              title={t.name}
-              className={`w-3 h-3 rounded-full ${t.color} transition-transform hover:scale-125 ${
-                activeTheme === t.id ? 'ring-2 ring-white scale-110' : 'opacity-50 hover:opacity-100'
-              }`}
-            />
+            <button key={t.id} onClick={() => { sounds.playClick(); onThemeChange(t.id); }} title={t.name}
+              className="syn-core transition-transform hover:scale-125"
+              style={{ width: 12, height: 12, borderRadius: '50%', background: t.color, boxShadow: activeTheme === t.id ? `0 0 0 2px #eaf8f4, 0 0 8px ${t.color}` : `0 0 6px ${t.color}`, opacity: activeTheme === t.id ? 1 : 0.55 }} />
           ))}
         </div>
-
-        <button
-          onClick={() => { onToggleSound(); sounds.playClick(); }}
-          title={soundEnabled ? 'Silenciar' : 'Ativar som'}
-          className="p-1.5 rounded hover:bg-white/10 text-cyan-300 transition-colors"
-        >
-          {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-red-400" />}
+        <button onClick={() => { onToggleSound(); sounds.playClick(); }} title={soundEnabled ? 'Silenciar' : 'Ativar som'} className="syn-pill p-2 transition-all" style={{ color: '#9aa6c9' }}>
+          {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
         </button>
-
-        <button
-          onClick={() => { sounds.playPowerPulse(); onToggleGameMode(); }}
-          title="Modo Game / Hibernação"
-          className="p-1.5 rounded hover:bg-amber-500/20 text-amber-400 transition-colors"
-        >
+        <button onClick={() => { sounds.playPowerPulse(); onToggleGameMode(); }} title="Hibernação" className="syn-pill p-2 transition-all" style={{ color: '#ffcf5c' }}>
           <Gamepad2 className="w-4 h-4" />
         </button>
-
-        <button
-          onClick={() => { sounds.playClick(); onOpenSettings(); }}
-          title="Configurações"
-          className={`p-1.5 rounded transition-colors ${
-            activeView === 'settings'
-              ? 'bg-[var(--primary)] text-black'
-              : 'hover:bg-white/10 text-[var(--primary)]'
-          }`}
-        >
+        <button onClick={() => { sounds.playClick(); onOpenSettings(); }} title="Ajustes"
+          className="syn-pill p-2 transition-all" style={activeView === 'settings' ? { background: 'rgba(45,253,212,0.2)', color: '#eaf8f4' } : { color: '#2dfdd4' }}>
           <Settings className="w-4 h-4" />
         </button>
       </div>

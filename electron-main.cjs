@@ -247,16 +247,17 @@ function chromeUserAgent() {
 // BRAVE "EMULADO" — chrome de navegador simulado dentro do box + Shields
 // ---------------------------------------------------------------------------
 
-// Client Hints no formato do Google Chrome: o login do Google verifica as
-// marcas de sec-ch-ua ("Google Chrome") e recusa navegadores sem elas
-// ("This browser or app may not be secure").
-function chromeMetadata() {
+// Client Hints no formato do Brave: o login do Google verifica as marcas de
+// sec-ch-ua e recusa navegadores sem elas ("This browser or app may not be
+// secure"). O Brave real de desktop manda UA igual ao Chrome, mas com as
+// marcas "Brave" + "Chromium" no sec-ch-ua (fonte: wiki Detecting Brave).
+function braveMetadata() {
   const ua = app.userAgentFallback || '';
   const chromeFull = (ua.match(/Chrome\/([\d.]+)/) || ['', '131.0.6778.86'])[1];
   const major = chromeFull.split('.')[0];
   return {
     brands: [
-      { brand: 'Google Chrome', version: major },
+      { brand: 'Brave', version: major },
       { brand: 'Chromium', version: major },
       { brand: 'Not_A Brand', version: '24' }
     ],
@@ -271,7 +272,8 @@ function chromeMetadata() {
 }
 
 // Toda janela/webview gerada (YouTube Music, Agenda Google, popups de login)
-// recebe User-Agent e Client Hints idênticos ao Google Chrome.
+// recebe User-Agent e Client Hints idênticos ao Brave (UA de desktop igual ao
+// Chrome; marcas sec-ch-ua "Brave").
 // Scripts injetados ANTES de qualquer código da página removem os sinais de
 // "navegador automatizado/webview" que fazem o Google recusar o login
 // ("This browser or app may not be secure"): navigator.webdriver, a ausência de
@@ -389,7 +391,24 @@ const GOOGLE_LOGIN_STEALTH = `
     Object.defineProperty(Navigator.prototype, 'pdfViewerEnabled', { get: function () { return true; }, configurable: true });
     window.__sp3 = 3;
   } catch (e) {}
+
+  // 4) navigator.brave.isBrave() — o Brave real expõe esta API no desktop;
+  // sites (e o ecossistema Google) usam para detectar o Brave
+  try {
+    Object.defineProperty(navigator, 'brave', {
+      configurable: true,
+      value: { isBrave: function () { return Promise.resolve(true); } }
+    });
+  } catch (e) {}
 })();
+`;
+
+// Cosmético dos Shields: some com os slots de anúncio/banner que sobrariam
+// como espaço vazio depois do bloqueio de rede (YouTube / YouTube Music)
+const YT_AD_CSS = `
+#masthead-ad, .ytp-ad-text-overlay, .ytp-ad-message-container,
+ytmusic-ad-slot-renderer, ytmusic-companion-promo-renderer,
+ytmusic-player-ad-overlay-renderer { display: none !important; }
 `;
 
 app.on('web-contents-created', (event, contents) => {
@@ -405,7 +424,7 @@ app.on('web-contents-created', (event, contents) => {
       userAgent: chromeUserAgent(),
       acceptLanguage: 'pt-BR,pt;q=0.9,en;q=0.8',
       platform: 'Win32',
-      userAgentMetadata: chromeMetadata()
+      userAgentMetadata: braveMetadata()
     });
     send('Page.enable');
     // Documentos futuros (login = navegação nova) recebem o script ANTES de
@@ -419,16 +438,42 @@ app.on('web-contents-created', (event, contents) => {
     contents.on('did-finish-load', () => {
       send('Runtime.evaluate', { expression: GOOGLE_LOGIN_STEALTH });
     });
+    // Cosmético: esconde os slots/banner de anúncio em toda página do YouTube
+    const injectYtCss = (targetUrl) => {
+      try {
+        const u = new URL(targetUrl);
+        if (u.hostname === 'music.youtube.com' || u.hostname.endsWith('.youtube.com')) {
+          contents.insertCSS(YT_AD_CSS).catch(() => { /* ignora */ });
+        }
+      } catch { /* ignora */ }
+    };
+    contents.on('did-navigate', (event, url) => injectYtCss(url));
+    contents.on('did-frame-navigate', (event, url) => injectYtCss(url));
   } catch { /* ignora */ }
 });
 
 // ---- Brave Shields (emulado): bloqueia anúncios/rastreadores como o Brave ----
+// Redes de anúncio/rastreador (equivalente ao filtro padrão do Brave Shields)
 const SHIELDS_BLOCKLIST = [
-  'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
-  'adservice.google.com', 'ads.pubmatic.com', 'adnxs.com',
-  'amazon-adsystem.com', 'scorecardresearch.com', 'moatads.com',
-  'taboola.com', 'outbrain.com', 'google-analytics.com',
-  'ads.youtube.com', 'media.net', 'criteo.com', 'zedo.com'
+  'doubleclick.net', 'doubleclick.com', 'googlesyndication.com', 'googleadservices.com',
+  'googletagservices.com', 'googletagmanager.com', 'adservice.google.com',
+  'ads.pubmatic.com', 'adnxs.com', 'amazon-adsystem.com', 'scorecardresearch.com',
+  'moatads.com', 'taboola.com', 'outbrain.com', 'google-analytics.com',
+  'innovid.com', 'flashtalking.com', '2mdn.net', 'criteo.com', 'criteo.net',
+  'ads.youtube.com', 'media.net', 'zedo.com', 'hotjar.com', 'connect.facebook.net',
+  'clarity.ms', 'bat.bing.com'
+];
+
+// Marcadores de URL dos endpoints de anúncio do YouTube/Google (fontes:
+// filtros uBlock/DNR): pagead, ptracking, stats de anúncio, midroll, VAST,
+// beacons e os segmentos de stream de ad (ctier=SA/SR, adformat)
+const SHIELDS_URL_MARKERS = [
+  '/pagead/', '/pagead2/', '/ptracking', '/api/stats/ads', '/api/stats/atr',
+  '/get_video_ads', '/get_midroll_', '/get_video_info', '/ad_status',
+  '/googleads', '/pubads', '/securepubads', '/pcs/activeview',
+  'ad_companion', 'annotations_invideo', 'ad_break',
+  'ctier=sa', 'ctier=sr', 'adformat=', 'ad_type=', 'adurl=', 'adunit',
+  'instream_ad=1'
 ];
 
 let shieldsEnabled = true;
@@ -440,8 +485,7 @@ function isShieldsBlocked(rawUrl) {
     const host = url.hostname.toLowerCase();
     if (SHIELDS_BLOCKLIST.some((d) => host === d || host.endsWith(`.${d}`))) return true;
     const pathQuery = `${url.pathname}${url.search}`.toLowerCase();
-    return pathQuery.includes('/pagead/') || pathQuery.includes('/api/stats/ads')
-      || pathQuery.includes('/get_video_ads') || pathQuery.includes('ad_break');
+    return SHIELDS_URL_MARKERS.some((m) => pathQuery.includes(m));
   } catch {
     return false;
   }

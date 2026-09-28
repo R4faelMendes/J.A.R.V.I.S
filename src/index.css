@@ -367,3 +367,126 @@ body.box-resizing * {
   cursor: inherit !important;
 }
 
+/* ==================================================================
+   SYNAPSE — organismo neural vivo (substitui o HUD mecânico/militar)
+   Teal = estável/ouvindo · Magenta = falando/reativo · Violeta = fundo
+   ================================================================== */
+:root {
+  --syn-bg: #050311;
+  --syn-bg-2: #0a0620;
+  --syn-teal: #2dfdd4;
+  --syn-violet: #8a5cff;
+  --syn-magenta: #ff3ec8;
+  --syn-text: #eaf8f4;
+  --syn-muted: #9aa6c9;
+  --syn-warn: #ffcf5c;
+  --syn-critical: #ff5c7a;
+  --syn-ok: #2dfdd4;
+  --syn-teal-glow: rgba(45, 253, 212, 0.55);
+  --syn-violet-glow: rgba(138, 92, 255, 0.5);
+  --syn-magenta-glow: rgba(255, 62, 200, 0.55);
+}
+
+body {
+  background-color: var(--syn-bg);
+  color: var(--syn-text);
+  font-family: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+}
+
+.font-syn-title { font-family: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; }
+.font-syn-body { font-family: 'Manrope', 'Segoe UI', system-ui, sans-serif; }
+
+@keyframes syn-morph {
+  0%, 100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; transform: scale(1) rotate(0deg); }
+  33%      { border-radius: 63% 37% 41% 59% / 58% 42% 58% 42%; transform: scale(1.06) rotate(8deg); }
+  66%      { border-radius: 37% 63% 58% 42% / 63% 59% 41% 37%; transform: scale(0.96) rotate(-6deg); }
+}
+@keyframes syn-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+@keyframes syn-breathe-slow {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+@keyframes syn-flow {
+  to { stroke-dashoffset: -160; }
+}
+@keyframes syn-drift {
+  from { transform: translateY(0) translateX(0); opacity: 0; }
+  15%  { opacity: 0.9; }
+  to   { transform: translateY(-40px) translateX(12px); opacity: 0; }
+}
+@keyframes syn-listening-dot {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50%      { transform: scale(1.5); opacity: 1; }
+}
+
+.syn-blob   { animation: syn-morph 9s ease-in-out infinite; filter: blur(38px); mix-blend-mode: screen; }
+.syn-core   { animation: syn-breathe 4.2s ease-in-out infinite; }
+.syn-core-slow { animation: syn-breathe-slow 8s ease-in-out infinite; }
+.syn-pulse path { stroke-dasharray: 6 10; animation: syn-flow 6s ease-in-out infinite; }
+.syn-pulse-fast path { stroke-dasharray: 6 10; animation: syn-flow 2.8s ease-in-out infinite; }
+.syn-particle   { animation: syn-drift ease-in-out infinite; border-radius: 50%; filter: blur(1px); }
+.syn-listening-dot { animation: syn-listening-dot 1.6s ease-in-out infinite; }
+
+.syn-panel {
+  background: radial-gradient(135% 100% at 0% 0%, rgba(10, 6, 32, 0.75) 0%, rgba(5, 3, 17, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(45, 253, 212, 0.18);
+  border-radius: 28px 22px 30px 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(138,92,255,0.08);
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.syn-panel:hover {
+  border-color: rgba(45, 253, 212, 0.35);
+  box-shadow: 0 8px 44px rgba(0,0,0,0.65), inset 0 0 34px rgba(138,92,255,0.12);
+}
+.syn-panel-accent {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  opacity: 0.15;
+  pointer-events: none;
+  animation: syn-morph 11s ease-in-out infinite;
+  filter: blur(22px);
+  mix-blend-mode: screen;
+}
+
+.syn-pill {
+  border-radius: 999px;
+  transition: box-shadow 0.3s ease, background 0.3s ease, transform 0.3s ease;
+}
+.syn-pill:hover {
+  box-shadow: 0 0 14px var(--syn-teal-glow);
+}
+.syn-input {
+  border-radius: 999px;
+  background: rgba(10, 6, 32, 0.7);
+  border: 1px solid rgba(45, 253, 212, 0.22);
+  outline: none;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.syn-input:focus {
+  border-color: rgba(45, 253, 212, 0.55);
+  box-shadow: 0 0 18px var(--syn-teal-glow), inset 0 0 12px rgba(45,253,212,0.08);
+}
+
+/* Compat: HUD mecânico aposentado — sem colchetes, sem grade militar */
+.corner-bracket { display: none !important; }
+.cyber-grid {
+  background-image: radial-gradient(rgba(45, 253, 212, 0.07) 1px, transparent 1.5px);
+  background-size: 26px 26px;
+}
+.hud-panel {
+  background: radial-gradient(135% 100% at 0% 0%, rgba(10, 6, 32, 0.75) 0%, rgba(5, 3, 17, 0.9) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(45, 253, 212, 0.18);
+  border-radius: 28px 22px 30px 20px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6), inset 0 0 30px rgba(138,92,255,0.08);
+  position: relative;
+}
+

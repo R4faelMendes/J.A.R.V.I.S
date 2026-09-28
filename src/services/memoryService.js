@@ -7,7 +7,8 @@ const STORAGE_KEYS = {
   PREFERENCES: 'jarvis_preferences',
   AGENDA_TASKS: 'jarvis_agenda_tasks',
   AGENDA_ALARMS: 'jarvis_agenda_alarms',
-  BOX_SIZES: 'jarvis_box_sizes'
+  BOX_SIZES: 'jarvis_box_sizes',
+  GRAPH_ENTITIES: 'jarvis_graph_entities'
 };
 
 // Chaves gravadas também em arquivo no disco (memória permanente do J.A.R.V.I.S)
@@ -16,7 +17,8 @@ const PERSISTENT_KEYS = [
   STORAGE_KEYS.COMMAND_HISTORY,
   STORAGE_KEYS.PREFERENCES,
   STORAGE_KEYS.AGENDA_TASKS,
-  STORAGE_KEYS.BOX_SIZES
+  STORAGE_KEYS.BOX_SIZES,
+  STORAGE_KEYS.GRAPH_ENTITIES
 ];
 
 const fileAPI = typeof window !== 'undefined' ? window.electronAPI : null;
@@ -292,6 +294,24 @@ class MemoryMatrix {
     return updated;
   }
 
+  // ---- Sessão do cérebro (n8n) — um UUID por execução do app ----
+  // Vive em sessionStorage: mesma aba/janela compartilha a sessão (memória
+  // de conversa contínua); fechar e reabrir começa uma sessão nova.
+  getSessionId() {
+    try {
+      const KEY = 'jarvis_brain_session';
+      let id = sessionStorage.getItem(KEY);
+      if (!id) {
+        id = (crypto?.randomUUID && crypto.randomUUID()) || `sess_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+        sessionStorage.setItem(KEY, id);
+      }
+      return id;
+    } catch {
+      if (!this._memSession) this._memSession = `sess_${Date.now()}`;
+      return this._memSession;
+    }
+  }
+
   // ---- Tamanho dos boxes (arraste com o mouse, estilo janelas do Windows) ----
   getBoxSizes() {
     try {
@@ -360,6 +380,67 @@ class MemoryMatrix {
   saveTasks(tasks) {
     localStorage.setItem(STORAGE_KEYS.AGENDA_TASKS, JSON.stringify(tasks));
     persistToDisk();
+  }
+
+  // ---- Grafo de memória de longo prazo (entidades + relações) ----
+  // Tipos: project | person | decision | note. Relações: { from, to, kind }
+  getEntities() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.GRAPH_ENTITIES);
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignora */ }
+    const seed = [
+      { id: 'ent_stark', type: 'person', label: 'Rafael Mendes', detail: 'Operador principal' },
+      { id: 'ent_jarvis', type: 'note', label: 'J.A.R.V.I.S.', detail: 'Organismo synapse v5.0' },
+    ];
+    try { localStorage.setItem(STORAGE_KEYS.GRAPH_ENTITIES, JSON.stringify(seed)); } catch { /* ignora */ }
+    return seed;
+  }
+
+  saveEntity(entity) {
+    const list = this.getEntities();
+    const full = { id: `ent_${Date.now()}`, type: 'note', label: 'Sem nome', detail: '', links: [], ...entity };
+    const idx = list.findIndex((e) => e.id === full.id);
+    if (idx >= 0) list[idx] = { ...list[idx], ...full };
+    else list.unshift(full);
+    localStorage.setItem(STORAGE_KEYS.GRAPH_ENTITIES, JSON.stringify(list));
+    persistToDisk();
+    return full;
+  }
+
+  deleteEntity(id) {
+    const list = this.getEntities().filter((e) => e.id !== id)
+      .map((e) => ({ ...e, links: (e.links || []).filter((l) => l.to !== id) }));
+    localStorage.setItem(STORAGE_KEYS.GRAPH_ENTITIES, JSON.stringify(list));
+    persistToDisk();
+  }
+
+  /** Constelação pronta para o SynapseGraph: projetos + entidades + tarefas. */
+  getMemoryGraph() {
+    const W = 560; const H = 300;
+    const cx = W / 2; const cy = H / 2;
+    const nodes = [{ id: 'core', label: 'J.A.R.V.I.S.', x: cx, y: cy, size: 10, color: '#2dfdd4' }];
+    const links = [];
+    const projects = this.getProjects().slice(0, 5);
+    const entities = this.getEntities().slice(0, 8);
+    const ring = [...projects.map((p) => ({ id: `proj:${p.id}`, label: p.name.slice(0, 14), color: '#8a5cff' })),
+      ...entities.map((e) => ({ id: `ent:${e.id}`, label: String(e.label).slice(0, 14), color: e.type === 'person' ? '#ff3ec8' : e.type === 'decision' ? '#ffcf5c' : '#2dfdd4' }))];
+    ring.forEach((n, i) => {
+      const a = (i / Math.max(1, ring.length)) * Math.PI * 2 - Math.PI / 2;
+      const x = cx + Math.cos(a) * (W / 2 - 60);
+      const y = cy + Math.sin(a) * (H / 2 - 34);
+      nodes.push({ ...n, x, y, size: 6 });
+      links.push({ from: 'core', to: n.id });
+    });
+    // Relações entre entidades viram sinapses secundárias
+    const byLabel = Object.fromEntries(ring.map((n) => [n.id, n]));
+    for (const e of entities) {
+      for (const l of e.links || []) {
+        const to = `ent:${l.to}`;
+        if (byLabel[`ent:${e.id}`] && byLabel[to]) links.push({ from: `ent:${e.id}`, to, kind: l.kind });
+      }
+    }
+    return { nodes, links, W, H };
   }
 }
 

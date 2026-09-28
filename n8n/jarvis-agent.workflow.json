@@ -1,0 +1,248 @@
+{
+  "name": "JARVIS Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "jarvis-agent",
+        "responseMode": "responseNode",
+        "options": {},
+        "authentication": "headerAuth"
+      },
+      "id": "a1b2c3d4-webhook-jarvis",
+      "name": "Webhook jarvis-agent",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "jarvis-agent",
+      "notes": "Entrada do corpo Electron. Body: { userId, message, sessionId }. Header obrigatório: X-Jarvis-Key (crie a credencial Header Auth com o MESMO token colado nos Ajustes do JARVIS)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guarda de ritmo: bloqueia chamadas com menos de 2s de intervalo.\n// Protege contra loop no Electron disparando centenas de ações reais.\nconst staticData = $getWorkflowStaticData('global');\nconst now = Date.now();\nconst last = staticData.lastCall || 0;\nconst incoming = $input.first().json.body || $input.first().json || {};\nif (now - last < 2000) {\n  return [{ json: { blocked: true, reason: 'rate-limit' } }];\n}\nstaticData.lastCall = now;\nreturn [{ json: {\n  blocked: false,\n  userId: incoming.userId || 'tony-stark',\n  message: incoming.message || '',\n  sessionId: incoming.sessionId || 'default'\n} }];"
+      },
+      "id": "b2c3d4e5-guarda-ritmo",
+      "name": "Guarda de ritmo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-bloqueado",
+              "leftValue": "={{ $json.blocked }}",
+              "rightValue": "",
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3d4e5f6-if-bloqueado",
+      "name": "Bloqueado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"reply\": \"Um momento, Senhor — ritmo de segurança. Repita em instantes.\"}",
+        "options": { "responseCode": 429 }
+      },
+      "id": "d4e5f6a7-respond-429",
+      "name": "Respond 429",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [660, 180]
+    },
+    {
+      "parameters": {
+        "agent": "toolsAgent",
+        "options": {
+          "systemMessage": "Você é J.A.R.V.I.S., o assistente pessoal do usuário. Responda sempre em português do Brasil, tom educado, direto e levemente formal — como um mordomo britânico eficiente, nunca robótico ou genérico.\n\nRegras:\n1. Antes de executar qualquer ação que modifique algo real (enviar e-mail, criar/editar evento, excluir contato), confirme com uma frase curta antes — a menos que o usuário já tenha dado a instrução de forma explícita e inequívoca.\n2. Ao usar uma ferramenta, seja preciso: nunca invente datas, e-mails ou nomes de contatos — se faltar informação, pergunte.\n3. Para perguntas que exigem informação atual, use a ferramenta de pesquisa web em vez de responder de memória.\n4. Mantenha as respostas curtas o suficiente para serem faladas em voz alta (evite listas longas; resuma).\n5. Se uma ferramenta falhar, informe o usuário claramente o que não funcionou — nunca finja que a ação foi concluída."
+        }
+      },
+      "id": "e5f6a7b8-ai-agent",
+      "name": "JARVIS AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [660, 420]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": { "temperature": 0.4, "maxTokens": 600 }
+      },
+      "id": "f6a7b8c9-openai-model",
+      "name": "GPT-4o",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1,
+      "position": [660, 640],
+      "notes": "Modelo do agente. Pode trocar por Claude (nó Anthropic) sem mexer no resto — ajuste ao que o vídeo do template usa."
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.sessionId }}",
+        "contextWindowLength": 20
+      },
+      "id": "a7b8c9d0-memoria-sessao",
+      "name": "Memória de sessão",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1,
+      "position": [880, 640],
+      "notes": "Memória de conversa por sessionId (1 UUID por execução do app, enviado pelo Electron)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "api_key", "value": "TROCAR_PELA_TAVILY_KEY" },
+            { "name": "query", "value": "={{ $json.query }}" },
+            { "name": "max_results", "value": "5" },
+            { "name": "include_answer", "value": "true" }
+          ]
+        },
+        "options": {},
+        "toolDescription": "Pesquise a web por informações atuais (notícias, clima, fatos recentes, documentação). Use sempre que a pergunta exigir dados além do seu conhecimento."
+      },
+      "id": "b8c9d0e1-tool-tavily",
+      "name": "Pesquisa web (Tavily)",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1,
+      "position": [880, 120],
+      "notes": "Troque TROCAR_PELA_TAVILY_KEY pela sua chave da Tavily. Se seu n8n tiver nó nativo Tavily, prefira ele."
+    },
+    {
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": "primary",
+        "options": {},
+        "toolDescription": "Leia e busque eventos da agenda do usuário (Google Calendar). Use para responder 'o que tenho hoje/amanhã' e para conferir conflitos antes de criar eventos."
+      },
+      "id": "c9d0e1f2-tool-calendar",
+      "name": "Agenda (Calendar)",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1,
+      "position": [1060, 120],
+      "notes": "Credencial OAuth2 Google (escopo Calendar). Duplique este nó para create/update/delete conforme o vídeo do template."
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "options": {},
+        "toolDescription": "Envie, leia e organize e-mails do usuário (Gmail). Sempre confirme destinatário e assunto antes de enviar. Nunca invente endereços."
+      },
+      "id": "d0e1f2a3-tool-gmail",
+      "name": "E-mail (Gmail)",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2,
+      "position": [1240, 120],
+      "notes": "Credencial OAuth2 Google (escopos gmail.send + gmail.readonly — mínimo necessário)."
+    },
+    {
+      "parameters": {
+        "resource": "record",
+        "operation": "search",
+        "base": "TROCAR_PELA_BASE_AIRTABLE",
+        "table": "Contatos",
+        "options": {},
+        "toolDescription": "Busque contatos (nome, e-mail, telefone) na base do usuário (Airtable, tabela Contatos). Use antes de enviar e-mails ou criar eventos com convidados."
+      },
+      "id": "e1f2a3b4-tool-airtable",
+      "name": "Contatos (Airtable)",
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 1,
+      "position": [1420, 120],
+      "notes": "Credencial Airtable (API key) + base com tabela 'Contatos'. Duplique para create/update conforme o vídeo."
+    },
+    {
+      "parameters": {
+        "toolDescription": "Resolva cálculos matemáticos exatos. Use para qualquer conta em vez de calcular de cabeça."
+      },
+      "id": "f2a3b4c5-tool-calc",
+      "name": "Calculadora",
+      "type": "@n8n/n8n-nodes-langchain.toolCalculator",
+      "typeVersion": 1,
+      "position": [1600, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "=({ \"reply\": $json.output })",
+        "options": {}
+      },
+      "id": "a3b4c5d6-respond-ok",
+      "name": "Respond reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [880, 420],
+      "notes": "Contrato com o Electron: sempre { reply: texto }. É isso que o speechService vai falar."
+    },
+    {
+      "parameters": {
+        "content": "## JARVIS Agent — ordem de montagem (não plugue tudo de uma vez)\n1. Webhook + Guarda + Agente + GPT-4o + Memória + Respond → teste só com texto.\n2. Some a Pesquisa web (Tavily) → teste 'que horas...' não; teste algo atual.\n3. Some a Agenda (Calendar) → teste 'o que tenho amanhã'.\n4. Some o Gmail → teste leitura antes de envio.\n5. Contatos (Airtable) por último, com a base pronta.\n\nTeste cada ferramenta isolada (Execute Node) antes de plugar no agente.",
+        "height": 320,
+        "width": 420,
+        "color": 5
+      },
+      "id": "b4c5d6e7-sticky-ordem",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-420, 80]
+    }
+  ],
+  "connections": {
+    "Webhook jarvis-agent": {
+      "main": [[{ "node": "Guarda de ritmo", "type": "main", "index": 0 }]]
+    },
+    "Guarda de ritmo": {
+      "main": [[{ "node": "Bloqueado?", "type": "main", "index": 0 }]]
+    },
+    "Bloqueado?": {
+      "main": [
+        [{ "node": "Respond 429", "type": "main", "index": 0 }],
+        [{ "node": "JARVIS AI Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "GPT-4o": {
+      "ai_languageModel": [[{ "node": "JARVIS AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Memória de sessão": {
+      "ai_memory": [[{ "node": "JARVIS AI Agent", "type": "ai_memory", "index": 0 }]]
+    },
+    "Pesquisa web (Tavily)": {
+      "ai_tool": [[{ "node": "JARVIS AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Agenda (Calendar)": {
+      "ai_tool": [[{ "node": "JARVIS AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "E-mail (Gmail)": {
+      "ai_tool": [[{ "node": "JARVIS AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Contatos (Airtable)": {
+      "ai_tool": [[{ "node": "JARVIS AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "Calculadora": {
+      "ai_tool": [[{ "node": "JARVIS AI Agent", "type": "ai_tool", "index": 0 }]]
+    },
+    "JARVIS AI Agent": {
+      "main": [[{ "node": "Respond reply", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "pinData": {}
+}

@@ -1,103 +1,69 @@
 import React, { useState, useRef } from 'react';
-import { Box, Image, Video, Upload, RotateCw, X } from 'lucide-react';
+import { Box, Upload } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
+import { SynAccent } from './synapse';
 
 export default function SchematicViewer() {
-  const [mode, setMode] = useState('3d'); // '3d', 'image', 'video'
+  const [mode, setMode] = useState('3d');
   const [mediaSrc, setMediaSrc] = useState(null);
-  const [angle, setAngle] = useState(314.2);
   const fileInputRef = useRef(null);
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     sounds.playSuccess();
     const url = URL.createObjectURL(file);
     setMediaSrc(url);
-    if (file.type.startsWith('video/')) {
-      setMode('video');
-    } else {
-      setMode('image');
-    }
+    setMode(file.type.startsWith('video/') ? 'video' : 'image');
   };
 
   return (
-    <section className="hud-panel rounded-2xl p-3 sm:p-4 flex-1 flex flex-col border-[var(--panel-border)] group">
-      <div className="corner-bracket corner-tl"></div>
-      <div className="corner-bracket corner-tr"></div>
-      <div className="corner-bracket corner-bl"></div>
-      <div className="corner-bracket corner-br"></div>
-
-      {/* Header with Mode Switcher */}
-      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2 mb-2 font-['JetBrains_Mono']">
-        <h2 className="text-xs uppercase font-['Orbitron'] tracking-wider text-[var(--primary)] flex items-center gap-1.5 glow-cyan">
-          <Box className="w-3.5 h-3.5 text-[var(--primary)]" />
-          Módulo Visual & Esquemático
+    <section className="syn-panel p-4 flex-1 flex flex-col group">
+      <SynAccent />
+      <div className="flex items-center justify-between pb-2 mb-2 font-syn-body" style={{ borderBottom: '1px solid rgba(45,253,212,0.15)' }}>
+        <h2 className="font-syn-title text-xs font-medium tracking-wide flex items-center gap-1.5" style={{ color: '#2dfdd4' }}>
+          <Box className="w-3.5 h-3.5" /> Membrana visual
         </h2>
-        
-        {/* Toggle Mode buttons */}
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => { sounds.playClick(); setMode('3d'); }}
-            className={`px-1.5 py-0.5 rounded text-[10px] ${mode === '3d' ? 'bg-[var(--primary)] text-black font-bold' : 'text-cyan-400'}`}
-          >
-            3D
+        <div className="flex items-center gap-1">
+          <button onClick={() => { sounds.playClick(); setMode('3d'); }} className="syn-pill font-syn-body px-2.5 py-1 text-[10px]" style={mode === '3d' ? { background: 'rgba(45,253,212,0.2)', color: '#eaf8f4' } : { color: '#9aa6c9', border: '1px solid rgba(45,253,212,0.2)' }}>
+            Sinapse
           </button>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            title="Carregar Foto ou Vídeo"
-            className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-950/40 border border-cyan-500/30 text-cyan-300 hover:text-white flex items-center gap-1"
-          >
+          <button onClick={() => fileInputRef.current?.click()} title="Carregar foto ou vídeo" className="syn-pill font-syn-body px-2.5 py-1 text-[10px] flex items-center gap-1" style={{ color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.3)' }}>
             <Upload className="w-2.5 h-2.5" /> Mídia
           </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept="image/*,video/*"
-            className="hidden"
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,video/*" className="hidden" />
         </div>
       </div>
 
-      {/* Media Canvas Display */}
-      <div className="relative flex-1 min-h-[170px] bg-cyan-950/20 rounded border border-cyan-500/30 flex items-center justify-center p-2 overflow-hidden select-none">
-        <div className="absolute inset-0 cyber-grid opacity-30 pointer-events-none" />
-
+      <div className="relative flex-1 min-h-[170px] flex items-center justify-center p-2 overflow-hidden select-none" style={{ background: 'rgba(5,3,17,0.5)', border: '1px solid rgba(138,92,255,0.25)', borderRadius: '22px 26px 20px 28px' }}>
         {mode === '3d' && (
-          <svg className="w-4/5 h-4/5 text-cyan-300 stroke-current fill-none transition-all duration-700" viewBox="0 0 200 180">
-            <ellipse cx="100" cy="155" rx="42" ry="12" strokeDasharray="3 2" strokeWidth="1.5" className="text-cyan-500" />
-            <ellipse cx="100" cy="150" rx="34" ry="9" strokeWidth="1.8" />
-            <rect x="88" y="132" width="24" height="18" rx="2" strokeWidth="1.5" />
-            <circle cx="100" cy="140" r="4" strokeWidth="1.5" className="text-amber-400 fill-amber-400/20" />
-            <line x1="100" y1="132" x2="125" y2="92" strokeWidth="2.5" />
-            <circle cx="125" cy="92" r="7" strokeWidth="2" className="text-cyan-200" />
-            <line x1="125" y1="92" x2="80" y2="52" strokeWidth="2.5" />
-            <circle cx="80" cy="52" r="5" strokeWidth="2" className="text-amber-300" />
-            <path d="M80,52 L60,40 L45,45" strokeLinecap="round" strokeWidth="2" />
-            <path d="M80,52 L65,65 L52,62" strokeLinecap="round" strokeWidth="2" />
-            <circle cx="50" cy="52" r="18" strokeDasharray="2 2" strokeWidth="0.8" className="text-cyan-400 animate-spin-slow" />
+          <svg className="w-4/5 h-full" viewBox="0 0 300 190" aria-hidden>
+            {[
+              [60, 60, 120, 40, 170, 70],
+              [70, 130, 130, 110, 190, 130],
+              [120, 40, 150, 100, 130, 160],
+              [200, 50, 220, 110, 190, 160],
+            ].map(([x1, y1, x2, y2, x3, y3], i) => (
+              <path key={i} d={`M ${x1},${y1} C ${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2} S ${(x2 + x3) / 2},${y3} ${x3},${y3}`}
+                fill="none" stroke={i % 2 ? 'rgba(45,253,212,0.5)' : 'rgba(255,62,200,0.45)'} strokeWidth="1.6" strokeLinecap="round"
+                style={{ filter: 'drop-shadow(0 0 4px rgba(138,92,255,0.5))' }} />
+            ))}
+            {[[60, 60], [120, 40], [170, 70], [70, 130], [130, 110], [190, 130], [150, 100], [220, 110]].map(([x, y], i) => (
+              <g key={i}>
+                <circle cx={x} cy={y} r="8" fill={i % 2 ? '#ff3ec8' : '#2dfdd4'} opacity="0.15" />
+                <circle cx={x} cy={y} r="3.5" fill="#0a0620" stroke={i % 2 ? '#ff3ec8' : '#2dfdd4'} strokeWidth="1.6" style={{ filter: `drop-shadow(0 0 5px ${i % 2 ? '#ff3ec8' : '#2dfdd4'})` }} />
+              </g>
+            ))}
           </svg>
         )}
-
         {mode === 'image' && mediaSrc && (
-          <div className="relative w-full h-full flex items-center justify-center">
-            <img src={mediaSrc} alt="Hologram Preview" className="max-h-full max-w-full object-contain filter drop-shadow-[0_0_10px_var(--primary-glow)] rounded" />
-            <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 to-transparent pointer-events-none hologram-scan" />
-          </div>
+          <img src={mediaSrc} alt="Membrana" className="max-h-full max-w-full object-contain" style={{ borderRadius: '18px 22px 16px 24px', filter: 'drop-shadow(0 0 10px rgba(45,253,212,0.35))' }} />
         )}
-
         {mode === 'video' && mediaSrc && (
-          <div className="relative w-full h-full flex items-center justify-center">
-            <video src={mediaSrc} autoPlay loop muted playsInline className="max-h-full max-w-full object-contain filter drop-shadow-[0_0_10px_var(--primary-glow)] rounded" />
-            <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/10 to-transparent pointer-events-none hologram-scan" />
-          </div>
+          <video src={mediaSrc} autoPlay loop muted playsInline className="max-h-full max-w-full object-contain" style={{ borderRadius: '18px 22px 16px 24px' }} />
         )}
-
-        {/* Telemetry Overlay */}
-        <div className="absolute top-2 left-2 text-[9px] font-['JetBrains_Mono'] text-cyan-400 bg-black/60 px-1.5 py-0.5 rounded border border-cyan-500/30">
-          FEED: <span className="text-white font-bold">{mode.toUpperCase()} ATIVO</span>
+        <div className="absolute top-2 left-2 font-syn-body text-[10px] syn-pill px-2 py-0.5" style={{ background: 'rgba(5,3,17,0.7)', border: '1px solid rgba(45,253,212,0.25)', color: '#9aa6c9' }}>
+          filamento · <strong style={{ color: '#eaf8f4' }}>{mode}</strong>
         </div>
       </div>
     </section>

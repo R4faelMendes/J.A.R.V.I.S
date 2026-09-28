@@ -180,17 +180,37 @@ async function testAi() {
 }
 
 async function testLoginStealth() {
-  // Sinais de "navegador normal" dentro do emulador — o Google exige tudo isto
-  // para permitir login: webdriver=false, window.chrome completo, plugins>0 e a
-  // marca "Google Chrome" nos Client Hints (sec-ch-ua)
-  const probe = 'JSON.stringify({ wd: navigator.webdriver, '
-    + 'chromeRt: !!(window.chrome && window.chrome.runtime), '
-    + 'chromeApp: !!(window.chrome && window.chrome.app), '
-    + 'plugins: (navigator.plugins || []).length, '
-    + 'brands: (navigator.userAgentData && navigator.userAgentData.brands ? navigator.userAgentData.brands : []).map(function (b) { return b.brand; }).join("|"), '
-    + 'sp: window.__sp || 0, spErr: window.__spErr || "", sp3: window.__sp3 || 0, '
-    + 'cd: (function () { try { var d = Object.getOwnPropertyDescriptor(window, "chrome"); if (!d) return "none"; return (d.get ? "get" : "data") + "/" + (d.configurable ? "conf" : "NONCONF") + "/" + (d.writable ? "w" : "nw"); } catch (e) { return "err"; } })(), '
-    + 'crOwn: (function () { try { var c = window.chrome; var d2 = c ? Object.getOwnPropertyDescriptor(c, "runtime") : null; if (!d2) return "none"; return d2.get ? "get" : (d2.value ? "val" : "empty"); } catch (e) { return "err"; } })() })';
+  // Sinais de "navegador normal" dentro do emulador (emulado como Brave) — o
+  // Google exige tudo isto para permitir login: webdriver=false, window.chrome
+  // completo, plugins>0 e a marca "Brave"/"Google Chrome" nos Client Hints.
+  // Autocontida (não fecha sobre variáveis externas): roda direto na janela
+  // atual e é serializada para as webviews do emulador.
+  const collectSpSignals = () => {
+    let cd = 'none';
+    try {
+      const d = Object.getOwnPropertyDescriptor(window, 'chrome');
+      if (d) cd = `${d.get ? 'get' : 'data'}/${d.configurable ? 'conf' : 'NONCONF'}/${d.writable ? 'w' : 'nw'}`;
+    } catch { cd = 'err'; }
+    let crOwn = 'none';
+    try {
+      const c = window.chrome;
+      const d2 = c ? Object.getOwnPropertyDescriptor(c, 'runtime') : null;
+      if (d2) crOwn = d2.get ? 'get' : (d2.value ? 'val' : 'empty');
+    } catch { crOwn = 'err'; }
+    return {
+      wd: navigator.webdriver,
+      chromeRt: !!(window.chrome && window.chrome.runtime),
+      chromeApp: !!(window.chrome && window.chrome.app),
+      plugins: (navigator.plugins || []).length,
+      brands: (navigator.userAgentData && navigator.userAgentData.brands
+        ? navigator.userAgentData.brands : []).map((b) => b.brand).join('|'),
+      sp: window.__sp || 0,
+      spErr: window.__spErr || '',
+      sp3: window.__sp3 || 0,
+      cd,
+      crOwn
+    };
+  };
   try {
     let parsed = null;
     let reloaded = false;
@@ -198,27 +218,36 @@ async function testLoginStealth() {
       const wv = document.querySelector('webview');
       if (wv?.executeJavaScript) {
         try {
-          const raw = await wv.executeJavaScript(probe);
+          const raw = await Promise.race([
+            wv.executeJavaScript(`(${collectSpSignals.toString()})()`),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('probe lento')), 2500))
+          ]);
           parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         } catch { /* webview ainda inicializando */ }
-      }
-      // A navegação inicial disputa com o envio via CDP: recarrega UMA vez para
-      // provar que documentos novos (é assim que funciona o login — o Google
-      // abre numa navegação nova) recebem o script anti-bot
-      if (!reloaded && attempt >= 2 && parsed && Number(parsed.sp) === 0
-        && wv && typeof wv.reload === 'function') {
-        reloaded = true;
-        try { wv.reload(); } catch { /* ignora */ }
+        // A navegação inicial disputa com o envio via CDP: recarrega UMA vez para
+        // provar que documentos novos (é assim que funciona o login — o Google
+        // abre numa navegação nova) recebem o script anti-bot
+        if (!reloaded && attempt >= 2 && parsed && Number(parsed.sp) === 0
+          && typeof wv.reload === 'function') {
+          reloaded = true;
+          try { wv.reload(); } catch { /* ignora */ }
+        }
+      } else {
+        // Sem webview na tela (home com sidebar): a JANELA PRINCIPAL recebe o
+        // mesmo script anti-bot e os mesmos Client Hints Brave — sonda local
+        // em vez de falhar por "webview indisponível"
+        try { parsed = collectSpSignals(); } catch { /* ignora */ }
       }
       if (!(parsed && Number(parsed.sp) >= 9)) await new Promise((r) => setTimeout(r, 500));
     }
-    if (!parsed) throw new Error('webview indisponível');
+    if (!parsed) throw new Error('sonda indisponível');
     const ok = parsed.wd === false && !!parsed.chromeRt && parsed.plugins > 0
       && Number(parsed.sp) >= 9
-      && String(parsed.brands || '').includes('Google Chrome');
+      && /Google Chrome|Brave/.test(String(parsed.brands || ''));
+    const alvo = document.querySelector('webview') ? 'webview' : 'janela';
     push('login-google', ok,
-      `wd=${parsed.wd} chromeRt=${parsed.chromeRt} plugins=${parsed.plugins} sp=${parsed.sp}/${parsed.sp3} `
-      + `cd=${parsed.cd} crOwn=${parsed.crOwn} brands=${parsed.brands}`
+      `alvo=${alvo} wd=${parsed.wd} chromeRt=${parsed.chromeRt} plugins=${parsed.plugins} `
+      + `sp=${parsed.sp}/${parsed.sp3} cd=${parsed.cd} crOwn=${parsed.crOwn} brands=${parsed.brands}`
       + `${parsed.spErr ? ` spErr=${parsed.spErr}` : ''}`);
   } catch (e) {
     push('login-google', false, errText(e));

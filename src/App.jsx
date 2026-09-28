@@ -10,6 +10,7 @@ import MemoryModal from './components/MemoryModal';
 import MusicWidgetModal from './components/MusicWidgetModal';
 import SettingsModal from './components/SettingsModal';
 import AutomationModal from './components/AutomationModal';
+import RulesModal from './components/RulesModal';
 import GameModeOverlay from './components/GameModeOverlay';
 
 import { speechService } from './services/speechService';
@@ -17,6 +18,10 @@ import { sounds } from './services/soundEffects';
 import { commandExecutor } from './services/commandExecutor';
 import { aiService } from './services/aiService';
 import { memoryService } from './services/memoryService';
+import { ruleEngine } from './services/ruleEngine';
+import { biometricService, SENSITIVE_ACTIONS } from './services/biometricService';
+import { visionService } from './services/visionService';
+import { runSmokeTest } from './services/selfTest';
 
 export default function App() {
   const [activeTheme, setActiveTheme] = useState(() => {
@@ -27,16 +32,24 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
   const [lastDirective, setLastDirective] = useState(
-    'Pronto, Senhor. Todos os protocolos de combate e telemetria estão sincronizados.'
+    'Pronto, Senhor. O organismo despertou e todos os filamentos estão sincronizados.'
   );
 
   // Novo layout estilo Codex: sidebar + área escura
-  const [activeView, setActiveView] = useState('home'); // home, agenda, music, memory, automation, tactical, schematics, settings
+  const [activeView, setActiveViewRaw] = useState('home'); // home, agenda, music, memory, automation, tactical, schematics, settings
+  // Ao abrir a view de música ela fica montada para sempre: o X só a OCULTA —
+  // o iframe continua vivo, o áudio não para e a fila/busca são preservadas
+  const [musicOpened, setMusicOpened] = useState(false);
+  const setActiveView = (view) => {
+    if (view === 'music') setMusicOpened(true);
+    setActiveViewRaw(view);
+  };
   const [automationState, setAutomationState] = useState(null);
   const [gameModeActive, setGameModeActive] = useState(false);
   const [reactorModel, setReactorModel] = useState('mark_3');
   const [textCommand, setTextCommand] = useState('');
   const [ytSearch, setYtSearch] = useState('');
+  const [localMode, setLocalMode] = useState(false); // glow violeta quando o cérebro local responde
 
   const prefs = memoryService.getPreferences();
   const userName = prefs.userName || 'Tony Stark';
@@ -50,11 +63,60 @@ export default function App() {
     const timer = setTimeout(() => {
       sounds.playPowerPulse();
       speechService.speak(
-        `J.A.R.V.I.S. operacional. Conexão neural estabelecida, Senhor Stark. Todos os subsistemas nominais.`,
+        `J.A.R.V.I.S. vivo. Conexão neural estabelecida, Senhor. O organismo respira em ritmo basal.`,
         () => setIsSpeaking(true),
         () => setIsSpeaking(false)
       );
     }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Fase 1 — organismo proativo: reflexos (regras) + vigília visual (opt-in)
+  useEffect(() => {
+    ruleEngine.start((rule, context) => {
+      if (rule.action?.kind === 'command' && rule.action.command) {
+        handleExecuteCommand(rule.action.command);
+      } else {
+        const text = rule.action?.text || `Reflexo disparado: ${rule.name}, Senhor.`;
+        setLastDirective(text);
+        speakJarvis(text);
+      }
+      void context;
+    });
+    visionService.start((hint) => {
+      const text = `Uma observação, Senhor: ${hint}.`;
+      setLastDirective(text);
+    });
+    return () => { ruleEngine.stop(); visionService.stop(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Reage a mudanças de consentimento vindas dos ajustes (sem reload)
+  useEffect(() => {
+    if (activeView === 'settings') return undefined;
+    visionService.start((hint) => setLastDirective(`Uma observação, Senhor: ${hint}.`));
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
+
+  // Autoteste ponta-a-ponta (J.A.R.V.I.S com ?smoke=1) — valida voz, microfone e controle do PC
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('smoke')) return undefined;
+    const autoclose = params.has('autoclose');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await runSmokeTest();
+        if (autoclose) {
+          setTimeout(() => { try { window.close(); } catch { /* ignora */ } }, 1500);
+        }
+        return res;
+      } catch (err) {
+        console.error('[SMOKE] erro no autoteste:', err);
+        if (autoclose) setTimeout(() => { try { window.close(); } catch { /* ignora */ } }, 1500);
+      }
+      return null;
+    }, 6500); // aguarda saudação, worker Whisper (4s) e índice de apps (6s)
     return () => clearTimeout(timer);
   }, []);
 
@@ -92,7 +154,7 @@ export default function App() {
     );
   };
 
-  // Pipeline central de comandos — mesma essência, agora navegando na área escura
+  // Pipeline central de comandos — com trava biométrica em ações sensíveis
   const handleExecuteCommand = async (commandText) => {
     if (!commandText.trim()) return;
 
@@ -100,6 +162,22 @@ export default function App() {
     sounds.playClick();
 
     const res = commandExecutor.parseAndExecute(commandText);
+
+    // Trava biométrica: energia do sistema e encerramento de processos exigem
+    // desbloqueio (Windows Hello no desktop; confirmação explícita fora dele)
+    if (SENSITIVE_ACTIONS.has(res.action) || res.action === 'PROCESS_KILL') {
+      const label = res.action === 'SYSTEM_POWER'
+        ? `ação de energia (${res.type})`
+        : `encerramento de processo (${res.query || res.speech || 'selecionado'})`;
+      setLastDirective('Verificando identidade do operador…');
+      const unlock = await biometricService.unlock(label);
+      if (!unlock.ok) {
+        const msg = 'Identidade não confirmada, Senhor. Ação sensível bloqueada.';
+        setLastDirective(msg);
+        speakJarvis(msg);
+        return;
+      }
+    }
 
     if (res.action === 'TOGGLE_GAME_MODE') {
       setGameModeActive(res.active);
@@ -193,10 +271,12 @@ export default function App() {
       try {
         const aiAnswer = await aiService.query(commandText);
         setLastDirective(aiAnswer);
+        setLocalMode(aiService.isLocalMode());
         speakJarvis(aiAnswer);
       } catch {
         const fallback = 'Senhor, identifiquei sua solicitação, mas os servidores de IA remotos apresentaram latência. Módulos locais permanecem ativos.';
         setLastDirective(fallback);
+        setLocalMode(true);
         speakJarvis(fallback);
       }
     }
@@ -219,11 +299,9 @@ export default function App() {
           </div>
         );
       case 'music':
-        return (
-          <div className="flex-1 min-h-0 flex flex-col h-full">
-            <MusicWidgetModal isOpen embedded onClose={goHome} searchQuery={ytSearch} />
-          </div>
-        );
+        // Renderizada fixa, logo abaixo do switch: montada uma 1ª vez e só
+        // ocultada ao fechar — assim o áudio continua e nada reinicia
+        return null;
       case 'memory':
         return (
           <div className="h-full min-h-0 flex flex-col">
@@ -239,31 +317,39 @@ export default function App() {
           );
         }
         return (
-          <div className="hud-panel rounded-xl p-6 max-w-2xl mx-auto font-['JetBrains_Mono']">
-            <div className="corner-bracket corner-tl"></div>
-            <div className="corner-bracket corner-tr"></div>
-            <div className="corner-bracket corner-bl"></div>
-            <div className="corner-bracket corner-br"></div>
-            <h2 className="font-['Orbitron'] text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider mb-2">
-              PIPELINE DE AUTOMAÇÃO
+          <div className="syn-panel rounded-xl p-6 max-w-2xl mx-auto font-syn-body">
+
+
+
+
+            <h2 className="font-syn-title text-lg font-bold mb-2" style={{ color: '#eaf8f4' }}>
+              Automação em repouso
             </h2>
-            <p className="text-xs text-cyan-300/80 mb-4">
+            <p className="font-syn-body text-xs font-light mb-4" style={{ color: '#9aa6c9' }}>
               Nenhuma sequência em execução. Inicie por voz ou pelos atalhos abaixo, Senhor.
             </p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleExecuteCommand('abrir vscode')}
-                className="px-4 py-2 rounded bg-[var(--primary)] text-black font-bold text-xs hover:bg-white transition-all"
+                className="syn-pill font-syn-title px-4 py-2 text-xs font-medium"
+                style={{ background: 'rgba(45,253,212,0.18)', color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.45)', boxShadow: '0 0 14px rgba(45,253,212,0.3)' }}
               >
                 Abrir VS Code
               </button>
               <button
                 onClick={() => runAutomation('CREATE_GITHUB_REPO', { repoName: 'temperatura-mobile' }, 'Iniciando sequência de criação de repositório no GitHub, Senhor.')}
-                className="px-4 py-2 rounded bg-cyan-950/60 border border-cyan-500/40 text-cyan-200 font-bold text-xs hover:border-[var(--primary)] transition-all"
+                className="syn-pill font-syn-title px-4 py-2 text-xs font-medium"
+                style={{ color: '#eaf8f4', border: '1px solid rgba(138,92,255,0.45)', background: 'rgba(138,92,255,0.12)' }}
               >
                 Criar repo GitHub
               </button>
             </div>
+          </div>
+        );
+      case 'rules':
+        return (
+          <div className="h-full min-h-0 flex flex-col">
+            <RulesModal isOpen embedded onClose={goHome} />
           </div>
         );
       case 'tactical':
@@ -301,26 +387,26 @@ export default function App() {
         return (
           <div className="max-w-3xl mx-auto flex flex-col gap-3">
             {/* Status da diretiva */}
-            <div className="hud-panel rounded-xl p-4 relative overflow-hidden">
-              <div className="corner-bracket corner-tl"></div>
-              <div className="corner-bracket corner-tr"></div>
-              <div className="corner-bracket corner-bl"></div>
-              <div className="corner-bracket corner-br"></div>
-              <div className="text-[10px] font-['JetBrains_Mono'] tracking-widest text-cyan-400/70 mb-1">
-                ÚLTIMA DIRETIVA
+            <div className="syn-panel p-4 relative overflow-hidden">
+              <div className="font-syn-body text-[11px] font-light mb-1" style={{ color: '#9aa6c9' }}>
+                Última diretiva
               </div>
-              <p className="font-['JetBrains_Mono'] text-sm text-cyan-100 italic">
+              <p className="font-syn-body text-sm italic font-light" style={{ color: '#eaf8f4' }}>
                 &ldquo;{lastDirective}&rdquo;
               </p>
-              <div className="mt-3 flex gap-2 text-[10px] font-['JetBrains_Mono']">
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20 text-cyan-200">
-                  {pending} TAREFAS PENDENTES
+              <div className="mt-3 flex flex-wrap gap-2 font-syn-body text-[11px]">
+                <span className="syn-pill px-2.5 py-1" style={{ border: '1px solid rgba(45,253,212,0.25)', color: '#9aa6c9' }}>
+                  {pending} tarefas pendentes
                 </span>
-                <span className="px-2 py-0.5 rounded bg-white/5 border border-cyan-500/20 text-cyan-200">
-                  {projects.length} PROJETOS
+                <span className="syn-pill px-2.5 py-1" style={{ border: '1px solid rgba(138,92,255,0.35)', color: '#9aa6c9' }}>
+                  {projects.length} projetos
                 </span>
-                <span className={`px-2 py-0.5 rounded border ${isListening ? 'bg-red-500/20 border-red-500/40 text-red-300' : 'bg-white/5 border-emerald-500/30 text-emerald-300'}`}>
-                  {isListening ? 'ESCUTANDO' : isSpeaking ? 'TRANSMITINDO' : 'PRONTO'}
+                <span className="syn-pill px-2.5 py-1" style={isListening
+                  ? { border: '1px solid rgba(45,253,212,0.5)', color: '#2dfdd4', background: 'rgba(45,253,212,0.1)' }
+                  : isSpeaking
+                    ? { border: '1px solid rgba(255,62,200,0.5)', color: '#ff3ec8', background: 'rgba(255,62,200,0.1)' }
+                    : { border: '1px solid rgba(154,166,201,0.3)', color: '#9aa6c9' }}>
+                  {isListening ? 'escutando' : isSpeaking ? 'transmitindo' : 'pronto'}
                 </span>
               </div>
             </div>
@@ -340,24 +426,27 @@ export default function App() {
                 handleExecuteCommand(textCommand);
                 setTextCommand('');
               }}
-              className="hud-panel rounded-xl p-3 flex items-center gap-2"
+              className="syn-panel p-2.5 pl-4 flex items-center gap-2"
+              style={{ borderRadius: '999px' }}
             >
-              <span className="text-[var(--primary)] font-['JetBrains_Mono'] text-sm font-bold pl-1">&gt;</span>
+              <span className="font-syn-body text-sm font-medium pl-1" style={{ color: '#2dfdd4' }}>›</span>
               <input
                 value={textCommand}
                 onChange={(e) => setTextCommand(e.target.value)}
-                placeholder="Digite uma diretiva ou fale com o microfone..."
-                className="flex-1 bg-transparent outline-none text-sm font-['JetBrains_Mono'] text-cyan-100 placeholder:text-cyan-400/40"
+                placeholder="Sussurre uma diretiva ou fale ao microfone…"
+                className="flex-1 bg-transparent outline-none font-syn-body font-light text-sm"
+                style={{ color: '#eaf8f4' }}
               />
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded bg-[var(--primary)] text-black text-xs font-bold font-['Orbitron'] hover:bg-white transition-all"
+                className="syn-pill font-syn-title px-5 py-2 text-xs font-medium"
+                style={{ background: 'rgba(45,253,212,0.18)', color: '#2dfdd4', border: '1px solid rgba(45,253,212,0.45)', boxShadow: '0 0 14px rgba(45,253,212,0.3)' }}
               >
-                EXECUTAR
+                Enviar
               </button>
             </form>
 
-            <div className="flex flex-wrap gap-2 font-['JetBrains_Mono'] text-[11px]">
+            <div className="flex flex-wrap gap-2 font-syn-body text-[11px]">
               {[
                 { label: 'Varredura completa', cmd: 'varredura completa dos sistemas' },
                 { label: 'Divertir energia', cmd: 'redirecionar energia para os propulsores' },
@@ -367,14 +456,15 @@ export default function App() {
                 <button
                   key={a.label}
                   onClick={() => handleExecuteCommand(a.cmd)}
-                  className="px-3 py-1.5 rounded bg-white/5 border border-cyan-500/25 text-cyan-200 hover:border-[var(--primary)] hover:text-white transition-all"
+                  className="syn-pill px-3.5 py-1.5 font-light"
+                  style={{ border: '1px solid rgba(45,253,212,0.25)', color: '#9aa6c9', background: 'rgba(10,6,32,0.5)' }}
                 >
                   {a.label}
                 </button>
               ))}
             </div>
 
-            <TerminalInput isListening={isListening} onToggleMic={handleToggleMic} />
+            <TerminalInput isListening={isListening} isSpeaking={isSpeaking} onToggleMic={handleToggleMic} />
           </div>
         );
       }
@@ -382,8 +472,8 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0b0e1a] text-[#b8e2f2] selection:bg-cyan-500/30 selection:text-cyan-200">
-      {/* Sidebar estilo Codex — Reator ARC + conteúdos */}
+    <div className="flex h-screen w-screen overflow-hidden font-syn-body" style={{ background: '#050311', color: '#eaf8f4' }}>
+      {/* Sidebar — núcleo synapse + navegação */}
       <Sidebar
         activeView={activeView}
         onSelect={(v) => setActiveView(v)}
@@ -393,10 +483,11 @@ export default function App() {
         onModelChange={(m) => setReactorModel(m)}
         userName={userName}
         accessLevel={accessLevel}
+        localMode={localMode}
       />
 
-      {/* Área escura — mini header + conteúdo selecionado */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#121212]">
+      {/* Área viva — mini header + conteúdo selecionado */}
+      <div className="flex-1 flex flex-col min-w-0" style={{ background: 'radial-gradient(120% 90% at 50% 0%, #0a0620 0%, #050311 70%)' }}>
         <MiniHeader
           activeView={activeView}
           activeTheme={activeTheme}
@@ -408,9 +499,17 @@ export default function App() {
           onToggleSound={handleToggleSound}
           onOpenSettings={() => setActiveView('settings')}
           onToggleGameMode={() => setGameModeActive(true)}
+          localMode={localMode}
         />
         <main className="flex-1 flex flex-col min-h-0 p-4">
           {renderView()}
+          {/* YT Music mantido MONTADO (só oculto quando fechado): o áudio
+              continua tocando e o estado do player é preservado ao voltar */}
+          <div className={activeView === 'music' ? 'flex-1 min-h-0 flex flex-col h-full' : 'hidden'}>
+            {(musicOpened || activeView === 'music') && (
+              <MusicWidgetModal isOpen embedded onClose={goHome} searchQuery={ytSearch} />
+            )}
+          </div>
         </main>
       </div>
 

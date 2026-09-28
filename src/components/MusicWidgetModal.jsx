@@ -1,9 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Music, Search, Minimize2, Maximize2 } from 'lucide-react';
+import { X, Music, Search, Minimize2, Maximize2, Shield } from 'lucide-react';
 import { sounds } from '../services/soundEffects';
 import { memoryService } from '../services/memoryService';
 
 const YT_MUSIC_HOME = 'https://music.youtube.com';
+// Cosmético do Brave Shields emulado: esconde os slots de anúncio que
+// sobrariam como espaço vazio (mesmos seletores de YT_AD_CSS em electron-main)
+const YT_AD_CSS = `#masthead-ad, .ytp-ad-text-overlay, .ytp-ad-message-container,
+ytmusic-ad-slot-renderer, ytmusic-companion-promo-renderer,
+ytmusic-player-ad-overlay-renderer { display: none !important; }`;
 const buildYtMusicUrl = (term = '') => {
   const normalized = term.trim();
   if (!normalized) return YT_MUSIC_HOME;
@@ -49,6 +54,35 @@ export default function MusicWidgetModal({ isOpen, onClose, embedded = false, se
   const [currentSrc, setCurrentSrc] = useState(initialTrack?.src || buildYtMusicUrl('jarvis cinematic soundtrack'));
   const boxRef = useRef(null);
   const [dims, setDims] = useState('');
+
+  // Brave Shields emulado (bloqueio de anúncios/rastreadores + contador)
+  const [shields, setShields] = useState({ blocked: 0, enabled: true });
+  useEffect(() => {
+    let alive = true;
+    Promise.resolve(window.electronAPI?.shieldsStatus?.())
+      .then((s) => {
+        if (!alive || !s) return;
+        const v = (memoryService.getPreferences() || {}).shieldsEnabled;
+        const enabled = typeof v === 'boolean' ? v : s.enabled !== false;
+        if (enabled !== s.enabled) window.electronAPI?.shieldsSetEnabled?.(enabled);
+        setShields({ blocked: s.blocked || 0, enabled });
+      })
+      .catch(() => { /* ignora */ });
+    window.electronAPI?.onShieldsBlocked?.((total) => {
+      if (alive) setShields((p) => ({ ...p, blocked: total }));
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const toggleShields = () => {
+    sounds.playClick();
+    setShields((p) => {
+      const next = { ...p, enabled: !p.enabled };
+      window.electronAPI?.shieldsSetEnabled?.(next.enabled);
+      memoryService.updatePreferences({ shieldsEnabled: next.enabled });
+      return next;
+    });
+  };
 
   const activeTrack = queue[currentIndex] || queue[0] || DEFAULT_STREAMS[0];
 
@@ -126,11 +160,11 @@ export default function MusicWidgetModal({ isOpen, onClose, embedded = false, se
 
   return (
     <div className={embedded ? (isDocked ? "flex-1 min-h-0 flex flex-col w-full h-[340px]" : "flex-1 min-h-0 flex flex-col w-full h-full") : "fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"}>
-      <div ref={boxRef} className={embedded ? (isDocked ? "hud-panel rounded-xl w-full h-[340px] flex flex-col border-[var(--primary)] overflow-hidden shadow-[0_0_24px_var(--primary-glow)]" : "hud-panel rounded-xl w-full h-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden") : "hud-panel rounded-xl w-full max-w-[98vw] h-[95vh] flex flex-col border-[var(--primary)] shadow-[0_0_45px_var(--primary-glow)] overflow-hidden"}>
-        <div className="corner-bracket corner-tl"></div>
-        <div className="corner-bracket corner-tr"></div>
-        <div className="corner-bracket corner-bl"></div>
-        <div className="corner-bracket corner-br"></div>
+      <div ref={boxRef} className={embedded ? (isDocked ? "syn-panel rounded-xl w-full h-[340px] flex flex-col border-[var(--primary)] overflow-hidden shadow-[0_0_24px_var(--primary-glow)]" : "syn-panel rounded-xl w-full h-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden") : "syn-panel rounded-xl w-full max-w-[98vw] h-[95vh] flex flex-col border-[var(--primary)] shadow-[0_0_45px_var(--primary-glow)] overflow-hidden"}>
+
+
+
+
 
         <div className="flex items-center justify-between px-3 sm:px-4 py-2 border-b border-cyan-500/20 bg-slate-950/80">
           <div className="flex items-center gap-2 min-w-0">
@@ -138,13 +172,26 @@ export default function MusicWidgetModal({ isOpen, onClose, embedded = false, se
               <Music className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-['Orbitron'] text-[10px] sm:text-xs font-bold text-[var(--primary)] tracking-wider truncate">
-                YT MUSIC // FULLSCREEN
+              <h2 className="font-syn-title text-[10px] sm:text-xs font-medium tracking-wide truncate" style={{ color: '#eaf8f4' }}>
+                Membrana musical
               </h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={toggleShields}
+              className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-mono transition-all ${
+                shields.enabled
+                  ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300 hover:border-emerald-400'
+                  : 'border-white/15 bg-white/5 text-slate-400 hover:text-slate-200'
+              }`}
+              title={`Brave Shields emulado: ${shields.blocked} anúncios/rastreadores bloqueados — clique para ${shields.enabled ? 'desligar' : 'ligar'}`}
+            >
+              <Shield className="w-3 h-3" />
+              {shields.enabled ? `${shields.blocked} BLOQ.` : 'SHIELDS OFF'}
+            </button>
+
             <div className="flex items-center gap-2 bg-slate-900/80 border border-cyan-500/30 rounded px-2 py-1">
               <input
                 value={customUrl}
@@ -197,6 +244,19 @@ export default function MusicWidgetModal({ isOpen, onClose, embedded = false, se
               key={currentSrc}
               src={currentSrc}
               title="YouTube Music full screen"
+              onLoad={(e) => {
+                // Cosmético do Shields dentro do iframe (mesma sessão/webSecurity
+                // off): esconde slots de anúncio que passariam pelo bloqueio de rede
+                try {
+                  const doc = e.target?.contentDocument;
+                  if (doc && !doc.getElementById('jarvis-shields-css')) {
+                    const style = doc.createElement('style');
+                    style.id = 'jarvis-shields-css';
+                    style.textContent = YT_AD_CSS;
+                    (doc.head || doc.documentElement).appendChild(style);
+                  }
+                } catch { /* cross-origin sem permissão — ignora */ }
+              }}
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"

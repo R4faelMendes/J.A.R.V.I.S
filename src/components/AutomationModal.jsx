@@ -12,11 +12,11 @@ export default function AutomationModal({ isOpen, onClose, automationState, embe
 
   return (
     <div className={embedded ? "flex-1 min-h-0 flex flex-col" : "fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-lg animate-in fade-in duration-200"}>
-      <div className={embedded ? "hud-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "hud-panel rounded-xl w-full max-w-2xl flex flex-col border-[var(--primary)] shadow-[0_0_50px_var(--primary-glow)] overflow-hidden"}>
-        <div className="corner-bracket corner-tl"></div>
-        <div className="corner-bracket corner-tr"></div>
-        <div className="corner-bracket corner-bl"></div>
-        <div className="corner-bracket corner-br"></div>
+      <div className={embedded ? "syn-panel rounded-xl w-full flex-1 min-h-0 flex flex-col border-[var(--primary)] overflow-hidden" : "syn-panel rounded-xl w-full max-w-2xl flex flex-col border-[var(--primary)] shadow-[0_0_50px_var(--primary-glow)] overflow-hidden"}>
+
+
+
+
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cyan-500/20 bg-slate-950/70">
@@ -29,11 +29,11 @@ export default function AutomationModal({ isOpen, onClose, automationState, embe
               )}
             </div>
             <div>
-              <h2 className="font-['Orbitron'] text-base sm:text-lg font-bold text-[var(--primary)] glow-cyan tracking-wider">
-                PIPELINE DE AUTOMAÇÃO DE SISTEMA
+              <h2 className="font-syn-title text-base sm:text-lg font-bold" style={{ color: '#eaf8f4' }}>
+                Automação viva
               </h2>
-              <p className="text-xs text-cyan-400/80 font-['JetBrains_Mono']">
-                EXECUÇÃO EMULADA // BARRAMENTO DE TECLADO, MOUSE & NAVEGADOR
+              <p className="font-syn-body text-xs font-light" style={{ color: '#9aa6c9' }}>
+                Teclado, mouse e navegador movidos pelo organismo
               </p>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function AutomationModal({ isOpen, onClose, automationState, embe
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 font-['JetBrains_Mono']">
+        <div className="p-6 space-y-6 font-syn-body">
           {/* Progress Bar */}
           <div>
             <div className="flex justify-between text-xs mb-1.5">
@@ -94,7 +94,7 @@ export default function AutomationModal({ isOpen, onClose, automationState, embe
             {status === AutomationStatus.COMPLETED && (
               <button
                 onClick={() => { sounds.playClick(); onClose(); }}
-                className="px-5 py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-['Orbitron'] font-bold text-xs uppercase transition-all shadow-[0_0_12px_#10b981]"
+                className="px-5 py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-syn-title font-bold text-xs uppercase transition-all shadow-[0_0_12px_#10b981]"
               >
                 Concluir
               </button>

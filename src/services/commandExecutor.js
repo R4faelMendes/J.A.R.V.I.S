@@ -53,6 +53,7 @@ const INTERNAL_TARGETS = [
   { keys: ['configuracao', 'configurações', 'configuracoes', 'configurar', 'ajustes', 'ajuste', 'preferencias', 'preferências', 'opcões', 'opcoes'], modal: 'settings', speech: 'Abrindo o painel de configurações, Senhor.' },
   { keys: ['musica', 'música', 'midia', 'mídia', 'player', 'tocador'], modal: 'music', speech: 'Abrindo o controle de mídia, Senhor.' },
   { keys: ['automacao', 'automação', 'rotina', 'rotinas'], modal: 'automation', speech: 'Abrindo o pipeline de automação, Senhor.' },
+  { keys: ['reflexo', 'reflexos', 'regras', 'gatilho', 'gatilhos', 'proativo', 'proativa'], modal: 'rules', speech: 'Abrindo os reflexos do organismo, Senhor.' },
   { keys: ['tatico', 'tático', 'mapa'], modal: 'tactical', speech: 'Abrindo o mapa tático, Senhor.' },
   { keys: ['esquema', 'esquemas', 'esquematico', 'esquemático', 'esquematicos', 'diagrama'], modal: 'schematics', speech: 'Abrindo o módulo esquemático, Senhor.' },
   { keys: ['inicio', 'início', 'central', 'home', 'principal'], modal: 'home', speech: 'Voltando à central de voz, Senhor.' }
@@ -64,6 +65,7 @@ const CLOSE_MODAL_NAMES = {
   settings: 'as configurações',
   music: 'o controle de mídia',
   automation: 'o pipeline de automação',
+  rules: 'os reflexos',
   tactical: 'o mapa tático',
   schematics: 'o módulo esquemático',
   home: 'a central de voz'
