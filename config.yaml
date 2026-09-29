@@ -1,0 +1,106 @@
+# JARVIS 2.0 — config.yaml
+# Tudo local, gratuito, CPU-only. Edite à vontade; o servidor relê ao iniciar.
+
+geral:
+  idioma: "pt-BR"
+  nome_assistente: "Jarvis"
+  pasta_trabalho: "workspace"   # usada pelo code_runner (isolada)
+
+cerebro:
+  provedor: "ollama"
+  host: "http://localhost:11434"
+  modelo_principal: "qwen2.5:3b"
+  modelos_alternativos: ["llama3.2:3b", "qwen2.5:1.5b"]
+  num_ctx: 4096
+  num_predict: 256
+  keep_alive: "24h"
+  num_parallel: 1
+  historico_trocas: 8
+
+audio:
+  microfone_indice: null        # null = padrão do Windows
+  alto_falante_indice: null
+  taxa_amostragem: 16000
+  bloco_ms: 30
+
+stt:
+  modelo: "base"                # testar "small" só se latência ok
+  pasta_modelo: "models/whisper"
+  compute_type: "int8"
+  device: "cpu"
+  language: "pt"
+  beam_size: 1
+  vad_filter: true
+  cpu_threads: 4                # i5-4570: 4 núcleos físicos, 4 threads
+  fim_fala_silencio_ms: 600
+
+vad:
+  motor: "webrtcvad"            # leve, sem PyTorch; blocos nativos de 30 ms
+  agressividade: 2              # 0..3 (2 = equilíbrio fala/ruído)
+  # silero via onnxruntime: caminho futuro sem torch; webrtcvad basta por ora
+
+wakeword:
+  modelo: "hey_jarvis"
+  framework: "onnx"             # tflite não funciona bem no Windows
+  limiar: 0.5
+  modo_conversa_seg: 8
+  atalho_global: "ctrl+alt+j"   # reserva obrigatória, sempre ativa
+  ativada: true
+
+tts:
+  motor: "piper"
+  binario_piper: "models/piper/piper.exe"
+  voz: "pt_BR-faber-medium"     # alternativa: "pt_BR-edresson-low"
+  pasta_vozes: "models/piper-voices"
+  velocidade: 1.0               # 0.5 .. 1.5
+  sintetizar_por_frase: true
+  fila_audio: true
+  barge_in: true                # interromper falando por cima
+
+roteador_rapido:
+  ativado: true                 # comandos comuns sem chamar o LLM (<1s)
+
+seguranca:
+  confirmar_acoes_perigosas: true   # voz + botão
+  comandos_proibidos:
+    - "format"
+    - "diskpart"
+    - "del /f /s /q C:\\Windows"
+    - "Remove-Item C:\\Windows"
+    - "shutdown /s"
+    - "reg delete"
+  log_execucao: "logs/exec.log"
+
+skills:
+  apps: true
+  system: true
+  files: true
+  web: true
+  code_runner: true
+  notes_reminders: true
+  media: true
+  smart_home: false             # desligada por padrão (opcional)
+  screen_agent: false           # DESATIVADA: PC sem VRAM para visão
+
+servidor:
+  host: "0.0.0.0"               # só rede local; NUNCA expor à internet
+  porta: 8765
+  pin: "0000"                   # troque; exibido no PC com QR code
+  https_local: true             # certificado autoassinado p/ microfone no celular
+  cert_arquivo: "models/cert.pem"
+  chave_arquivo: "models/key.pem"
+
+interface:
+  tema: "ciano"                 # alternativa: "ambar"
+  modo_economia: true           # partículas off, 30fps (padrão: economizar CPU)
+  fps: 30
+  fontes_locais: true
+
+logs:
+  perf: "logs/perf.log"
+  sistema: "logs/jarvis.log"
+
+startup:
+  iniciar_com_windows: false
+  abrir_interface: true
+  aquecer_modelos: true
