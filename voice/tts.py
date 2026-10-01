@@ -171,6 +171,10 @@ class TTS:
         # Piper usa length-scale (inverso): <1 = mais rápido.
         self.length_scale = max(0.5, min(1.5, 1.0 / velocidade if velocidade > 0 else 1.0))
         self.dispositivo_saida = cfg.get("audio", {}).get("alto_falante_indice")
+        if self.dispositivo_saida is None:
+            from core.audio import resolver_saida
+
+            self.dispositivo_saida = resolver_saida()  # nome > índice > padrão
         self._parar = threading.Event()
         self._falando = threading.Event()
         self.servidor: ServidorPiper | None = None
@@ -202,12 +206,25 @@ class TTS:
 
     def sintetizar(self, frase: str) -> tuple[int, np.ndarray]:
         """Sintetiza UMA frase: via servidor persistente, com fallback one-shot."""
+        import time as _t
+
+        from core.events import BUS
+
+        t0 = _t.perf_counter()
         if self.servidor is not None and self.servidor.vivo():
             try:
-                return self.servidor.sintetizar(frase)
+                taxa, audio = self.servidor.sintetizar(frase)
+                BUS.emitir("TTS_SYNTH", {"chars": len(frase), "bytes": int(audio.nbytes),
+                                         "tempo_s": round(_t.perf_counter() - t0, 2),
+                                         "via": "servidor"})
+                return taxa, audio
             except Exception:
                 pass  # cai para o one-shot abaixo
-        return self._sintetizar_oneshot(frase)
+        taxa, audio = self._sintetizar_oneshot(frase)
+        BUS.emitir("TTS_SYNTH", {"chars": len(frase), "bytes": int(audio.nbytes),
+                                 "tempo_s": round(_t.perf_counter() - t0, 2),
+                                 "via": "oneshot"})
+        return taxa, audio
 
     def _sintetizar_oneshot(self, frase: str) -> tuple[int, np.ndarray]:
         """Sintetiza UMA frase num processo novo (lento; reserva)."""
@@ -268,6 +285,19 @@ class TTS:
         """Toca um trecho; retorna False se foi interrompido (barge-in)."""
         if self._parar.is_set() or audio.size == 0:
             return False
+        from core.audio import taxa_nativa_saida
+        from core.events import BUS
+
+        # WASAPI exige a taxa nativa: reamostra (Tarefa 2.3). MME aceita direto.
+        nativa = taxa_nativa_saida(self.dispositivo_saida)
+        if nativa != taxa:
+            from core.audio import reamostrar
+
+            audio = reamostrar(audio, taxa, nativa)
+            taxa = nativa
+        BUS.emitir("AUDIO_PLAY_START", {"dur_s": round(len(audio) / taxa, 2),
+                                        "taxa": taxa,
+                                        "dispositivo": self.dispositivo_saida})
         self._falando.set()
         try:
             try:
@@ -282,10 +312,13 @@ class TTS:
                     sd.sleep(50)
                     esperado += 50
                 sd.wait()
-            except Exception:
-                # Fallback de reserva se o sounddevice falhar no dispositivo
+            except Exception as erro_sd:
+                # Fallback de reserva se o sounddevice falhar no dispositivo.
+                # Registra o erro real (nunca engolir silenciosamente).
+                BUS.emitir("AUDIO_SD_FALHOU", {"erro": str(erro_sd)[:200]})
                 if not self._parar.is_set():
                     self._tocar_winsound_memoria(taxa, audio)
+            BUS.emitir("AUDIO_PLAY_END", {"interrompido": bool(self._parar.is_set())})
             return not self._parar.is_set()
         finally:
             if not self._parar.is_set():

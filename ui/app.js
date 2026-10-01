@@ -475,50 +475,176 @@
   requestAnimationFrame(animate);
 
   // ==========================================================================
-  // WEBSOCKET & COMUNICAÇÃO EM TEMPO REAL
+  // PROTOCOLO DE RESPOSTA & HISTÓRICO (Tarefa 3)
+  // ==========================================================================
+  const MAX_HISTORICO = 5;
+  let historicoRespostas = []; // [{ id, texto, origem }]
+  let mensagemAtiva = null;    // { id, seqs: Set, texto, origem, spanElement, containerElement }
+  let deltaBuffer = [];
+  let rafScheduled = false;
+
+  function renderizarHistoricoERespostaAtiva() {
+    elResposta.textContent = "";
+    if (historicoRespostas.length === 0 && !mensagemAtiva) {
+      const span = document.createElement("span");
+      span.className = "placeholder-text";
+      span.textContent = "Sistemas prontos. Aguardando comando...";
+      elResposta.appendChild(span);
+      return;
+    }
+
+    // Renderiza as até 5 respostas anteriores
+    historicoRespostas.forEach((item, idx) => {
+      const div = document.createElement("div");
+      div.className = "response-item past";
+      const tag = document.createElement("span");
+      tag.className = "response-tag";
+      tag.textContent = `[#${idx + 1}] `;
+      div.appendChild(tag);
+      const textSpan = document.createElement("span");
+      textSpan.textContent = item.texto;
+      div.appendChild(textSpan);
+      elResposta.appendChild(div);
+    });
+
+    // Renderiza a resposta ativa se houver
+    if (mensagemAtiva) {
+      const div = document.createElement("div");
+      div.className = "response-item active";
+      const tag = document.createElement("span");
+      tag.className = "response-tag active-tag";
+      tag.textContent = "▶ ";
+      div.appendChild(tag);
+      const textSpan = document.createElement("span");
+      textSpan.textContent = mensagemAtiva.texto;
+      div.appendChild(textSpan);
+      mensagemAtiva.spanElement = textSpan;
+      mensagemAtiva.containerElement = div;
+      elResposta.appendChild(div);
+    }
+
+    elResposta.scrollTop = elResposta.scrollHeight;
+  }
+
+  function iniciarNovaResposta(id, origem = "") {
+    if (mensagemAtiva && mensagemAtiva.id === id) return;
+    if (mensagemAtiva && mensagemAtiva.texto.trim()) {
+      historicoRespostas.push({
+        id: mensagemAtiva.id,
+        texto: mensagemAtiva.texto,
+        origem: mensagemAtiva.origem
+      });
+      if (historicoRespostas.length > MAX_HISTORICO) {
+        historicoRespostas.shift();
+      }
+    }
+    mensagemAtiva = {
+      id: id,
+      seqs: new Set([0]),
+      texto: "",
+      origem: origem,
+      spanElement: null,
+      containerElement: null
+    };
+    deltaBuffer = [];
+    renderizarHistoricoERespostaAtiva();
+  }
+
+  function processarDeltaBuffer() {
+    if (!mensagemAtiva || deltaBuffer.length === 0) {
+      rafScheduled = false;
+      return;
+    }
+    let alterou = false;
+    for (let i = 0; i < deltaBuffer.length; i++) {
+      const item = deltaBuffer[i];
+      if (item.id === mensagemAtiva.id) {
+        mensagemAtiva.texto += item.delta;
+        alterou = true;
+      }
+    }
+    deltaBuffer = [];
+    if (alterou && mensagemAtiva.spanElement) {
+      mensagemAtiva.spanElement.textContent = mensagemAtiva.texto;
+      elResposta.scrollTop = elResposta.scrollHeight;
+    }
+    rafScheduled = false;
+  }
+
+  function receberDelta(id, seq, delta) {
+    if (!mensagemAtiva || mensagemAtiva.id !== id) {
+      iniciarNovaResposta(id);
+    }
+    if (seq !== undefined && mensagemAtiva.seqs.has(seq)) {
+      // Ignora duplicado (mesmo id e seq)
+      return;
+    }
+    if (seq !== undefined) mensagemAtiva.seqs.add(seq);
+    deltaBuffer.push({ id, delta });
+    if (!rafScheduled) {
+      rafScheduled = true;
+      requestAnimationFrame(processarDeltaBuffer);
+    }
+  }
+
+  function finalizarResposta(id, seq, textoFinal) {
+    if (!mensagemAtiva || mensagemAtiva.id !== id) {
+      iniciarNovaResposta(id);
+    }
+    if (seq !== undefined && mensagemAtiva.seqs.has(seq) && mensagemAtiva.texto === textoFinal) {
+      return;
+    }
+    if (seq !== undefined) mensagemAtiva.seqs.add(seq);
+    deltaBuffer = [];
+    mensagemAtiva.texto = textoFinal;
+    if (mensagemAtiva.spanElement) {
+      mensagemAtiva.spanElement.textContent = textoFinal;
+      elResposta.scrollTop = elResposta.scrollHeight;
+    }
+  }
+
+  // ==========================================================================
+  // WEBSOCKET & COMUNICAÇÃO EM TEMPO REAL (Singleton + Backoff Exponencial)
   // ==========================================================================
   let ws = null;
+  let wsReconnectTimer = null;
+  let wsBackoffMs = 1000;
+  const WS_MAX_BACKOFF_MS = 16000;
+
   function conectarWebSocket() {
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    if (ws) {
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      try { ws.close(); } catch (e) {}
+    }
+
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    ws = new WebSocket(`${proto}://${location.host}/ws`);
+    try {
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+    } catch (e) {
+      agendarReconexao();
+      return;
+    }
 
     ws.onopen = () => {
+      wsBackoffMs = 1000;
       $("badge-ws").classList.add("active");
-      adicionarLog("[LINK] Conexão WebSocket estabelecida com o servidor.");
+      adicionarLog("[LINK] Conexão WebSocket estabelecida.");
     };
 
     ws.onmessage = (ev) => {
       try {
         const d = JSON.parse(ev.data);
-        if (d.estado) definirEstado(d.estado);
-
-        // Atualização de CPU e RAM
-        if (typeof d.cpu === "number") {
-          elCpuBar.style.width = `${Math.min(100, d.cpu)}%`;
-          elCpuTxt.textContent = `${d.cpu.toFixed(0)}%`;
-        }
-        if (typeof d.ram === "number") {
-          elRamBar.style.width = `${Math.min(100, d.ram)}%`;
-          elRamTxt.textContent = `${d.ram.toFixed(0)}%`;
-        }
-
-        // Transcrição e Resposta
-        if (d.transcricao && elTranscricao.textContent !== d.transcricao) {
-          digitarTexto(elTranscricao, d.transcricao, 10);
-        }
-        if (d.resposta && elResposta.textContent !== d.resposta) {
-          digitarTexto(elResposta, d.resposta, 12);
-        }
-        if (d.ferramenta) {
-          elFerramenta.textContent = d.ferramenta;
-        }
-
-        // Nível de Áudio
-        if (typeof d.nivel === "number") {
-          targetAudioLevel = d.nivel;
-          elAudioBar.style.width = `${Math.min(100, d.nivel * 100)}%`;
-          elAudioTxt.textContent = `${(d.nivel * 100).toFixed(0)}%`;
-        }
+        tratarMensagemWS(d);
       } catch (e) {
         console.error("Erro ao processar mensagem do WebSocket:", e);
       }
@@ -526,11 +652,60 @@
 
     ws.onclose = () => {
       $("badge-ws").classList.remove("active");
-      definirEstado("erro");
-      adicionarLog("[LINK] Conexão WebSocket perdida. Tentando reconectar em 2s...");
-      setTimeout(conectarWebSocket, 2000);
+      agendarReconexao();
+    };
+
+    ws.onerror = () => {
+      $("badge-ws").classList.remove("active");
     };
   }
+
+  function agendarReconexao() {
+    if (wsReconnectTimer) return;
+    adicionarLog(`[LINK] Conexão perdida. Reconectando em ${wsBackoffMs / 1000}s...`);
+    wsReconnectTimer = setTimeout(() => {
+      wsReconnectTimer = null;
+      wsBackoffMs = Math.min(wsBackoffMs * 2, WS_MAX_BACKOFF_MS);
+      conectarWebSocket();
+    }, wsBackoffMs);
+  }
+
+  function tratarMensagemWS(d) {
+    if (d.tipo === "response_start") {
+      iniciarNovaResposta(d.id, d.origem);
+    } else if (d.tipo === "response_delta") {
+      receberDelta(d.id, d.seq, d.delta);
+    } else if (d.tipo === "response_end") {
+      finalizarResposta(d.id, d.seq, d.texto_final);
+    } else if (d.tipo === "transcricao") {
+      if (d.texto) elTranscricao.textContent = d.texto;
+    } else if (d.tipo === "loop_detectado") {
+      adicionarLog(`[ALERTA] Loop de respostas detectado (${d.consecutivas} automáticas). Interrompido.`);
+      definirEstado("erro");
+    } else if (d.tipo === "confirmacao") {
+      exibirModalConfirmacao(d.acao);
+    }
+
+    // Telemetria / Estado (NUNCA limpa ou altera o painel de resposta)
+    if (d.estado) definirEstado(d.estado);
+    if (typeof d.cpu === "number") {
+      elCpuBar.style.width = `${Math.min(100, d.cpu)}%`;
+      elCpuTxt.textContent = `${d.cpu.toFixed(0)}%`;
+    }
+    if (typeof d.ram === "number") {
+      elRamBar.style.width = `${Math.min(100, d.ram)}%`;
+      elRamTxt.textContent = `${d.ram.toFixed(0)}%`;
+    }
+    if (typeof d.nivel === "number") {
+      targetAudioLevel = d.nivel;
+      elAudioBar.style.width = `${Math.min(100, d.nivel * 100)}%`;
+      elAudioTxt.textContent = `${(d.nivel * 100).toFixed(0)}%`;
+    }
+    if (d.ferramenta) {
+      elFerramenta.textContent = d.ferramenta;
+    }
+  }
+
   conectarWebSocket();
 
   // ==========================================================================
@@ -539,7 +714,7 @@
   async function enviarComando(texto) {
     if (!texto.trim()) return;
     definirEstado("pensando");
-    digitarTexto(elTranscricao, texto, 10);
+    elTranscricao.textContent = texto;
     $("entrada").value = "";
     playSFX("click");
 
@@ -555,7 +730,7 @@
       $("tempo-resposta").textContent = `RESPOSTA GERADA EM ${resp.tempos_s ?? duracao} s`;
 
       if (resp.resposta) {
-        digitarTexto(elResposta, resp.resposta, 12);
+        finalizarResposta(resp.id || `cmd_${Date.now()}`, 999999, resp.resposta);
       }
 
       if (resp.precisa_confirmar) {
@@ -579,7 +754,7 @@
       }
     } catch (err) {
       definirEstado("erro");
-      digitarTexto(elResposta, "Erro de comunicação com o servidor.");
+      finalizarResposta("erro", 0, "Erro de comunicação com o servidor.");
       adicionarLog(`[ERRO] Falha ao enviar comando: ${err}`);
     }
   }
@@ -602,7 +777,7 @@
     definirEstado("pensando");
     const r = await fetch("/api/confirmar", { method: "POST" }).then((x) => x.json());
     if (r.resposta) {
-      digitarTexto(elResposta, r.resposta, 12);
+      finalizarResposta(r.id || `conf_${Date.now()}`, 999999, r.resposta);
     }
     definirEstado("dormindo");
   }

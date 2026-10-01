@@ -48,7 +48,10 @@ class Brain:
         self.model: str = cerebro.get("modelo_principal", "qwen2.5:3b")
         self.num_ctx: int = int(cerebro.get("num_ctx", 4096))
         self.num_predict: int = int(cerebro.get("num_predict", 256))
-        self.keep_alive: str = str(cerebro.get("keep_alive", "24h"))
+        val = cerebro.get("keep_alive", "24h")
+        # Preserva o tipo: número (segundos, -1 = infinito) ou string ("24h").
+        # str(-1) virava "-1" e o Ollama devolvia HTTP 400.
+        self.keep_alive = val if isinstance(val, (int, float)) else str(val)
         self.max_trocas: int = int(cerebro.get("historico_trocas", 8))
         self._historico: list[dict[str, str]] = []
 

@@ -48,6 +48,10 @@ def main():
 
     voz_nome = cfg.get("tts", {}).get("voz", "pt_BR-faber-medium")
     dev_saida = cfg.get("audio", {}).get("alto_falante_indice")
+    if dev_saida is None:
+        from core.audio import resolver_saida
+
+        dev_saida = resolver_saida()  # nome do config > índice > padrão
     
     print(f"Configuração carregada:")
     print(f"  - Voz configurada: {voz_nome}")

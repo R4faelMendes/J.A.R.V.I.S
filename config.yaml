@@ -11,15 +11,18 @@ cerebro:
   host: "http://localhost:11434"
   modelo_principal: "qwen2.5:3b"
   modelos_alternativos: ["llama3.2:3b", "qwen2.5:1.5b"]
-  num_ctx: 4096
+  num_ctx: 2048                # Tarefa 5: 2048 economiza RAM/prefill na CPU (era 4096)
   num_predict: 256
-  keep_alive: "24h"
+  keep_alive: -1                # Tarefa 5: modelo sempre residente (era "24h")
   num_parallel: 1
   historico_trocas: 8
 
 audio:
-  microfone_indice: null        # null = padrão do Windows
-  alto_falante_indice: null
+  microfone_nome: "wireless stereo"  # substring estável (índices mudam ao desplugar USB)
+  microfone_indice: null        # reserva se o nome não for achado
+  alto_falante_nome: "wireless stereo"  # fone do usuário; prefere MME (mais leve)
+  alto_falante_indice: null     # reserva se o nome não for achado
+  ruido_base: 0.008             # calibrado: gate de energia = 3x este valor
   taxa_amostragem: 16000
   bloco_ms: 30
 
@@ -42,7 +45,7 @@ vad:
 wakeword:
   modelo: "hey_jarvis"
   framework: "onnx"             # tflite não funciona bem no Windows
-  limiar: 0.5
+  limiar: 0.2                   # calibrado em 29/09/2026: voz PT atinge 0,30-0,38; silêncio 0,045
   modo_conversa_seg: 8
   atalho_global: "ctrl+alt+j"   # reserva obrigatória, sempre ativa
   ativada: true

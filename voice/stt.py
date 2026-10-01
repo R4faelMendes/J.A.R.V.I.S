@@ -28,14 +28,10 @@ BLOCO_AMOSTRAS = 480  # 30 ms a 16 kHz (formato exigido pelo webrtcvad)
 
 
 def reamostrar(audio: np.ndarray, taxa_orig: int, taxa_dest: int = TAXA) -> np.ndarray:
-    """Reamostra áudio mono para a taxa de destino (interpolação linear)."""
-    if taxa_orig == taxa_dest:
-        return audio.astype(np.float32)
-    dur = len(audio) / taxa_orig
-    n_novo = int(dur * taxa_dest)
-    velho = np.linspace(0.0, dur, len(audio))
-    novo = np.linspace(0.0, dur, n_novo)
-    return np.interp(novo, velho, audio).astype(np.float32)
+    """Reamostra áudio mono (centralizado em core.audio p/ TTS e STT usarem)."""
+    from core.audio import reamostrar as _reamostrar
+
+    return _reamostrar(audio, taxa_orig, taxa_dest)
 
 
 class STT:
@@ -54,6 +50,13 @@ class STT:
         self.cpu_threads: int = int(stt.get("cpu_threads", 4))
         self.silencio_fim_ms: int = int(stt.get("fim_fala_silencio_ms", 600))
         self.indice_mic = audio_cfg.get("microfone_indice")
+        if self.indice_mic is None:
+            # Nome é mais estável que índice (USB desplugado muda tudo).
+            from core.audio import resolver_entrada
+
+            self.indice_mic = resolver_entrada()
+        # Gate de energia calibrado: ignora quadros abaixo de 3x o ruído de fundo.
+        self.gate_energia: float = float(audio_cfg.get("ruido_base", 0.008)) * 3.0
         # VAD leve sem PyTorch (webrtcvad); agressividade 2 = equilíbrio.
         self.vad = webrtcvad.Vad(2)
         try:
@@ -68,9 +71,13 @@ class STT:
             raise RuntimeError(f"Não carreguei o Whisper '{self.modelo_nome}': {erro}") from erro
 
     def tem_fala(self, bloco_int16: bytes) -> bool:
-        """Diz se um bloco de 30 ms contém voz (True/False)."""
+        """Diz se um bloco de 30 ms contém voz (VAD + gate de energia)."""
         if len(bloco_int16) != BLOCO_AMOSTRAS * 2:
             return False
+        dados = np.frombuffer(bloco_int16, dtype=np.int16).astype(np.float32) / 32768.0
+        gate = getattr(self, "gate_energia", 0.024)
+        if float(np.sqrt(np.mean(dados * dados))) < gate:
+            return False  # abaixo do ruído calibrado: nem consulta o VAD
         try:
             return self.vad.is_speech(bloco_int16, TAXA)
         except Exception:
@@ -80,11 +87,23 @@ class STT:
         """Transcreve um trecho de áudio (float32 mono 16 kHz)."""
         if audio.size < TAXA // 2:  # menos de 0,5 s: ignora (ruído)
             return ""
+        from core.events import BUS
+
+        import time as _t
+        BUS.emitir("STT_START", {"dur_s": round(len(audio) / TAXA, 2)})
+        t0 = _t.perf_counter()
         try:
+            # AGC leve: normaliza o pico em 0.5 (voz baixa continua legível).
+            pico = float(np.max(np.abs(audio))) if audio.size else 0.0
+            if pico > 0.05:
+                audio = (audio / pico * 0.5).astype(np.float32)
             segmentos, _info = self.modelo.transcribe(
                 audio, language="pt", beam_size=1, vad_filter=True
             )
-            return "".join(s.text for s in segmentos).strip()
+            texto = "".join(s.text for s in segmentos).strip()
+            BUS.emitir("STT_END", {"texto": texto[:80],
+                                   "tempo_s": round(_t.perf_counter() - t0, 2)})
+            return texto
         except Exception as erro:
             raise RuntimeError(f"Falha na transcrição: {erro}") from erro
 

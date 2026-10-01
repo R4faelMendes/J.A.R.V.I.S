@@ -492,7 +492,59 @@ body:not(.booting) #boot-screen {
 
 .response-box {
   min-height: 120px;
-  font-size: 15px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cyan-main) rgba(0, 229, 255, 0.05);
+}
+
+.response-box::-webkit-scrollbar {
+  width: 5px;
+}
+.response-box::-webkit-scrollbar-track {
+  background: rgba(0, 229, 255, 0.05);
+}
+.response-box::-webkit-scrollbar-thumb {
+  background: var(--cyan-main);
+  border-radius: 3px;
+}
+
+.response-item {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(0, 229, 255, 0.03);
+  border-left: 2px solid var(--panel-border);
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  word-break: break-word;
+}
+
+.response-item.past {
+  opacity: 0.65;
+  border-left-color: rgba(0, 229, 255, 0.2);
+}
+
+.response-item.active {
+  opacity: 1;
+  border-left-color: var(--cyan-main);
+  background: rgba(0, 229, 255, 0.08);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+}
+
+.response-tag {
+  font-family: var(--font-title);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--blue-electric);
+  margin-right: 4px;
+}
+
+.response-tag.active-tag {
+  color: var(--cyan-main);
 }
 
 .placeholder-text {

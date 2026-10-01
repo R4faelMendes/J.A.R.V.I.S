@@ -48,6 +48,10 @@ class WakeListener:
         self.janela_conversa_s: float = float(ww.get("modo_conversa_seg", 8))
         self.atalho: str = str(ww.get("atalho_global", "ctrl+alt+j"))
         self.indice_mic = audio_cfg.get("microfone_indice")
+        if self.indice_mic is None:
+            from core.audio import resolver_entrada
+
+            self.indice_mic = resolver_entrada()
         self.on_wake = on_wake
         self._rodando = threading.Event()
         self._thread: threading.Thread | None = None
@@ -92,11 +96,17 @@ class WakeListener:
         """Abre/renova a janela de follow-up de ~8 s (chamar após cada resposta)."""
         self._conversa_ate = time.time() + self.janela_conversa_s
 
-    def _disparar(self) -> None:
+    def _disparar(self, score: float = 0.0) -> None:
         agora = time.time()
         if agora - self._ultimo_disparo < 3.0:  # cooldown: evita disparo duplo
             return
         self._ultimo_disparo = agora
+        try:
+            from core.events import BUS
+
+            BUS.emitir("WAKE_TRIGGER", {"score": round(score, 3), "limiar": self.limiar})
+        except Exception:
+            pass
         try:
             self.on_wake()
         except Exception:
@@ -123,8 +133,9 @@ class WakeListener:
             sobra = np.concatenate([sobra, vindo])
             while len(sobra) >= JANELA_AMOSTRAS and self._rodando.is_set():
                 quadro, sobra = sobra[:JANELA_AMOSTRAS], sobra[JANELA_AMOSTRAS:]
-                if self.pontuar(quadro) >= self.limiar:
-                    self._disparar()
+                score = self.pontuar(quadro)
+                if score >= self.limiar:
+                    self._disparar(score)
         try:
             fluxo.stop()
             fluxo.close()

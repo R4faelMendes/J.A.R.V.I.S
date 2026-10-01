@@ -47,12 +47,22 @@ Se o PowerShell bloquear o `Activate.ps1`: `Set-ExecutionPolicy -Scope CurrentUs
 - [x] **F0** Preparação (estrutura + hardware) · [x] **F1** Cérebro Ollama qwen2.5:3b · [x] **F2** Piper faber-medium + servidor persistente
 - [x] **F3** Whisper base + webrtcvad (sem torch) · [x] **F4** hey_jarvis onnx + Ctrl+Alt+J · [x] **F5** Pipeline (roteador, barge-in, eco)
 - [x] **F6** 9 skills + executor com confirmação e `logs/exec.log`
-- [x] **F7** FastAPI+WS + HUD Holográfico Cinematográfico (Three.js 3D + Canvas 2D + Web Audio FX + fontes locais)
+- [x] **F7** FastAPI+WS + HUD Holográfico Cinematográfico + Protocolo de Resposta `response_start/delta/end` (anti-loop e deduplicação)
 - [x] **F8** PWA + PIN/QR + HTTPS autoassinado (só rede local) · [x] **F9** start.bat/VBS, startup, freeze
+- [x] **T3** Painel de Resposta corrigido: protocolo com IDs e sequências, deduplicação, buffer rAF, backoff exponencial e histórico de 5 itens (60/60 testes verdes)
 
 ## Pendências de hardware (não de código)
 1. **Microfone capta silêncio** (rms ~0,01): confira mute físico, USB, Som → Entrada (barra azul deve mexer), ganho 80–100, Privacidade → Microfone. Diagnóstico: `scripts/check_mic.py`. Validação ao vivo (frase + 20x wake) fica para depois do ajuste.
 2. **Ocioso:** medir CPU em repouso quando o mic funcionar (meta < 5%).
+
+## Atualizações 29–30/09 (testado)
+- **Ativação: diga "EI JARVIS"** (5/6, limiar 0,2; "Jarvis" seco só 1/6). Reserva: **Ctrl+Alt+J**.
+- **Áudio por nome:** `audio.microfone_nome: "wireless stereo"`, `alto_falante_nome` (prefere MME); WASAPI reamostra sozinho. USB morto; hands-free só via KS (não abre).
+- **`start.bat` + `scripts/preflight.py`:** liberam a porta 8765, sobem o Ollama se fechado (acha via `%LOCALAPPDATA%` mesmo fora do PATH), validam o modelo e gravam `logs/ollama_iniciado_pelo_jarvis.flag`. Se a porta estiver presa por outro servidor, o preflight encerra o ocupante.
+- **Ollama:** `num_ctx` 2048, `keep_alive` -1 (numérico! string `"-1"` dá HTTP 400), env `KEEP_ALIVE=-1`, `MAX_LOADED=1`, `NUM_PARALLEL=1`.
+- **WebSocket:** protocolo `response_start/delta/end` com `id`+`seq` (front acumula, ignora duplicados, histórico de 5); telemetria enxuta (nível ≤30 Hz, CPU/RAM 1 Hz, sem reenvio repetido); `LOOP_DETECTADO` após 3 autos sem humano.
+- **Debug:** página `/debug` (mic do navegador, VAD/wake do servidor, 50 eventos, clientes) + `scripts/diagnostico_completo.py` (9/9 OK).
+- **Testes:** 60/60 (`pytest tests/ -p no:cacheprovider`).
 
 ## Solução de problemas
 | Sintoma | Causa e correção |
