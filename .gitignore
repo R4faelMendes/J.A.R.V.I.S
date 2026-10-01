@@ -6,3 +6,15 @@ models/
 logs/
 workspace/
 *.wav
+
+# Build e restore (C#) — nunca versionar
+[Bb]in/
+[Oo]bj/
+*.user
+.vs/
+TestResults/
+project.assets.json
+*.nuget.cache
+*.nuget.dgspec.json
+*.nuget.g.props
+*.nuget.g.targets

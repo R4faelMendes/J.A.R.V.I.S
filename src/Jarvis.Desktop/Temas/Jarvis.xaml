@@ -1,0 +1,66 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- JARVIS · Tema escuro padrão. Espelha src/design/tokens.css. -->
+  <Color x:Key="CorAbismo">#050D18</Color>
+  <Color x:Key="CorVidro">#0C1B2E</Color>
+  <Color x:Key="CorLinha">#1B3A57</Color>
+  <Color x:Key="CorCiano">#4FD6FF</Color>
+  <Color x:Key="CorGelo">#E6F6FF</Color>
+  <Color x:Key="CorNevoa">#8FA9BF</Color>
+  <Color x:Key="CorOuro">#F4B544</Color>
+  <Color x:Key="CorVermelho">#FF4D3D</Color>
+  <Color x:Key="CorVerde">#4DE3A1</Color>
+
+  <SolidColorBrush x:Key="Fundo" Color="{StaticResource CorAbismo}"/>
+  <SolidColorBrush x:Key="Texto" Color="{StaticResource CorGelo}"/>
+  <SolidColorBrush x:Key="Texto2" Color="{StaticResource CorNevoa}"/>
+  <SolidColorBrush x:Key="Acento" Color="{StaticResource CorCiano}"/>
+  <SolidColorBrush x:Key="Borda" Color="{StaticResource CorLinha}"/>
+
+  <FontFamily x:Key="FonteTitulo">./Recursos/fontes/#Chakra Petch</FontFamily>
+  <FontFamily x:Key="FonteTexto">./Recursos/fontes/#IBM Plex Sans</FontFamily>
+
+  <CornerRadius x:Key="RaioBotao">10</CornerRadius>
+  <CornerRadius x:Key="RaioPainel">20</CornerRadius>
+  <CornerRadius x:Key="RaioJanela">28</CornerRadius>
+
+  <Style x:Key="BotaoPrimario" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource Acento}"/>
+    <Setter Property="Foreground" Value="#04131F"/>
+    <Setter Property="FontFamily" Value="{StaticResource FonteTexto}"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="Padding" Value="16,11"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border Background="{TemplateBinding Background}" CornerRadius="10"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style x:Key="BotaoSecundario" TargetType="Button" BasedOn="{StaticResource BotaoPrimario}">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{StaticResource Texto}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource Borda}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+
+  <Style x:Key="Chip" TargetType="Border">
+    <Setter Property="CornerRadius" Value="999"/>
+    <Setter Property="Padding" Value="11,4"/>
+    <Setter Property="Background" Value="#140F2E"/>
+  </Style>
+
+  <Style x:Key="PainelVidro" TargetType="Border">
+    <Setter Property="Background" Value="#B30C1B2E"/>
+    <Setter Property="BorderBrush" Value="#8C1B3A57"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="20"/>
+    <Setter Property="Padding" Value="24"/>
+  </Style>
+</ResourceDictionary>
