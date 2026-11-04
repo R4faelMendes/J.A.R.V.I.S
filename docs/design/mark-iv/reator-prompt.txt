@@ -1,0 +1,6 @@
+Built-in image_gen; transparent_background=true.
+Referenced image (edit target): C:/Users/ADMINI~1/AppData/Local/Temp/codex-clipboard-7a160a2e-0431-4771-ac4a-88be1b757bc4.jpg
+Saved asset: C:/Users/Administrator/Desktop/Jarvis/src/Jarvis.Rendering.Shared/Assets/reactor-mark-iv.png
+
+Exact prompt:
+Use case: background-extraction. Asset type: photorealistic reactor cutout for a native desktop and Android UI. Input image is the edit target. Extract ONLY the arc reactor from the supplied photograph onto genuine transparent alpha. Preserve its exact mechanical circular design, the photographed oblique orientation, metallic silver/black concentric rings with perforated holes and screws, vivid cyan-blue translucent outer segments and luminous center, and the copper wire coil modules. Remove all dark room background, floor, cast blue floor reflection, and wires protruding from the left edge. Keep the complete reactor, centered, ample 8% transparent margin, no cropping, no pedestal, no text, no labels, no additional objects, no redesign. Clean high-detail photorealistic edges, transparent outside, blue self-illumination confined to the object and a very subtle edge glow. The central luminous circular face is solid, not a transparent hole. Square composition.

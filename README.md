@@ -1,87 +1,64 @@
-# JARVIS 2.0 — Assistente pessoal 100% local e gratuito (Windows 10, CPU)
+# Jarvis — assistente pessoal para Windows e Android
 
-> Pasta real: `C:\Users\Administrator\Desktop\J.A.R.V.I.S - 2.0` (Desktop clássico, **sem** OneDrive — verificado).
-> Custo zero, tudo local (áudio, tela e arquivos nunca saem do PC). Internet só para baixar ferramentas e pesquisar.
+Projeto pessoal em **C#/.NET 8**, com aplicativo desktop em **WPF** e aplicativo companheiro em **.NET MAUI**. Esta publicação corresponde ao código da versão em desenvolvimento no computador do autor.
 
-## Hardware registrado (verificado via PowerShell/WMI)
-- **SO:** Windows 10 Pro 10.0.19045, 64 bits
-- **CPU:** Intel i5-4570 @ 3.20 GHz — **4 núcleos / 4 threads** (`cpu_threads=4`)
-- **RAM:** ~17,9 GiB | **GPU:** 2x 1 GB (inúteis p/ IA → tudo na CPU)
-- **Disco C:** ~267 GB livres | **Áudio:** USB + Realtek + headset (39 dispositivos via sounddevice)
-- **Rede local (Fase 8):** IP `192.168.0.64`, porta `8765`, PIN em `config.yaml → servidor.pin`
+O Jarvis recebe comandos por voz para abrir aplicativos, controlar mídia e volume, consultar informações do computador e acionar funções do assistente. A interface também reúne agenda, e-mails, rotinas, telemetria e conexão com o celular. O aplicativo Android se comunica com o PC por um servidor local e pareamento.
 
-## Instalação limpa (PowerShell)
+## Inteligência artificial e automação
+
+- **Vosk** para detecção da palavra de ativação e **Whisper.net** para transcrição local de voz.
+- **Piper** para síntese de voz em português, com modelos instalados separadamente.
+- Roteamento local de intenções para comandos conhecidos, com ações implementadas pelo aplicativo.
+- O módulo `Jarvis.Ai` contém conectores de **Gemini, Groq e OpenRouter**, armazenamento protegido de chaves e uma cadeia de fallback. Esses conectores são infraestrutura experimental: sua presença no código não significa que estejam ativos no fluxo atual da interface.
+
+Os modelos de voz são de terceiros; não foram treinados neste projeto. O projeto explora a integração desses recursos com uma aplicação desktop e suas funções de automação.
+
+## Organização do código
+
+- `src/Jarvis.Core`: contratos, configurações e regras compartilhadas.
+- `src/Jarvis.Ai`: intenções locais, serviços de e-mail e infraestrutura de provedores de IA.
+- `src/Jarvis.Voice`: captura, reconhecimento e síntese de voz.
+- `src/Jarvis.System`: integração com o Windows, janelas, aplicativos, mídia e telemetria.
+- `src/Jarvis.Data`: persistência local e rotinas.
+- `src/Jarvis.Info`: clima e notícias.
+- `src/Jarvis.Server`: servidor local, comunicação e pareamento.
+- `src/Jarvis.Desktop`: interface WPF.
+- `src/Jarvis.Mobile`: aplicativo companheiro MAUI.
+- `tests/`: testes automatizados de regras, interfaces e integrações.
+
+## Compilar e testar
+
+Requisitos: Windows, SDK do .NET 8 e os componentes de desenvolvimento Windows/MAUI exigidos pelos projetos. Para Android, instale também o workload MAUI Android, Android SDK e JDK compatíveis. `Directory.Build.props` contém as convenções usadas pela instalação local; ajuste os caminhos se necessário.
+
 ```powershell
-cd "C:\Users\Administrator\Desktop\J.A.R.V.I.S - 2.0"
-winget install Python.Python.3.12 Git.Git Ollama.Ollama   # UAC pode pedir "Sim"
-py -3.12 -m venv .venv
-.\.venv\Scripts\pip.exe install -r requirements.txt       # versões congeladas
-ollama pull qwen2.5:3b
-.\.venv\Scripts\python.exe scripts/check_hardware.py
-.\.venv\Scripts\python.exe -m pytest tests/               # 50 testes
+dotnet restore Jarvis.sln
+dotnet build Jarvis.sln -c Release
+dotnet test Jarvis.sln -c Release
 ```
-Se o PowerShell bloquear o `Activate.ps1`: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` — ou chame `.\.venv\Scripts\python.exe` direto.
 
-## Como iniciar
-- **Duplo clique em `start.bat`**: garante Ollama, sobe o servidor (`0.0.0.0:8765`, HTTPS se `models/cert.pem` existir) e abre o HUD no Edge sem bordas. No Firewall, permita **só "Redes privadas"**.
-- `start_silencioso.vbs`: igual, sem janela. Início com Windows: `iniciar_com_windows: true` no config + `scripts/startup.py`.
-- **Texto:** `scripts/jarvis.py --texto "que horas são"` | conversa: `scripts/jarvis.py` | voz: `scripts/jarvis.py --voz`.
-- **Celular (mesmo Wi-Fi):** `scripts/mostrar_qr.py` → escaneie `models/qr-celular.png`, digite o PIN, aceite o certificado.
+Para compilar apenas o desktop:
 
-## Comandos de exemplo
-"Jarvis, que horas são?" · "que dia é hoje?" · "abrir a calculadora" · "volume para 30" · "pausar a música" · "me lembra em 5 minutos" · "uso de cpu" · "pesquise filme Duna" · "pare" · "confirmo" (confirma ação pendente) · atalho **Ctrl+Alt+J**.
+```powershell
+dotnet build src/Jarvis.Desktop/Jarvis.Desktop.csproj -c Release
+```
 
-## Medições reais (i5-4570, CPU)
-| Etapa | Número | Meta |
-|---|---|---|
-| LLM 1º token (aquecido) | 0,6–0,9 s | < 2 s ✅ |
-| Roteador → 1º áudio | 0,26 s | < 1 s ✅ |
-| LLM → 1º áudio | 1,30 s | 2–3 s ✅ |
-| STT (15 s em 1,23 s) | 1,23 s | < 1,5 s ✅ |
-| TTS 1ª frase (faber-medium) | 0,80 s | < 1 s ✅ |
-| qwen2.5:3b 5,8 tok/s vs 1.5b 10,1 tok/s | principal 3b, fallback 1.5b | — |
-| Servidor fim-a-fim (HTTP+voz) | 0,48 s | — |
-| Wake: silêncio 0,000 (sem falso +); voz sintética 0,105 | teste 20x ao vivo pendente | limiar 0,5 |
+## Modelos e configuração local
 
-## Fases — todas concluídas
-- [x] **F0** Preparação (estrutura + hardware) · [x] **F1** Cérebro Ollama qwen2.5:3b · [x] **F2** Piper faber-medium + servidor persistente
-- [x] **F3** Whisper base + webrtcvad (sem torch) · [x] **F4** hey_jarvis onnx + Ctrl+Alt+J · [x] **F5** Pipeline (roteador, barge-in, eco)
-- [x] **F6** 9 skills + executor com confirmação e `logs/exec.log`
-- [x] **F7** FastAPI+WS + HUD Holográfico Cinematográfico + Protocolo de Resposta `response_start/delta/end` (anti-loop e deduplicação)
-- [x] **F8** PWA + PIN/QR + HTTPS autoassinado (só rede local) · [x] **F9** start.bat/VBS, startup, freeze
-- [x] **T3** Painel de Resposta corrigido: protocolo com IDs e sequências, deduplicação, buffer rAF, backoff exponencial e histórico de 5 itens (60/60 testes verdes)
+O repositório contém o código e os recursos da interface. **Modelos de voz, executáveis externos, builds, caches, bancos pessoais e credenciais não são distribuídos nesta publicação.** A pasta `models/` permanece na instalação local e precisa ser preparada separadamente para executar as funções de voz e os testes de integração que dependem dela.
 
-## Pendências de hardware (não de código)
-1. **Microfone capta silêncio** (rms ~0,01): confira mute físico, USB, Som → Entrada (barra azul deve mexer), ganho 80–100, Privacidade → Microfone. Diagnóstico: `scripts/check_mic.py`. Validação ao vivo (frase + 20x wake) fica para depois do ajuste.
-2. **Ocioso:** medir CPU em repouso quando o mic funcionar (meta < 5%).
+A estrutura utilizada nesta versão inclui:
 
-## Atualizações 29–30/09 (testado)
-- **Ativação: diga "EI JARVIS"** (5/6, limiar 0,2; "Jarvis" seco só 1/6). Reserva: **Ctrl+Alt+J**.
-- **Áudio por nome:** `audio.microfone_nome: "wireless stereo"`, `alto_falante_nome` (prefere MME); WASAPI reamostra sozinho. USB morto; hands-free só via KS (não abre).
-- **`start.bat` + `scripts/preflight.py`:** liberam a porta 8765, sobem o Ollama se fechado (acha via `%LOCALAPPDATA%` mesmo fora do PATH), validam o modelo e gravam `logs/ollama_iniciado_pelo_jarvis.flag`. Se a porta estiver presa por outro servidor, o preflight encerra o ocupante.
-- **Ollama:** `num_ctx` 2048, `keep_alive` -1 (numérico! string `"-1"` dá HTTP 400), env `KEEP_ALIVE=-1`, `MAX_LOADED=1`, `NUM_PARALLEL=1`.
-- **WebSocket:** protocolo `response_start/delta/end` com `id`+`seq` (front acumula, ignora duplicados, histórico de 5); telemetria enxuta (nível ≤30 Hz, CPU/RAM 1 Hz, sem reenvio repetido); `LOOP_DETECTADO` após 3 autos sem humano.
-- **Debug:** página `/debug` (mic do navegador, VAD/wake do servidor, 50 eventos, clientes) + `scripts/diagnostico_completo.py` (9/9 OK).
-- **Testes:** 60/60 (`pytest tests/ -p no:cacheprovider`).
+- `models/vosk-model-small-pt-0.3/`;
+- `models/ggml-tiny.bin` e, opcionalmente, `models/ggml-base.bin`;
+- `models/piper/`, com o executável e os arquivos necessários ao Piper;
+- `models/piper-voices/`, com o modelo `.onnx` e seu `.onnx.json` correspondente; a configuração padrão usa `pt_BR-faber-medium.onnx` e há suporte a vozes alternativas.
 
-## Solução de problemas
-| Sintoma | Causa e correção |
-|---|---|
-| `python não foi encontrado` | Instale Python 3.12 via winget (não 3.13+) |
-| PowerShell bloqueia `Activate.ps1` | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
-| Microfone não abre | Privacidade → Microfone → permitir apps da área de trabalho |
-| Mic abre mas silêncio | Mute/ganho/USB (ver acima) |
-| Porta 8765 ocupada | `Get-Process python \| Stop-Process` ou troque `servidor.porta` |
-| Ollama parado | `ollama serve` (o start.bat já tenta sozinho) |
-| Voz Piper não encontrada | `models/piper-voices/*.onnx` (+ `.json`); `tts.voz` no config |
-| `duckduckgo-search` renomeado | Migrado para `ddgs` 9.16.0 (import com fallback) |
-| Acentos `?` no terminal | Normal no cp850; logs/arquivos são UTF-8 (`Get-Content -Encoding utf8`) |
-| Firewall | Permitir **só redes privadas**; nunca expor à internet nem abrir portas no roteador |
-| `DeprecationWarning` sounddevice/numpy | Irrelevante (dentro da lib); avaliado no próximo freeze |
-| `on_event` FastAPI deprecated | Irrelevante (aviso da lib; migrar p/ lifespan no futuro) |
+Consulte a implementação de `Jarvis.Voice` e os cartões de modelo em `docs/voices/` antes de preparar os recursos. Cada ferramenta e modelo mantém sua própria licença.
 
-## Segurança
-Confirmação por voz (`confirmo`) + botão ✓ na UI para apagar, executar código e similares; lista de proibidos em `config.yaml → seguranca`; tudo logado em `logs/exec.log`; lixeira em vez de delete; "pare" interrompe tudo.
+E-mail, provedores externos e pareamento dependem da configuração do usuário. As credenciais são mantidas fora do repositório e protegidas pelos mecanismos locais implementados no aplicativo. Não inclua arquivos de autorização, certificados privados ou dados pessoais em commits.
 
-## Melhorias futuras (gratuitas)
-Processo Piper já persistente; próximos: Whisper "small" se sobrar CPU; silero-vad onnx sem torch; tool calling mais agressivo no roteador; ditado pelo mic do navegador via WebSocket; lifespan no FastAPI; wake com modelo pt-BR próprio; backup do workspace.
+## Estado do projeto
+
+Projeto experimental de portfólio, com funcionalidades que dependem de Windows, dispositivos de áudio, rede, autorização de contas e modelos locais. A compilação não substitui a validação dessas integrações na máquina de destino. Os documentos em `docs/` registram diferentes etapas do desenvolvimento e podem descrever versões anteriores.
+
+Na validação de publicação de 04/11/2026, a solução compilou em Release sem erros. Dos 195 testes executados, 192 passaram e 3 falharam. Consulte os [resultados e limitações conhecidas](docs/validacao-publicacao-2026-11-04.md).

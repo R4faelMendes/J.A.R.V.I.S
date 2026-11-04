@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:Jarvis.Mobile.Views"
+             x:Class="Jarvis.Mobile.Views.FalarPage" Title="Falar">
+  <ScrollView><VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
+    <views:ReactorArt x:Name="Reator" HeightRequest="260" HorizontalOptions="Fill"/>
+    <Label x:Name="Transcricao" Text="Toque no microfone e fale." HorizontalTextAlignment="Center"/>
+    <Button x:Name="BotaoFalar" Text="Falar com Jarvis" Style="{StaticResource Primario}" MinimumHeightRequest="64" Clicked="Falar"/>
+    <Label Text="Seu microfone grava no Jarvis. O Whisper do seu PC reconhece português sem chave de API. Fale, por exemplo: abrir Chrome, próxima música ou volume cinquenta. O PC precisa estar conectado." Style="{StaticResource Cabecalho}" HorizontalTextAlignment="Center"/>
+  </VerticalStackLayout></ScrollView>
+</ContentPage>

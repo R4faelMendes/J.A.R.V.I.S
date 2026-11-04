@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui" xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml" x:Class="Jarvis.Mobile.Views.AppsPage" Title="Apps">
+<Grid Padding="20" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+<Label Text="CONTROLE DO COMPUTADOR" Style="{StaticResource Cabecalho}"/>
+<Label Grid.Row="1" Text="Seus aplicativos" Style="{StaticResource Titulo}"/>
+<SearchBar Grid.Row="2" Placeholder="Buscar no PC..." TextChanged="Filtrar"/>
+<Grid Grid.Row="3" ColumnDefinitions="*,Auto"><Label x:Name="Estado" Text="Conecte ao PC para carregar os aplicativos." VerticalOptions="Center"/><Button Grid.Column="1" Text="Escolher apps" Clicked="EscolherApps" FontSize="12"/></Grid>
+<CollectionView Grid.Row="4" x:Name="Lista" SelectionMode="None">
+<CollectionView.EmptyView><Label Text="Nenhum aplicativo para mostrar." Margin="0,20"/></CollectionView.EmptyView>
+<CollectionView.ItemTemplate><DataTemplate>
+<Border Style="{StaticResource Painel}"><VerticalStackLayout Spacing="12">
+<Label Text="{Binding Nome}" FontSize="18"/>
+<HorizontalStackLayout Spacing="12"><Button Text="Abrir" Style="{StaticResource Primario}" Clicked="Abrir"/><Button Text="Fechar" Clicked="Fechar"/></HorizontalStackLayout>
+</VerticalStackLayout></Border></DataTemplate></CollectionView.ItemTemplate></CollectionView>
+</Grid></ContentPage>

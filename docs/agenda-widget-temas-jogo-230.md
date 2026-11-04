@@ -1,0 +1,15 @@
+# Jarvis 2.3
+
+- Tema rosé removido. Preferências antigas com ID `rubi` passam a usar âmbar. O âmbar usa superfícies de grafite quente, sem fundo arroxeado.
+- Tons azul-acinzentados de textos e detalhes agora acompanham a paleta. A aplicação WPF cobre também a cor herdada de apresentadores e templates. Checkboxes e sliders têm templates próprios, com foco por teclado e estados de seleção.
+- Diagnóstico saiu da navegação do desktop e do mobile. A seção de navegador saiu da página de aplicativos. Os identificadores antigos de páginas continuam reservados para compatibilidade.
+- Agenda em quadro com A fazer, Em andamento e Concluídos. No PC, os cartões aceitam arrastar e soltar ou botões de movimento. No celular, os botões movem os cartões. O calendário continua disponível. A etapa é persistida e sincronizada; editar preserva a etapa. Concluídos deixam de gerar lembretes.
+- Widget Android **Jarvis · Agenda** mostra até quatro compromissos próximos, com data e hora. Usa os dados locais sincronizados, atualiza após alterações e informa quando o cache foi atualizado. Não mostra itens concluídos ou excluídos. Após instalar o APK, use Mais → Adicionar widget à tela inicial.
+- Reator com aproximação em espiral, encaixe com desaceleração, atraso entre peças, pequeno movimento mecânico de encaixe, guias de energia, varredura orbital e contrarrotação do núcleo. A sequência dura aproximadamente três segundos. Reduzir animações e economia continuam respeitados.
+- Modo de jogo com monitor de CPU/RAM/GPU, temperaturas e clocks disponíveis, gráficos, HUD para janela ou sem bordas e exportação da sessão para CSV. Sensores ausentes mostram —. Controle manual de ventoinha aparece somente quando o driver o oferece e exige modo de jogo ativo; ao desativar, o Jarvis solicita a restauração automática. Não foram adicionados controles fictícios de FPS, tensão ou overclock.
+- O hardware verificado expõe leituras, mas não disponibilizou controle de ventoinha ao Jarvis. A implementação não equivale a todas as funções do MSI Afterburner, que dependem de suporte específico dos drivers.
+- E-mails: conexão primária por IMAP/TLS com senha de app do Gmail, sem projeto no Google Cloud nem Gmail API. Valida a conexão antes de guardar a credencial com DPAPI e abre a caixa somente para leitura. O OAuth existente permanece como opção avançada para preservar contas anteriores. O login real precisa ser concluído pelo usuário dentro do aplicativo; nenhuma senha é solicitada no chat.
+
+Referências: [senhas de app do Google](https://support.google.com/mail/answer/185833?hl=pt-BR), [MailKit](https://www.nuget.org/packages/MailKit/4.17.0), [recursos do Afterburner](https://www.msi.com/support/technical_details/VGA_MSI_Utility_AfterBurner).
+
+Validações e capturas ficam em `artifacts/tests-230-entrega.log`, `artifacts/sensores-230.json`, `artifacts/preview/` e nos logs de compilação `build-230-*`. O widget ainda requer validação no launcher de um aparelho físico; nenhum aparelho estava conectado durante o desenvolvimento.

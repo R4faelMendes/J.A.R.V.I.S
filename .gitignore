@@ -1,20 +1,48 @@
-# JARVIS 2.0 — nunca versionar binários pesados nem segredos
-.venv/
-__pycache__/
-.pytest_cache/
-models/
-logs/
-workspace/
-*.wav
-
-# Build e restore (C#) — nunca versionar
-[Bb]in/
-[Oo]bj/
-*.user
-.vs/
+# Build
+bin/
+obj/
 TestResults/
-project.assets.json
-*.nuget.cache
-*.nuget.dgspec.json
-*.nuget.g.props
-*.nuget.g.targets
+publish/
+
+# Cache de runtime (regenerado pelo app)
+models/cache-tts/
+
+# VS / VSCode / Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Validação local gerada
+artifacts/
+*.log
+# Credenciais OAuth não devem entrar no repositório
+client_secret*.json
+
+# Modelos de voz e ferramentas externas ficam somente na instalação local.
+/models/
+
+# Dados privados e credenciais de execução
+.env
+.env.*
+!.env.example
+*.dpapi
+*.pfx
+*.p12
+*.key
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+credentials*.json
+token*.json
+
+# Estado temporário dos testes
+*.trx

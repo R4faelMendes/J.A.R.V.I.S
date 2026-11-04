@@ -1,0 +1,9 @@
+<!-- JARVIS — caminhos do Android SDK e JDK (instalados uma vez via InstallAndroidDependencies + OpenJDK 17). -->
+<Project>
+  <PropertyGroup Condition="'$(AndroidSdkDirectory)' == '' and Exists('$(LOCALAPPDATA)\Android\Sdk')">
+    <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\Sdk</AndroidSdkDirectory>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot')">
+    <JavaSdkDirectory>C:\Program Files\Microsoft\jdk-17.0.20.101-hotspot</JavaSdkDirectory>
+  </PropertyGroup>
+</Project>

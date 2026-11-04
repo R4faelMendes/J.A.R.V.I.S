@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Jarvis.Mobile.Views.MaisPage" Title="Mais">
+  <ScrollView><VerticalStackLayout Padding="16" Spacing="8">
+    <Label Text="MARK IV / MÓDULOS" Style="{StaticResource Cabecalho}"/>
+    <Label Text="Sua central" Style="{StaticResource Titulo}"/>
+    <Button Text="Meu aparelho · painel, localizar e espelhar" Clicked="Ir" ClassId="aparelho"/>
+    <Button Text="Falar com o Jarvis" Clicked="Ir" ClassId="falar"/>
+    <Button Text="Temas · PC e celular" Clicked="Ir" ClassId="temas"/>
+    <Button Text="Adicionar widget à tela inicial" Clicked="AdicionarWidget"/>
+    <Button Text="Janelas e grades" Clicked="Ir" ClassId="janelas"/>
+    <Button Text="Tela principal ao vivo" Clicked="Ir" ClassId="tela"/>
+    <Button Text="Parear com o PC" Clicked="Ir" ClassId="parear"/>
+    <Button Text="Conexão direta / internet" Clicked="Ir" ClassId="vpn"/>
+    <Button Text="Esquecer PC" TextColor="{StaticResource Vermelho}" Clicked="Esquecer"/>
+  </VerticalStackLayout></ScrollView>
+</ContentPage>
+

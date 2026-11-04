@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Jarvis.Mobile.Views.DiagnosticoPage" Title="Diagnóstico">
+  <ScrollView>
+    <VerticalStackLayout Padding="24" Spacing="10">
+      <Label Text="Não consegue conectar?" Style="{StaticResource Titulo}"/>
+      <Label x:Name="Resultado" Text="Verificando automaticamente…"/>
+      <Button Text="Verificar" Style="{StaticResource Primario}" Clicked="Verificar"/>
+      <Button Text="Tentar reconectar agora" Clicked="Redescobrir"/>
+      <Button Text="Compartilhar diagnóstico de tela preta ou fechamento" Clicked="CompartilharDiagnostico"/>
+      <Label Text="Fora de casa: o endereço direto do PC precisa estar acessível em HTTPS. IPv6 requer IPv6 no celular; IPv4 pode exigir redirecionamento de porta e IP público." FontSize="12"/>
+    </VerticalStackLayout>
+  </ScrollView>
+</ContentPage>
+

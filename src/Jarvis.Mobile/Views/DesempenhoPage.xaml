@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Jarvis.Mobile.Views.DesempenhoPage" Title="Desempenho">
+  <VerticalStackLayout Padding="16" Spacing="8">
+    <Label Text="Telemetria" Style="{StaticResource Cabecalho}"/>
+    <Label Text="Desempenho" Style="{StaticResource Titulo}"/>
+    <Border Style="{StaticResource Painel}"><Label x:Name="Medidores" Text="Conecte ao PC..."/></Border>
+    <Button Text="Atualizar" Style="{StaticResource Primario}" Clicked="Atualizar"/>
+  </VerticalStackLayout>
+</ContentPage>

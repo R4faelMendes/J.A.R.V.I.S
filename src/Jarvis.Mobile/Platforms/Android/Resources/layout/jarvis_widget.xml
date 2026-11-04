@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/jarvis_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="@drawable/jarvis_widget_background">
+  <TextView android:id="@+id/jarvis_widget_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="JARVIS  /  AGENDA" android:textColor="#D2DCE7" android:textSize="15sp" android:textStyle="bold" />
+  <TextView android:id="@+id/jarvis_widget_updated" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Compromissos salvos no celular" android:textColor="#B3B3B8" android:textSize="10sp" android:layout_marginBottom="10dp" />
+  <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="vertical">
+    <TextView android:id="@+id/jarvis_widget_event1" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="38dp" android:gravity="center_vertical" android:textColor="#F0F0F2" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/jarvis_widget_event2" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="38dp" android:gravity="center_vertical" android:textColor="#F0F0F2" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/jarvis_widget_event3" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="38dp" android:gravity="center_vertical" android:textColor="#F0F0F2" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/jarvis_widget_event4" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="38dp" android:gravity="center_vertical" android:textColor="#F0F0F2" android:textSize="13sp" android:maxLines="2" android:ellipsize="end" />
+  </LinearLayout>
+  <TextView android:id="@+id/jarvis_widget_agenda" android:layout_width="match_parent" android:layout_height="38dp" android:gravity="center" android:text="Abrir agenda  ↗" android:textColor="#EDF5F5" android:background="@drawable/jarvis_widget_button" />
+</LinearLayout>

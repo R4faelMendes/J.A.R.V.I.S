@@ -1,19 +1,42 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
-  </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\jarvis.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="4.153.1" />
+    <PackageReference Include="System.Management" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\Jarvis.Rendering.Shared\Assets\reactor-frontal-v3.zip" LogicalName="Jarvis.Rendering.reactor-frontal-v3.zip" />
+    <Compile Include="..\Jarvis.Rendering.Shared\ReatorRealista.cs" Link="Renderers\ReatorRealista.cs" />
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <Resource Include="Assets\jarvis.ico" />
+    <Resource Include="Assets\Artwork\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jarvis.Core\Jarvis.Core.csproj" />
+    <ProjectReference Include="..\Jarvis.Voice\Jarvis.Voice.csproj" />
+    <ProjectReference Include="..\Jarvis.System\Jarvis.System.csproj" />
+    <ProjectReference Include="..\Jarvis.Server\Jarvis.Server.csproj" />
+    <ProjectReference Include="..\Jarvis.Ai\Jarvis.Ai.csproj" />
+    <ProjectReference Include="..\Jarvis.Data\Jarvis.Data.csproj" />
+  </ItemGroup>
+
+  <Target Name="CopiarAplicativoAndroid" AfterTargets="Build" Condition="Exists('..\Jarvis.Mobile\bin\$(Configuration)\net8.0-android\com.companyname.jarvis.mobile-Signed.apk')">
+    <Copy SourceFiles="..\Jarvis.Mobile\bin\$(Configuration)\net8.0-android\com.companyname.jarvis.mobile-Signed.apk" DestinationFiles="$(TargetDir)mobile\Jarvis.apk" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
