@@ -33,6 +33,12 @@ Os links acompanham a última release publicada. Consulte as [notas e verificaç
 ## O que o Jarvis reúne
 
 - **Voz em português:** Vosk para ativação, Whisper.net para transcrição e Piper para síntese local. Ativação também por `Ctrl + Espaço`.
+- **Primeiro uso guiado:** instalação e reparo de Vosk, Whisper, Piper e voz em português, com progresso, cancelamento e testes locais.
+- **Comandos digitados:** histórico local de voz e texto, edição da transcrição e repetição de comandos.
+- **Rotinas:** editor com prévia das ações, perfis iniciais para trabalho/estudo/programação/reunião, ativação por voz e horário semanal enquanto o Jarvis estiver aberto.
+- **Resumo do dia:** compromissos locais pendentes e assuntos de e-mails não lidos, com fonte e horário.
+- **Atualização no app:** notas da release, download oficial com SHA-256 e instalação/reinício após confirmação.
+- **Modo discreto em jogos:** economia, animações reduzidas e silêncio, com restauração dos ajustes anteriores ao sair.
 - **Controle do Windows:** aplicativos, janelas e layouts, mídia, volume e bloqueio, com confirmações previstas pelo projeto.
 - **Central pessoal:** conversa, aplicativos, desempenho, agenda, e-mails, rotinas, celular, segurança e configurações.
 - **Telemetria:** informações do sistema e processos, com sensores dependentes de hardware e permissões.
@@ -45,18 +51,18 @@ E-mails e agenda dependem da conexão da conta; ficam vazios quando desconectado
 
 Os modelos de voz são de terceiros, não treinados neste projeto. Ações conhecidas passam por um roteador local de intenções.
 
-`Jarvis.Ai` também contém conectores Gemini, Groq e OpenRouter, proteção local das chaves e infraestrutura de fallback. Essa parte é experimental: a existência dos conectores não significa que estejam ativos em todos os fluxos da interface.
+A conversa com Gemini, Groq e OpenRouter é **opcional e começa desativada**. Ative-a em Configurações → Conversa com IA e forneça sua própria chave, protegida por DPAPI. Há fallback entre provedores configurados e um limite local de **20 tentativas por dia**, contando falhas. A resposta identifica o provedor; o texto da IA nunca é executado como comando. E-mails, agenda e histórico não são enviados automaticamente. Serviços podem cobrar conforme sua conta.
 
 ## Primeiros passos
 
 1. Baixe o executável Windows, coloque-o em uma pasta de sua escolha e abra o Jarvis. Ele não possui assinatura Authenticode; o Windows pode identificar o editor como desconhecido.
-2. Prepare os modelos abaixo em `%LocalAppData%/Jarvis/models`. No checkout também é possível usar `models/` na raiz. Sem esses recursos, as funções de voz ficam indisponíveis.
+2. Abra **Configurações → Preparar / reparar voz** e clique em **Instalar / reparar recursos**. O assistente baixa aproximadamente 200 MB das fontes oficiais, valida os arquivos e permite testar síntese, transcrição e microfone. Reabra o Jarvis após a primeira instalação para carregar a escuta. Você também pode preparar manualmente os arquivos abaixo em `%LocalAppData%/Jarvis/models`; o checkout aceita `models/` na raiz.
 3. Configure o microfone e as integrações nas páginas do aplicativo. Conecte uma conta para usar e-mails/agenda; provedores externos exigem credenciais próprias.
 4. Instale o APK Android, permita a instalação pela origem utilizada e faça o pareamento com o Jarvis aberto no PC. Comece com os dois dispositivos na mesma rede local.
 
 ```text
 models/
-├── vosk-model-small-pt-0.3/       # modelo extraído: am/, conf/, graph/...
+├── vosk-model-small-pt-0.3/       # extraído: final.mdl, mfcc.conf, Gr.fst, HCLr.fst, ivector/
 ├── ggml-tiny.bin                 # Whisper; ggml-base.bin é opcional
 ├── piper/
 │   └── piper.exe                 # junto das bibliotecas do Piper
@@ -67,13 +73,23 @@ models/
 
 Consulte `Jarvis.Voice`, os [modelos Vosk](https://alphacephei.com/vosk/models) e os cartões em [docs/voices](docs/voices/). Cada ferramenta/modelo mantém sua licença. O pacote não inclui modelos, dados pessoais, bancos, tokens de contas ou certificados privados. Se um APK anterior usa outra assinatura, será necessário removê-lo antes de instalar esta distribuição.
 
+## Usar os novos recursos
+
+- **Comandos:** digite `que horas são`, corrija uma transcrição em Editar ou repita uma ação pelo histórico. Enter envia; Shift + Enter cria uma linha.
+- **Rotinas:** escolha um perfil, ajuste as etapas e salve. Diga `executar rotina Estudar`, usando o nome salvo. A prévia lista todas as ações. Horários usam o relógio local; o PC precisa estar ligado e o Jarvis aberto. Horários perdidos não são recuperados; cada horário roda no máximo uma vez por dia. Ações que exigem confirmação devem ser executadas individualmente.
+- **Resumo:** use o acesso rápido na página inicial ou diga `resumo do dia`. A agenda é a agenda local do Jarvis; não implica sincronização com o Google Calendar.
+- **Atualizações:** em Configurações → Atualizações do Jarvis, consulte as notas e baixe a versão. Instalar e reiniciar pede confirmação e mantém uma cópia do executável anterior. O atualizador funciona no executável portátil publicado; em pastas protegidas, mova o aplicativo para uma pasta gravável.
+- **Privacidade:** os últimos 200 comandos ficam em SQLite neste computador. Limpe o histórico pela central de comandos. A IA precisa de consentimento explícito.
+
+Veja o [registro das melhorias implementadas e seus limites](docs/ideias-e-simplificacoes.md).
+
 ## Arquitetura
 
 Desktop em **.NET 8 + WPF + CommunityToolkit.Mvvm**; companheiro em **.NET MAUI**. Contratos compartilhados no Core, SQLite para persistência e DPAPI para segredos no Windows.
 
 | Projeto | Responsabilidade |
 | --- | --- |
-| `Jarvis.Core` | Contratos, configurações, tokens visuais e paletas |
+| `Jarvis.Core` | Contratos, configurações e tokens do tema único |
 | `Jarvis.Desktop` | Interface WPF, composição, bandeja e overlay |
 | `Jarvis.Mobile` | Companheiro MAUI, pareamento e conexão |
 | `Jarvis.Voice` | Captura, ativação, reconhecimento e síntese |
