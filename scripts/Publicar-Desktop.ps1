@@ -8,7 +8,21 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Falha ao publicar o desktop.' }
     $exeJarvis = Join-Path $destinoJarvis 'Jarvis.Desktop.exe'
     if (!(Test-Path -LiteralPath $exeJarvis)) { throw 'Executável não gerado.' }
-    Copy-Item -LiteralPath $exeJarvis -Destination (Join-Path $raizJarvis 'Jarvis.exe') -Force
+    $exeRaiz = Join-Path $raizJarvis 'Jarvis.exe'
+    try {
+        Copy-Item -LiteralPath $exeJarvis -Destination $exeRaiz -Force
+    } catch [System.IO.IOException] {
+        # Um executável aberto pode ser renomeado, mas não sobrescrito.
+        # Preserve a instância em uso e disponibilize o novo arquivo para a próxima abertura.
+        if (!(Test-Path -LiteralPath $exeRaiz)) { throw }
+        $anteriores = Join-Path $raizJarvis 'artifacts/previous'
+        New-Item -ItemType Directory -Path $anteriores -Force | Out-Null
+        $backup = Join-Path $anteriores ('Jarvis-' + [Guid]::NewGuid().ToString('N') + '.exe')
+        Move-Item -LiteralPath $exeRaiz -Destination $backup
+        try { Copy-Item -LiteralPath $exeJarvis -Destination $exeRaiz -Force }
+        catch { Move-Item -LiteralPath $backup -Destination $exeRaiz; throw }
+        Write-Output 'A instância aberta foi preservada. Reabra o Jarvis para usar a atualização.'
+    }
     $releaseJarvis = Join-Path $raizJarvis 'artifacts/release'
     New-Item -ItemType Directory -Path $releaseJarvis -Force | Out-Null
     Copy-Item -LiteralPath $exeJarvis -Destination (Join-Path $releaseJarvis 'Jarvis-Windows-x64.exe') -Force
