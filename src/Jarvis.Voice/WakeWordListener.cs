@@ -44,10 +44,7 @@ public sealed class WakeWordListener : IDisposable
         // Distribuições portáteis começam sem modelos: falhe antes de entrar na DLL.
         if (!Directory.Exists(pastaModelo))
             throw new DirectoryNotFoundException("Instale o modelo Vosk em: " + pastaModelo);
-        foreach (var arquivo in new[] { "am/final.mdl", "conf/model.conf" }) {
-            var caminho = Path.Combine(pastaModelo, arquivo);
-            if (!File.Exists(caminho)) throw new FileNotFoundException("Modelo Vosk incompleto. Reinstale o modelo de voz.", caminho);
-        }
+        if (!ModeloVosk.Completo(pastaModelo)) throw new FileNotFoundException("Modelo Vosk incompleto. Reinstale o modelo de voz.", pastaModelo);
         lock (_gate)
         {
             _rec?.Dispose(); _modelo?.Dispose();

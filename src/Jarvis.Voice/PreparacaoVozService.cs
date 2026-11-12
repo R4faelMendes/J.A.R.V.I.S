@@ -28,7 +28,7 @@ public sealed class PreparacaoVozService : IPreparacaoVoz
         bool json = false;
         try { using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Pasta, "piper-voices", nomeVoz + ".json"))); json = doc.RootElement.TryGetProperty("audio", out _); } catch (IOException) { } catch (JsonException) { }
         return new[] {
-            new RecursoVoz("Vosk português", Arquivo("vosk-model-small-pt-0.3/am/final.mdl", 100_000) && Arquivo("vosk-model-small-pt-0.3/conf/model.conf", 10), "Ativação por voz · modelo oficial Alpha Cephei"),
+            new RecursoVoz("Vosk português", ModeloVosk.Completo(Path.Combine(Pasta, "vosk-model-small-pt-0.3")), "Ativação por voz · modelo oficial Alpha Cephei"),
             new RecursoVoz("Whisper tiny", Arquivo("ggml-tiny.bin", 50_000_000), "Transcrição local · modelo oficial whisper.cpp"),
             new RecursoVoz("Piper Windows", Arquivo("piper/piper.exe", 10_000) && Directory.GetFiles(Path.Combine(Pasta, "piper"), "*.dll").Length > 0, "Síntese local · distribuição oficial Windows x64"),
             new RecursoVoz("Voz em português", Arquivo("piper-voices/" + nomeVoz, 1_000_000) && json, nomeVoz)
