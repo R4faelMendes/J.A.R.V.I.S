@@ -25,6 +25,8 @@ public sealed class MotorVoz : IDisposable
     private (AppInfo App, DateTime Ate)? _contextoApp;
 
     private readonly SemaphoreSlim _micGate = new(1, 1);
+    private readonly SemaphoreSlim _execucaoComando = new(1, 1);
+    public event EventHandler<ComandoProcessado>? ComandoConcluido;
     private bool _aguardandoComplemento;
     public event EventHandler<string>? Transcricao;
     public event EventHandler<ReactorState>? EstadoMudou;
@@ -166,7 +168,19 @@ public sealed class MotorVoz : IDisposable
         catch (Exception ex) { RegistrarVoz("comando-erro", ex.GetType().Name + ": " + ex.Message); Transcricao?.Invoke(this, "Não consegui concluir o comando: " + ex.Message); }
         finally { Interlocked.Exchange(ref _ocupado, 0); _wake.LiberarComando(rearmar); if (rearmar && !_vida.IsCancellationRequested) _wake.AtivarComando(); else if (!_tts.Falando) EstadoMudou?.Invoke(this, ReactorState.Repouso); }
     }
-    public async Task<string> ExecutarComandoAsync(string comando, bool falar = true)
+    public async Task<string> ExecutarComandoAsync(string comando, bool falar = true, CancellationToken ct = default, string origem = "voz")
+    {
+        if (string.IsNullOrWhiteSpace(comando) || comando.Length > 4000) return "Use um comando de até 4.000 caracteres.";
+        using var vida = CancellationTokenSource.CreateLinkedTokenSource(ct, _vida.Token);
+        await _execucaoComando.WaitAsync(vida.Token);
+        try {
+            var resposta = await ExecutarInternoAsync(comando.Trim(), falar, vida.Token);
+            ComandoConcluido?.Invoke(this, new(comando.Trim(), resposta, origem));
+            RespostaPronta?.Invoke(this, resposta);
+            return resposta;
+        } finally { _execucaoComando.Release(); }
+    }
+    private async Task<string> ExecutarInternoAsync(string comando, bool falar, CancellationToken ct)
     {
         EstadoMudou?.Invoke(this, ReactorState.Pensando);
         string resposta;

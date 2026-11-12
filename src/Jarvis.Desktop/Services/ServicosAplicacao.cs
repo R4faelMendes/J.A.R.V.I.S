@@ -7,6 +7,7 @@ using System.IO;
 /// <summary>Composição das integrações. Views recebem somente contratos Core.</summary>
 public static class ServicosAplicacao
 {
+    public static IHistoricoComandos Historico { get; } = new Jarvis.Data.HistoricoComandos();
     public static IPreparacaoVoz PreparacaoVoz { get; } = new Jarvis.Voice.PreparacaoVozService();
     public static IPerfMonitor CriarMonitor() => new PerfMonitor();
     public static IEmailService Email { get; } = new EmailImapService();

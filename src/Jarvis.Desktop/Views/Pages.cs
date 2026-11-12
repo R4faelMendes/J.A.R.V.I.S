@@ -866,12 +866,13 @@ public static class FabricaPaginas
         Action<string>? toast = null,
         Action<string>? falar = null,
         Action? ativarEscuta = null,
-        Func<string, Task<string>>? executar = null)
+        Func<string, Task<string>>? executar = null,
+        Func<string, CancellationToken, Task<string>>? executarCancelavel = null)
     {
         PaginaBase p = tipo switch
         {
             PageType.Nucleo => new NucleoPage { AtivarEscutaCallback = ativarEscuta },
-            PageType.Conversa => new NucleoPage { AtivarEscutaCallback = ativarEscuta },
+            PageType.Conversa => new ConversaPage { Executar = executarCancelavel ?? ((texto, ct) => executar?.Invoke(texto) ?? Task.FromResult("Executor indisponível.")) },
             PageType.ModoJogo => new ModoJogoPage(),
             PageType.Emails => new EmailsPage(),
             PageType.Apps => new AppsPage(),

@@ -14,10 +14,12 @@ public interface IPreparacaoVoz
 public sealed record RegistroComando(long Id, string Quando, string Comando, string Resposta, string Origem);
 public interface IHistoricoComandos
 {
+    event EventHandler? Alterado;
     IReadOnlyList<RegistroComando> Listar(int limite = 50);
     void Registrar(string comando, string resposta, string origem);
     void Limpar();
 }
+public sealed record ComandoProcessado(string Comando, string Resposta, string Origem);
 
 public sealed record PreferenciasIa(bool Ativa = false, string Gemini = "gemini-3.5-flash-lite", string Groq = "openai/gpt-oss-20b", string OpenRouter = "openrouter/free");
 public sealed record RespostaIa(string Texto, string Provedor, bool Online);

@@ -92,7 +92,8 @@ public partial class MainWindow : Window
             toast: MostrarToast,
             falar: FalarTexto,
             ativarEscuta: () => _vm.AtivarEscutaCommand.Execute(null),
-            executar: texto => _motor?.ExecutarComandoAsync(texto, false) ?? Task.FromResult("A voz ainda está iniciando. Aguarde um instante.")
+            executar: texto => _motor?.ExecutarComandoAsync(texto, false, origem: "digitado") ?? Task.FromResult("O executor ainda está iniciando."),
+            executarCancelavel: (texto, ct) => _motor?.ExecutarComandoAsync(texto, false, ct, "digitado") ?? Task.FromResult("O executor ainda está iniciando.")
         );
         if (!ConfiguracaoApp.ReduzirAnimacoes && !ConfiguracaoApp.ModoEconomico)
             AreaConteudo.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
@@ -159,6 +160,10 @@ public partial class MainWindow : Window
         _motor.Transcricao += (_, t) => { if (!_fechando) Dispatcher.InvokeAsync(() => _vm.UltimaTranscricao = t); };
         _motor.EstadoMudou += (_, e) => { if (!_fechando) Dispatcher.InvokeAsync(() => _vm.EstadoReator = e); };
         _motor.SolicitouNavegacao += (_, p) => { if (!_fechando) Dispatcher.InvokeAsync(() => NavegarPara(p)); };
+        _motor.ComandoConcluido += (_, item) => {
+            try { ServicosAplicacao.Historico.Registrar(item.Comando, item.Resposta, item.Origem); }
+            catch (Exception ex) { MotorVoz.RegistrarVoz("historico-erro", ex.GetType().Name); }
+        };
         _motor.RespostaPronta += (_, t) => { if (!_fechando) Dispatcher.InvokeAsync(() => _vm.UltimaTranscricao = t); };
         _vm.PedidoEscutaTecla += (_, _) => _motor.AtivarEscutaPorTecla();
         Loaded += (_, _) =>
