@@ -1,3 +1,4 @@
+using System.IO;
 using System.IO.Compression;
 using SkiaSharp;
 using Jarvis.Core;
@@ -12,25 +13,28 @@ public static class ReatorRealista
         return stream is null ? null : new ZipArchive(stream, ZipArchiveMode.Read);
     });
     private static readonly Dictionary<int, SKBitmap> Cache = new();
-    private static string _tema = "";
     public static bool ArteDisponivel => Quadros.Value is not null;
     private static SKBitmap? Arte(int frame)
     {
-        if (_tema != TemasJarvis.Estado.Id) { foreach (var old in Cache.Values) old.Dispose(); Cache.Clear(); _tema = TemasJarvis.Estado.Id; }
         if (Cache.TryGetValue(frame, out var cached)) return cached;
         var entry = Quadros.Value?.GetEntry($"{frame:D4}.webp"); if (entry is null) return null;
-        using var stream = entry.Open(); var image = SKBitmap.Decode(stream); if (image is null) return null;
+        // O codec WebP precisa de leitura completa e acesso aleatório; a entrada
+        // comprimida do ZIP pode retornar leituras parciais no .NET 8.
+        using var stream = new MemoryStream();
+        using (var origem = entry.Open()) origem.CopyTo(stream);
+        stream.Position = 0;
+        var image = SKBitmap.Decode(stream); if (image is null) return null;
         var pixels = image.Pixels; var half = image.Width * .5f;
         SKColor.Parse(TemasJarvis.Atual.Acento).ToHsv(out var hue, out _, out _);
         for (var y = 0; y < image.Height; y++) for (var x = 0; x < image.Width; x++) {
             var index = y * image.Width + x; var c = pixels[index];
             var radius = MathF.Sqrt((x - half) * (x - half) + (y - half) * (y - half)) / image.Width;
             if (radius > .435f) { pixels[index] = SKColors.Transparent; continue; }
-            if (_tema == "azul" || c.Blue <= c.Red + 4 || c.Green < c.Red || c.Blue < c.Green * .85) continue;
+            if (c.Blue <= c.Red + 4 || c.Green < c.Red || c.Blue < c.Green * .85) continue;
             var max = Math.Max(c.Red, Math.Max(c.Green, c.Blue)); var min = Math.Min(c.Red, Math.Min(c.Green, c.Blue)); float delta = max - min;
             if (max == 0 || delta < 7) continue;
             // Realça a energia verde sem alterar os metais e as áreas transparentes.
-            if (_tema == "esmeralda") {
+            {
                 var brilho = Math.Min(255f, max * 1.12f);
                 delta = Math.Min(brilho, delta * 1.4f);
                 min = (byte)(brilho - delta);

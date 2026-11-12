@@ -25,7 +25,7 @@ public sealed class ReatorFrontalTest
             TemasJarvis.Escolher("ambar");
             var themed = Render("Reator-frontal-ambar", 0, 1);
             using var bitmap = SKBitmap.Decode(themed); var center = bitmap.GetPixel(320, 320);
-            Assert.True(center.Red >= center.Blue, "O centro claro também deve deixar de ser ciano no tema âmbar.");
+            Assert.True(center.Green >= center.Blue, "O centro acompanha a energia verde do tema único.");
             Assert.Equal((byte)0, bitmap.GetPixel(0, 0).Alpha);
         } finally { TemasJarvis.Sincronizar(anterior); }
     }

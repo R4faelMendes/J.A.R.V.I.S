@@ -2,5 +2,5 @@
 <PropertyGroup><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><IsTestProject>true</IsTestProject></PropertyGroup>
 <ItemGroup><PackageReference Include="SkiaSharp" Version="[2.88.9]"/><PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100"/><PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/><PackageReference Include="xunit" Version="2.5.3"/><PackageReference Include="xunit.runner.visualstudio" Version="2.5.3"/></ItemGroup>
 <ItemGroup><ProjectReference Include="../../src/Jarvis.Core/Jarvis.Core.csproj"/><Compile Include="../../src/Jarvis.Mobile/Services/TemaMobile.cs" Link="TemaMobile.cs"/></ItemGroup>
-<ItemGroup><Compile Include="../../src/Jarvis.Rendering.Shared/ReatorRealista.cs" Link="ReatorRealista.cs"/><EmbeddedResource Include="../../src/Jarvis.Rendering.Shared/Assets/reactor-mark-iv.png" LogicalName="Jarvis.Rendering.reactor-mark-iv.png"/></ItemGroup>
+<ItemGroup><Compile Include="../../src/Jarvis.Rendering.Shared/ReatorRealista.cs" Link="ReatorRealista.cs"/><EmbeddedResource Include="../../src/Jarvis.Rendering.Shared/Assets/reactor-frontal-v3.zip" LogicalName="Jarvis.Rendering.reactor-frontal-v3.zip"/></ItemGroup>
 </Project>

@@ -52,7 +52,7 @@ public sealed class Revisao200Test
         }
         finally { Directory.Delete(dir, true); }
     }
-    [Fact] public void ReatorCompartilhadoAnimaEMudaEnergiaComOTema()
+    [Fact] public void ReatorCompartilhadoAnimaEMantemIdentidadeUnica()
     {
         var anterior = TemasJarvis.Estado;
         try
@@ -61,7 +61,7 @@ public sealed class Revisao200Test
             {
                 TemasJarvis.Escolher(tema); using var s = SKSurface.Create(new SKImageInfo(600, 600)); Jarvis.Rendering.ReatorRealista.Desenhar(s.Canvas, 600, 600, t, .1); using var im = s.Snapshot(); using var png = im.Encode(SKEncodedImageFormat.Png, 100); return png.ToArray();
             }
-            var a = Render("azul", 0); var b = Render("azul", 4); var c = Render("ambar", 4); Assert.False(a.SequenceEqual(b)); Assert.False(b.SequenceEqual(c));
+            var a = Render("azul", 0); var b = Render("azul", 4); var c = Render("ambar", 4); Assert.False(a.SequenceEqual(b)); Assert.True(b.SequenceEqual(c));
             var root = new DirectoryInfo(AppContext.BaseDirectory); while (root is not null && !File.Exists(Path.Combine(root.FullName, "Jarvis.sln"))) root = root.Parent;
             var outDir = Path.Combine(root!.FullName, "artifacts", "preview"); Directory.CreateDirectory(outDir);
             File.WriteAllBytes(Path.Combine(outDir, "Reator200-ciano.png"), b); File.WriteAllBytes(Path.Combine(outDir, "Reator200-ambar.png"), c);
@@ -92,7 +92,7 @@ public sealed class Revisao200Test
             using var curto = new ByteArrayContent(new byte[17]); curto.Headers.ContentType = new("audio/pcm"); Assert.Equal(HttpStatusCode.BadRequest, (await https.PostAsync("/api/voz/transcrever", curto)).StatusCode);
             using var grande = new ByteArrayContent(new byte[480002]); grande.Headers.ContentType = new("audio/pcm"); Assert.Equal((HttpStatusCode)413, (await https.PostAsync("/api/voz/transcrever", grande)).StatusCode);
             Assert.Equal(HttpStatusCode.BadRequest, (await https.PostAsJsonAsync("/api/tema", new EstadoTema("invalido", 0))).StatusCode);
-            (await https.PostAsJsonAsync("/api/tema", new EstadoTema("ambar", 0))).EnsureSuccessStatusCode(); var tema = await https.GetFromJsonAsync<EstadoTema>("/api/tema"); Assert.Equal("ambar", tema?.Id); Assert.True(tema?.Revisao > 0);
+            (await https.PostAsJsonAsync("/api/tema", new EstadoTema("ambar", 0))).EnsureSuccessStatusCode(); var tema = await https.GetFromJsonAsync<EstadoTema>("/api/tema"); Assert.Equal("jarvis", tema?.Id); Assert.Equal(0, tema?.Revisao);
         }
         finally { TemasJarvis.Sincronizar(anterior); pares.Remover(token); await app.StopAsync(); }
     }

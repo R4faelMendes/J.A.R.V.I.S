@@ -17,8 +17,10 @@ public class InicializacaoTest
                 using var image = surface.Snapshot(); using var png = image.Encode(SkiaSharp.SKEncodedImageFormat.Png,100); return png.ToArray();
             }
             var first = Render("azul",0); var second = Render("azul",4); var amber = Render("ambar",4);
-            Assert.False(first.SequenceEqual(second)); Assert.False(second.SequenceEqual(amber));
-            using var decoded = SkiaSharp.SKBitmap.Decode(first); Assert.Equal(0, decoded.GetPixel(0,0).Alpha); Assert.True(decoded.GetPixel(210,210).Alpha > 200);
+            Assert.False(first.SequenceEqual(second)); Assert.True(second.SequenceEqual(amber));
+            using var decoded = SkiaSharp.SKBitmap.Decode(second); Assert.Equal(0, decoded.GetPixel(0,0).Alpha);
+            var verdes = decoded.Pixels.Count(p => p.Alpha > 200 && p.Green > p.Red + 20 && p.Green > p.Blue + 20);
+            Assert.True(verdes > 100, $"O reator deve conter energia verde visível; encontrados {verdes} pixels.");
         } finally { Jarvis.Core.TemasJarvis.Sincronizar(previous); }
     }
     [Fact] public void TemaAtualizaCartaoBotaoEGradienteSemRecriarAzul()
