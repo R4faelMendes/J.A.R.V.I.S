@@ -13,4 +13,10 @@ public sealed class CatalogoRotinas : ICatalogoRotinas
         using var banco = new BancoJarvis(); banco.InserirRotina(nome, "Voz: " + gatilho, gatilho, acoes);
     }
     public void Alternar(long id, bool ativa) { using var banco = new BancoJarvis(); banco.AlternarRotina(id, ativa); }
+    public void Atualizar(long id, string nome, string gatilho, string acoes)
+    {
+        PlanoRotina.Validar(acoes);
+        using var banco = new BancoJarvis(); banco.AtualizarRotina(id, nome, "Voz: " + gatilho, gatilho, acoes);
+    }
+    public void Remover(long id) { using var banco = new BancoJarvis(); banco.RemoverRotina(id); }
 }

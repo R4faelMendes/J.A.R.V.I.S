@@ -225,5 +225,16 @@ public sealed class BancoJarvis : IDisposable
         cmd.ExecuteNonQuery();
     }
 
+    public void AtualizarRotina(long id, string nome, string gatilho, string valor, string acoes)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE rotinas SET nome=$n,gatilho=$g,valor=$v,acoes=$a WHERE id=$i";
+        cmd.Parameters.AddWithValue("$n", nome); cmd.Parameters.AddWithValue("$g", gatilho); cmd.Parameters.AddWithValue("$v", valor); cmd.Parameters.AddWithValue("$a", acoes); cmd.Parameters.AddWithValue("$i", id);
+        if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("Rotina não encontrada.");
+    }
+    public void RemoverRotina(long id)
+    {
+        using var cmd = _conn.CreateCommand(); cmd.CommandText = "DELETE FROM rotinas WHERE id=$i"; cmd.Parameters.AddWithValue("$i", id); cmd.ExecuteNonQuery();
+    }
     public void Dispose() => _conn.Dispose();
 }

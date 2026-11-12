@@ -40,6 +40,8 @@ public interface IAgendadorRotinas
     void Salvar(AgendamentoRotina item);
     void Remover(long id);
     string UltimoResultado { get; }
+    void Iniciar();
+    void Parar();
 }
 
 public sealed record VersaoDisponivel(string Versao, string Notas, Uri Pagina, Uri Executavel, Uri Checksums);

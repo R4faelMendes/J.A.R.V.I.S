@@ -28,6 +28,7 @@ public partial class App : Application
         _mini = new MiniOverlay { Owner = principal };
         _servidor = new Services.ServidorLocal();
         _servidor.Iniciar();
+        Services.ServicosAplicacao.Agendador.Iniciar();
     }
     private static void RegistrarFalha(Exception? ex)
     {
@@ -41,6 +42,7 @@ public partial class App : Application
     }
     protected override void OnExit(ExitEventArgs e)
     {
+        Services.ServicosAplicacao.Agendador.Parar();
         if (Services.ServicosAplicacao.Jogo.Ativo) Services.ServicosAplicacao.Jogo.DesativarAsync().GetAwaiter().GetResult();
         Services.ServicosAplicacao.InstrumentacaoJogo.Dispose();
         Services.MotorVoz.RegistrarVoz("encerramento", "servicos");

@@ -880,6 +880,7 @@ public static class FabricaPaginas
             PageType.Apps => new AppsPage(),
             PageType.Desempenho => new DesempenhoPage(),
             PageType.Agenda => new AgendaPage(),
+            PageType.Rotinas => new RotinasCentralPage(),
             PageType.Diagnostico => new DiagnosticoPage(),
             PageType.PreparacaoVoz => new PreparacaoVozPage(),
             PageType.ConversaIa => new IaConfiguracaoPage(),

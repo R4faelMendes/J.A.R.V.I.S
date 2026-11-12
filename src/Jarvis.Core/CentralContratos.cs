@@ -29,6 +29,8 @@ public interface ICatalogoRotinas
     IReadOnlyList<RotinaDefinida> Listar();
     void Adicionar(string nome, string gatilho, string acoes);
     void Alternar(long id, bool ativa);
+    void Atualizar(long id, string nome, string gatilho, string acoes) => throw new NotSupportedException();
+    void Remover(long id) => throw new NotSupportedException();
 }
 public sealed record PreferenciaPessoal(string Chave, string Valor);
 public interface IMemoriaPreferencias

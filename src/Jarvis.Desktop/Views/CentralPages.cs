@@ -44,18 +44,19 @@ public sealed class RotinasCentralPage : PaginaBase
     {
         container.Children.Clear(); var stack = new StackPanel();
         stack.Children.Add(DiagnosticoPage.Label("Crie sequências com aplicativos, música, volume, janelas e pausas. Cancelar interrompe as próximas etapas; ações já executadas permanecem."));
+        long? editando = null;
         var name = new TextBox { Text = "Modo trabalho", Margin = new Thickness(0, 8, 0, 8), MaxLength = 80 };
         stack.Children.Add(DiagnosticoPage.Label("Nome e frase de ativação")); stack.Children.Add(name);
         var actions = new List<PassoRotina>(); var list = new ListBox { Height = 100, Margin = new Thickness(0, 10, 0, 10) };
         var presets = new WrapPanel { Margin = new Thickness(0, 4, 0, 14) };
-        foreach (var preset in new[] { "Modo trabalho", "Modo jogo", "Encerrar o dia" })
+        foreach (var preset in new[] { "Modo trabalho", "Estudar", "Programar", "Reunião", "Encerrar o dia" })
         {
             var button = new Button { Content = preset, Margin = new Thickness(0, 0, 8, 0) };
             button.Click += (_, _) =>
             {
                 name.Text = preset; actions.Clear(); list.Items.Clear();
                 actions.Add(new("midia_pausar")); actions.Add(new("volume", preset == "Encerrar o dia" ? "0" : preset == "Modo jogo" ? "60" : "20"));
-                if (preset == "Modo trabalho") actions.Add(new("layout", "Metade"));
+                if (preset is "Modo trabalho" or "Programar" or "Estudar") actions.Add(new("layout", "Metade"));
                 foreach (var step in actions) list.Items.Add(PlanoRotina.Descrever(step));
             }; presets.Children.Add(button);
         }
@@ -93,7 +94,8 @@ public sealed class RotinasCentralPage : PaginaBase
             {
                 var json = JsonSerializer.Serialize(actions); PlanoRotina.Validar(json);
                 if (string.IsNullOrWhiteSpace(name.Text)) throw new ArgumentException("Dê um nome à rotina.");
-                ServicosAplicacao.CatalogoRotinas.Adicionar(name.Text.Trim(), name.Text.Trim(), json); Montar(container);
+                if (editando is { } id) ServicosAplicacao.CatalogoRotinas.Atualizar(id, name.Text.Trim(), name.Text.Trim(), json);
+                else ServicosAplicacao.CatalogoRotinas.Adicionar(name.Text.Trim(), name.Text.Trim(), json); Montar(container);
             }
             catch (Exception ex) { status.Text = ex.Message; }
         }; stack.Children.Add(save); stack.Children.Add(status);
@@ -102,8 +104,19 @@ public sealed class RotinasCentralPage : PaginaBase
             var body = new StackPanel(); body.Children.Add(DiagnosticoPage.Label(r.Nome, Theme.Gelo));
             var toggle = new CheckBox { Content = "Ativa para voz", IsChecked = r.Ativa, Foreground = Brushes.White, Margin = new Thickness(0, 6, 0, 10) };
             toggle.Click += (_, _) => ServicosAplicacao.CatalogoRotinas.Alternar(r.Id, toggle.IsChecked == true); body.Children.Add(toggle);
+            body.Children.Add(DiagnosticoPage.Label("Diga: executar rotina " + r.Nome));
             var row = new WrapPanel(); var run = new Button { Content = "Executar etapas", Margin = new Thickness(0, 0, 8, 0) }; var cancel = new Button { Content = "Cancelar", IsEnabled = false };
             var progress = DiagnosticoPage.Label(Descricao(r.Acoes));
+            var edit = new Button { Content = "Editar", Margin = new Thickness(8, 0, 8, 0) };
+            edit.Click += (_, _) => { try { actions.Clear(); actions.AddRange(PlanoRotina.Validar(r.Acoes)); list.Items.Clear(); foreach (var a in actions) list.Items.Add(PlanoRotina.Descrever(a)); name.Text = r.Nome; editando = r.Id; save.Content = "Salvar alterações"; status.Text = "Editando " + r.Nome; } catch (Exception ex) { status.Text = ex.Message; } };
+            var delete = new Button { Content = "Excluir" }; delete.Click += (_, _) => { if (MessageBox.Show("Excluir a rotina e seu agendamento?", "Rotinas", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return; ServicosAplicacao.Agendador.Remover(r.Id); ServicosAplicacao.CatalogoRotinas.Remover(r.Id); Montar(container); };
+            row.Children.Add(edit); row.Children.Add(delete);
+            var agenda = ServicosAplicacao.Agendador.Listar().FirstOrDefault(a => a.RotinaId == r.Id);
+            var enabled = new CheckBox { Content = "Agendar enquanto o Jarvis estiver aberto", IsChecked = agenda?.Ativo ?? false, Foreground = Brushes.White, Margin = new Thickness(0, 12, 0, 4) }; body.Children.Add(enabled);
+            var hora = new TextBox { Text = agenda?.Hora ?? "09:00", Width = 70, MaxLength = 5, HorizontalAlignment = HorizontalAlignment.Left }; body.Children.Add(hora);
+            var days = new WrapPanel(); var checks = new List<(DayOfWeek Dia, CheckBox Box)>();
+            foreach (var day in Enum.GetValues<DayOfWeek>()) { var check = new CheckBox { Content = new System.Globalization.CultureInfo("pt-BR").DateTimeFormat.GetAbbreviatedDayName(day), IsChecked = agenda?.Dias.Contains(day) ?? (day is not DayOfWeek.Saturday and not DayOfWeek.Sunday), Foreground = Brushes.White, Margin = new Thickness(0, 8, 10, 8) }; checks.Add((day, check)); days.Children.Add(check); } body.Children.Add(days);
+            var schedule = new Button { Content = "Salvar horário", HorizontalAlignment = HorizontalAlignment.Left }; schedule.Click += (_, _) => { try { ServicosAplicacao.Agendador.Salvar(new(r.Id, hora.Text.Trim(), checks.Where(c => c.Box.IsChecked == true).Select(c => c.Dia).ToArray(), enabled.IsChecked == true)); status.Text = "Horário salvo. PC ligado e Jarvis aberto; horários perdidos não serão executados depois. Consulte o histórico."; } catch (Exception ex) { status.Text = ex.Message; } }; body.Children.Add(schedule);
             run.Click += async (_, _) =>
             {
                 if (_execucao is not null) { status.Text = "Já existe uma rotina em execução."; return; }
@@ -118,5 +131,5 @@ public sealed class RotinasCentralPage : PaginaBase
         container.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
     }
     private sealed record Option(string Id, string Nome) { public override string ToString() => Nome; }
-    private static string Descricao(string json) { try { var p = PlanoRotina.Validar(json); return $"{p.Length} etapas executáveis"; } catch { return "Rotina antiga: crie uma nova sequência para executar ações reais."; } }
+    private static string Descricao(string json) { try { var p = PlanoRotina.Validar(json); return string.Join("\n", p.Select((a, i) => $"{i + 1}. {PlanoRotina.Descrever(a)}")); } catch { return "Rotina antiga: crie uma nova sequência para executar ações reais."; } }
 }

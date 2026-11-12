@@ -188,6 +188,11 @@ public sealed class MotorVoz : IDisposable
         {
             var normal = RoteadorIntencoes.Normalizar(comando);
             normal = System.Text.RegularExpressions.Regex.Replace(normal, @"^jarvis\s+", "");
+            if (normal is "rotinas" or "minhas rotinas") { SolicitouNavegacao?.Invoke(this, PageType.Rotinas); return await FinalizarRespostaAsync("Aqui estão suas rotinas.", falar); }
+            var fraseRotina = normal.StartsWith("executar rotina ") ? normal[15..] : normal.StartsWith("rotina ") ? normal[7..] : null;
+            var rotina = ServicosAplicacao.CatalogoRotinas.Listar().FirstOrDefault(r => r.Ativa && (RoteadorIntencoes.Normalizar(r.Nome) == fraseRotina || RoteadorIntencoes.Normalizar(r.Gatilho.Replace("Voz: ", "")) == normal));
+            if (rotina is not null) { await ServicosAplicacao.Rotinas.ExecutarAsync(rotina.Acoes, new Progress<ProgressoRotina>(), ct); return await FinalizarRespostaAsync("Rotina " + rotina.Nome + " concluída.", falar); }
+            if (fraseRotina is not null) return await FinalizarRespostaAsync("Rotina não encontrada ou desativada.", falar);
             if (normal is "modo jogo" or "ativar modo jogo" or "ativar modo de jogo")
                 return await FinalizarRespostaAsync((await ServicosAplicacao.Jogo.AtivarAsync(Array.Empty<int>())).Mensagem, falar);
             if (normal is "sair do modo jogo" or "desativar modo jogo" or "sair do modo de jogo" or "desativar modo de jogo")

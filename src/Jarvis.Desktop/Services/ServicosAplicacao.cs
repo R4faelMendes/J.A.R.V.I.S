@@ -19,6 +19,7 @@ public static class ServicosAplicacao
     public static IDiagnosticoService Diagnostico { get; } = new DiagnosticoService();
     public static IRotinaService Rotinas { get; } = new RotinaService();
     public static ICatalogoRotinas CatalogoRotinas { get; } = new Jarvis.Data.CatalogoRotinas();
+    public static IAgendadorRotinas Agendador { get; } = new Jarvis.Data.AgendadorRotinas(CatalogoRotinas, Rotinas, Historico);
     public static IAppController Apps { get; } = new AppController();
     public static IWindowController Janelas { get; } = new WindowController();
     public static ITransmissaoTela Tela { get; } = new TransmissaoTela();
