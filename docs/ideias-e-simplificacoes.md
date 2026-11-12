@@ -27,6 +27,10 @@ Testes automatizados cobrem opt-in/fallback/cota de IA, histórico SQL, horário
 
 Na execução completa desta revisão: 207/213 testes aprovados. Seis falhas existentes permanecem: cinco testes de integração ainda procuram modelos em `models/` na raiz (a instalação guiada usa `%LocalAppData%/Jarvis/models`) e um teste de captura espera permissão inicial desativada, enquanto o serviço atual inicia permitido. Não foram alterados esses contratos fora do escopo. A bateria direcionada final aprovou 34 testes; a verificação de layout aprovou as páginas novas e o mobile aprovou 4 testes. O teste real separado de Piper/Whisper com os modelos instalados passou. Provedores externos de IA não foram chamados com credenciais reais; fallback, consentimento e cota foram testados com provedores controlados.
 
+Conferência final: o workflow de publicação 2.4.0 no GitHub concluiu com sucesso e os três downloads retornaram HTTP 200. O executável portátil local abriu a janela em 22,3 s nesta execução, iniciou os serviços com `--startup` e encerrou sem erro. O helper de atualização foi exercitado numa pasta isolada com executáveis de teste: substituição, cópia anterior e início do novo arquivo aprovados.
+
+A compilação local da solução inteira encontrou `XABBA7000` ao renomear um ZIP temporário do Android, inclusive numa repetição serial. Os scripts individuais de publicação Windows/Android e o workflow de release passaram. Isso não equivale a afirmar que `dotnet build Jarvis.sln` está aprovado nesta máquina.
+
 ## Fontes dos recursos de voz
 
 - [Vosk português](https://alphacephei.com/vosk/models)

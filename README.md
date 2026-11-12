@@ -45,7 +45,7 @@ Os links acompanham a última release publicada. Consulte as [notas e verificaç
 - **PC + Android:** servidor local e SignalR, pareamento por código/QR e validação do certificado no companheiro.
 - **Interface própria:** WPF com MVVM, reator SkiaSharp com fallback WPF, fontes locais e tema único preto e branco com verde `#00D800`, sem seletor de paletas.
 
-E-mails e agenda dependem da conexão da conta; ficam vazios quando desconectados. Clima e notícias usam serviços externos. As integrações dependem de autorizações, rede e recursos da máquina.
+E-mails dependem da conexão da conta e ficam vazios quando desconectados. A agenda local do Jarvis funciona sem conta; integrações Google dependem de conexão. Clima e notícias usam serviços externos. As integrações dependem de autorizações, rede e recursos da máquina.
 
 ### Inteligência artificial
 
