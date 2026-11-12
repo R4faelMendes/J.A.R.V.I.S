@@ -715,6 +715,7 @@ public sealed class ConfiguracoesPage : PaginaBase
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var stack = new StackPanel();
         var resumo = new Button { Content = "Resumo do dia", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 8) }; resumo.Click += (_, _) => Navegar(PageType.ResumoDia); stack.Children.Add(resumo);
+        var updates = new Button { Content = "Atualizações do Jarvis", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 8, 0, 8) }; updates.Click += (_, _) => Navegar(PageType.Atualizacoes); stack.Children.Add(updates);
         var ia = new Button { Content = "Configurar conversa com IA (opcional)", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16) };
         ia.Click += (_, _) => Navegar(PageType.ConversaIa); stack.Children.Add(ia);
         var prepararVoz = new Button { Content = "Preparar / reparar voz local", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16) };
@@ -881,6 +882,7 @@ public static class FabricaPaginas
             PageType.Apps => new AppsPage(),
             PageType.Desempenho => new DesempenhoPage(),
             PageType.Agenda => new AgendaPage(),
+            PageType.Atualizacoes => new AtualizacoesPage(),
             PageType.ResumoDia => new ResumoDiaPage(),
             PageType.Rotinas => new RotinasCentralPage(),
             PageType.Diagnostico => new DiagnosticoPage(),
