@@ -5,6 +5,7 @@
 - UI só fala com interfaces de `Jarvis.Core` (IVoiceService, IAppController, ...). Sem Win32/Google/IA na UI.
 - Fontes locais em `src/Jarvis.Desktop/Assets/Fonts` (Chakra Petch + IBM Plex Sans, licença livre).
 - Tokens em `Jarvis.Core/Theme.cs` (protótipo vence divergências).
+- Decisão do dono em 12/11/2026: tema único Jarvis, preto `#000000`, branco `#FFFFFF` e verde `#00D800`. Sem seletor de paletas; esta decisão substitui as cores anteriores do protótipo. Vermelho/amarelo somente para estados semânticos de erro/alerta.
 - Voz: NAudio 2.1.4 + Vosk 0.3.38 (`vosk-model-small-pt-0.3`, 31 MB) + Whisper.net 1.9.1 (`ggml-tiny.bin`, 77 MB) + Piper 1.2.0 local.
 - Namespace de sistema: `Jarvis.Sistema` (nunca `Jarvis.System`: colide com `System.Windows` no XAML).
 - Servidor: Kestrel+SignalR embutido (`HospedeJarvis.Criar`), porta 8766, lista fixa de comandos, token duradouro, pinning de impressão. Celular nunca executa texto livre.

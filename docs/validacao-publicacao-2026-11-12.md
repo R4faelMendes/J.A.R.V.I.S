@@ -55,3 +55,14 @@ O workflow GitHub Pages foi executado com sucesso, e o endereço público respon
 - Fontes locais com licenças OFL e preferência por movimento reduzido respeitada.
 
 O histórico é atualizado no deploy de cada push em `main`. Os botões apontam à última release publicada; novos binários dependem de tag ou execução manual do workflow de aplicativos. As credenciais de assinatura Android ficam nos secrets do GitHub e em armazenamento privado local, fora do repositório.
+
+
+## Atualização posterior: tema único Jarvis (2.3.2)
+
+O tema único passa a usar preto `#000000`, branco `#FFFFFF` e verde `#00D800`, com cinzas neutros para cartões e bordas. O catálogo contém uma opção; seletores, página mobile de temas, persistência e consulta periódica de tema foram removidos. IDs antigos retornam `jarvis`, mantendo compatibilidade com clientes anteriores. Cores de alerta permanecem semânticas.
+
+Os testes adicionados cobrem a migração dos seis IDs anteriores, o contraste do verde e a estabilidade do mapeamento. **18 testes focados Windows e 4 testes mobile passaram.** O teste mobile agora usa o mesmo ZIP de quadros do aplicativo; ele verifica animação e pixels verdes visíveis. A leitura do WebP foi corrigida para materializar a entrada ZIP num stream completo antes da decodificação.
+
+O teste de interface completo chegou à falha já registrada de barra de voz em F11 após a verificação de ausência de controles azuis. Não há declaração de suíte integralmente aprovada: a execução geral durante esta atualização teve 192 aprovados e 7 falhas em 199 testes, antes dos ajustes finais de renderização. As integrações de voz ainda dependem dos modelos locais ausentes.
+
+O site foi verificado em 1440 × 1000 e 390 × 844, sem overflow horizontal, com preto/branco e `--green: #00d800`. A revisão de funcionalidades e as propostas de próximos passos estão em `docs/ideias-e-simplificacoes.md`.

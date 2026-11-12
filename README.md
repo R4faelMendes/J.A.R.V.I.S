@@ -6,8 +6,8 @@
 
 Assistente pessoal para Windows, com reconhecimento de voz local,<br>automação e um aplicativo companheiro para Android.
 
-[![Site](https://img.shields.io/badge/Site-35F29A?style=for-the-badge&logo=githubpages&logoColor=081B15)](https://R4faelMendes.github.io/J.A.R.V.I.S/)
-[![Downloads](https://img.shields.io/badge/Downloads-102E25?style=for-the-badge&logo=github&logoColor=35F29A)](https://github.com/R4faelMendes/J.A.R.V.I.S/releases/latest)
+[![Site](https://img.shields.io/badge/Site-00D800?style=for-the-badge&logo=githubpages&logoColor=081B15)](https://R4faelMendes.github.io/J.A.R.V.I.S/)
+[![Downloads](https://img.shields.io/badge/Downloads-102E25?style=for-the-badge&logo=github&logoColor=00D800)](https://github.com/R4faelMendes/J.A.R.V.I.S/releases/latest)
 [![.NET 8](https://img.shields.io/badge/.NET-8-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Site](https://github.com/R4faelMendes/J.A.R.V.I.S/actions/workflows/site.yml/badge.svg)](https://github.com/R4faelMendes/J.A.R.V.I.S/actions/workflows/site.yml)
 
@@ -37,7 +37,7 @@ Os links acompanham a última release publicada. Consulte as [notas e verificaç
 - **Central pessoal:** conversa, aplicativos, desempenho, agenda, e-mails, rotinas, celular, segurança e configurações.
 - **Telemetria:** informações do sistema e processos, com sensores dependentes de hardware e permissões.
 - **PC + Android:** servidor local e SignalR, pareamento por código/QR e validação do certificado no companheiro.
-- **Interface própria:** WPF com MVVM, reator SkiaSharp com fallback WPF, fontes locais e paletas compartilhadas. O tema esmeralda usa verde vivo e fundos com maior contraste.
+- **Interface própria:** WPF com MVVM, reator SkiaSharp com fallback WPF, fontes locais e tema único preto e branco com verde `#00D800`, sem seletor de paletas.
 
 E-mails e agenda dependem da conexão da conta; ficam vazios quando desconectados. Clima e notícias usam serviços externos. As integrações dependem de autorizações, rede e recursos da máquina.
 
@@ -134,6 +134,10 @@ Novos aplicativos são compilados e publicados quando uma tag `v*` é enviada. A
 Projeto em desenvolvimento. Consulte a [validação desta atualização](docs/validacao-publicacao-2026-11-12.md) e o [registro anterior](docs/validacao-publicacao-2026-11-04.md) para resultados e falhas conhecidas. Documentos em `docs/` registram etapas antigas e podem descrever comportamentos anteriores.
 
 Não comite credenciais, certificados, chaves de assinatura ou bancos pessoais. Modelos e segredos locais ficam fora do repositório; mantenha backup privado da assinatura Android.
+
+## Próximas melhorias
+
+Veja a [revisão de ideias e simplificações](docs/ideias-e-simplificacoes.md), baseada nos fluxos implementados: primeiro uso da voz, comandos digitados, acesso às rotinas e remoção de ações apenas demonstrativas.
 
 ## Contribuir e relatar problemas
 
