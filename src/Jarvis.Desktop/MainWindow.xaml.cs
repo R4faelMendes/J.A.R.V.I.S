@@ -138,7 +138,6 @@ public partial class MainWindow : Window
 
     private MotorVoz? _motor;
     private DispatcherTimer? _medidor;
-    private DispatcherTimer? _fps;
 
     private static string LocalizarModelos()
     {
@@ -183,9 +182,6 @@ public partial class MainWindow : Window
                 _medidor.Interval = TimeSpan.FromMilliseconds(_vm.EstadoReator == ReactorState.Falando && !ConfiguracaoApp.ModoEconomico ? 33 : 100);
             };
             _medidor.Start();
-            _fps = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            _fps.Tick += (_, _) => _vm.FpsTexto = $"{DockReator.RenderizadorAtivo} · {DockReator.FpsMedido:0} fps";
-            _fps.Start();
             _inicioVoz = InicializarServicosAsync();
         };
         Closed += (_, _) =>
@@ -193,7 +189,7 @@ public partial class MainWindow : Window
             MotorVoz.RegistrarVoz("encerramento", "janela");
             _fechando = true; _vidaJanela.Cancel(); _motor.PararFala();
             UnregisterHotKey(new WindowInteropHelper(this).Handle, 1);
-            _medidor?.Stop(); _fps?.Stop(); _toastTimer?.Stop(); _celularTimer?.Stop();
+            _medidor?.Stop(); _toastTimer?.Stop(); _celularTimer?.Stop();
             ConfiguracaoApp.ConfiguracoesAlteradas -= AoAlterarConfiguracao;
             if (_inicioVoz is { IsCompleted: false }) _ = _inicioVoz.ContinueWith(_ => _motor.Dispose());
             else _motor.Dispose();

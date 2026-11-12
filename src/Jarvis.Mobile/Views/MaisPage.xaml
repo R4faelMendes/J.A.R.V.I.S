@@ -5,13 +5,11 @@
   <ScrollView><VerticalStackLayout Padding="16" Spacing="8">
     <Label Text="MARK IV / MÓDULOS" Style="{StaticResource Cabecalho}"/>
     <Label Text="Sua central" Style="{StaticResource Titulo}"/>
-    <Button Text="Meu aparelho · painel, localizar e espelhar" Clicked="Ir" ClassId="aparelho"/>
+    <Button Text="Meu aparelho" Clicked="Ir" ClassId="aparelho"/>
     <Button Text="Falar com o Jarvis" Clicked="Ir" ClassId="falar"/>
     <Button Text="Adicionar widget à tela inicial" Clicked="AdicionarWidget"/>
-    <Button Text="Janelas e grades" Clicked="Ir" ClassId="janelas"/>
-    <Button Text="Tela principal ao vivo" Clicked="Ir" ClassId="tela"/>
     <Button Text="Parear com o PC" Clicked="Ir" ClassId="parear"/>
-    <Button Text="Conexão direta / internet" Clicked="Ir" ClassId="vpn"/>
+    <Button Text="Opções avançadas · rede, janelas e espelhamento" Clicked="Ir" ClassId="avancado"/>
     <Button Text="Esquecer PC" TextColor="{StaticResource Vermelho}" Clicked="Esquecer"/>
   </VerticalStackLayout></ScrollView>
 </ContentPage>

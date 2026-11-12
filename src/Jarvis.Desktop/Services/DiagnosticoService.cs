@@ -35,6 +35,7 @@ public sealed class DiagnosticoService : IDiagnosticoService
         }
         catch (Exception ex) { itens.Add(new("Servidor local", false, ex.Message)); }
         itens.Add(new("Dados protegidos", RedeService.PortaOuvindo(5189), "HTTPS 5189 · token e impressão do certificado no app."));
+        itens.Add(new("Renderização", true, "SkiaSharp com fallback WPF; " + (ConfiguracaoApp.ReduzirAnimacoes || ConfiguracaoApp.ModoEconomico ? "animações reduzidas." : "animações habilitadas.") + " FPS não é exibido no dock."));
         return itens;
     }
 }

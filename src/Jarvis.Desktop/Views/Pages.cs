@@ -424,6 +424,7 @@ public sealed class DesempenhoPage : PaginaBase
     private TextBlock _txtDisk = null!;
     private TextBlock _txtProprio = null!;
     private StackPanel _tabelaProcessos = new();
+    private TextBlock? _sugestao;
 
     public DesempenhoPage() : base("Sistema", "Desempenho")
     {
@@ -479,40 +480,13 @@ public sealed class DesempenhoPage : PaginaBase
         secProc.Child = sp;
         stack.Children.Add(secProc);
 
-        // SUGESTÕES DO JARVIS
-        var secSug = new Border
-        {
-            Style = (Style)Application.Current.Resources["PainelVidro"],
-            Margin = new Thickness(0, 0, 0, 16)
-        };
-        var ss = new StackPanel();
-        var topSug = new DockPanel { Margin = new Thickness(0, 0, 0, 10) };
-        var btnOtimizar = new Button { Content = "Otimizar sistema", Style = (Style)Application.Current.Resources["BotaoPrimario"], Padding = new Thickness(18, 7, 18, 7) };
-        btnOtimizar.Click += (_, _) => MostrarToast("Otimização concluída: memória liberada.");
-        DockPanel.SetDock(btnOtimizar, Dock.Right);
-        topSug.Children.Add(btnOtimizar);
-        topSug.Children.Add(new TextBlock { Text = "Sugestões do Jarvis", FontSize = 16, FontWeight = FontWeights.Bold, Foreground = (Brush)Application.Current.Resources["TextoGelo"] });
-        ss.Children.Add(topSug);
-
-        void AddSugestao(string texto)
-        {
-            var p = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 4) };
-            p.Children.Add(new TextBlock { Text = "• ", Foreground = (Brush)Application.Current.Resources["AcaoCiano"], FontWeight = FontWeights.Bold });
-            p.Children.Add(new TextBlock { Text = texto, Foreground = (Brush)Application.Current.Resources["TextoNevoa"], FontSize = 13 });
-            ss.Children.Add(p);
-        }
-
-        AddSugestao("Temperaturas estáveis. Sensores de hardware monitorados em tempo real.");
-        AddSugestao("Nenhum processo em sobrecarga.");
-        AddSugestao("Memória e cache gerenciados automaticamente.");
-
-        secSug.Child = ss;
-        stack.Children.Add(secSug);
+        _sugestao = new TextBlock { Text = "Aguardando medições reais…", TextWrapping = TextWrapping.Wrap, Foreground = (Brush)Application.Current.Resources["TextoNevoa"] };
+        stack.Children.Add(CriarCardVidro("Leitura do sistema", _sugestao));
 
         // LINHA INFERIOR: USO DO JARVIS
         _txtProprio = new TextBlock
         {
-            Text = "O Jarvis está usando 1.8% da CPU e 115 MB de RAM",
+            Text = "Aguardando a primeira amostra do Jarvis…",
             FontSize = 12,
             Foreground = (Brush)Application.Current.Resources["TextoNevoa"],
             HorizontalAlignment = HorizontalAlignment.Center
@@ -533,6 +507,14 @@ public sealed class DesempenhoPage : PaginaBase
             var gpu = _perf.GpuPercent;
             var disk = _perf.DiscoPercent;
             var prop = _perf.CpuPropria;
+            if (_sugestao is not null) {
+                var leituras = new List<string>();
+                if (double.IsFinite(cpu)) leituras.Add($"CPU em {cpu:0}%" + (cpu >= 85 ? " · uso elevado nesta amostra" : ""));
+                if (double.IsFinite(mem)) leituras.Add($"RAM em {mem:0}%" + (mem >= 85 ? " · uso elevado nesta amostra" : ""));
+                var temperatura = _perf.TemperaturaC;
+                leituras.Add(double.IsFinite(temperatura) && temperatura > 0 ? $"Sensor de temperatura: {temperatura:0} °C" : "Temperatura indisponível neste hardware/permissão");
+                _sugestao.Text = string.Join(". ", leituras) + $". Atualizado às {DateTime.Now:HH:mm:ss}.";
+            }
 
             if (_txtCpu != null) _txtCpu.Text = double.IsNaN(cpu) ? "—" : $"{cpu:0}%";
             if (_txtMem != null) _txtMem.Text = double.IsNaN(mem) ? "—" : $"{mem:0}%";
@@ -890,7 +872,7 @@ public static class FabricaPaginas
             PageType.Apps => new AppsPage(),
             PageType.Desempenho => new DesempenhoPage(),
             PageType.Agenda => new AgendaPage(),
-            PageType.Diagnostico => new NucleoPage { AtivarEscutaCallback = ativarEscuta },
+            PageType.Diagnostico => new DiagnosticoPage(),
             PageType.Celular => new CelularCentralPage(),
             PageType.Seguranca => new SegurancaPage(),
             PageType.Configuracoes => new ConfiguracoesPage(),
