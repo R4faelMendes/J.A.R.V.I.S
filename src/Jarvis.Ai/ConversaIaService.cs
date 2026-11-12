@@ -64,10 +64,10 @@ public sealed class ConversaIaService : IConversaIa
         if (string.IsNullOrWhiteSpace(pergunta) || pergunta.Length > 4000) throw new ArgumentException("Pergunta inválida.");
         await _gate.WaitAsync(ct);
         try {
-            PreferenciasIa preferencias; CancellationToken consentimento;
-            lock (_config) { preferencias = _preferencias; consentimento = _consentimento.Token; }
+            PreferenciasIa preferencias; CancellationTokenSource ligado;
+            lock (_config) { preferencias = _preferencias; ligado = CancellationTokenSource.CreateLinkedTokenSource(ct, _consentimento.Token); }
+            using var consentimentoDaConsulta = ligado;
             if (!preferencias.Ativa) return new(AssistenteLocal.Responder(pergunta), "Local", false);
-            using var ligado = CancellationTokenSource.CreateLinkedTokenSource(ct, consentimento);
             var provedores = Provedores(preferencias);
             if (provedores.Count == 0) return new("Configure uma chave de IA em Configurações para perguntas gerais. " + AssistenteLocal.Responder(pergunta), "Local", false);
             foreach (var provedor in provedores) {

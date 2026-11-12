@@ -64,4 +64,29 @@ public sealed class Evolucao240Test
     public void AtualizadorRecusaFonteNaoOficial(string uri) => Assert.Throws<InvalidDataException>(() => AtualizadorJarvis.ValidarUrl(new(uri), "Jarvis-Windows-x64.exe"));
     [Fact]
     public void AtualizadorRecusaChecksumsAmbiguos() => Assert.Throws<InvalidDataException>(() => AtualizadorJarvis.LerChecksum(new string('a', 64) + "  Jarvis-Windows-x64.exe\n" + new string('b', 64) + "  Jarvis-Windows-x64.exe"));
+    private sealed class Agenda : IAgendaService
+    {
+        public IReadOnlyList<Compromisso> Listar() => [new(Guid.NewGuid().ToString(), "Reunião de hoje", DateTimeOffset.Now, DateTimeOffset.Now.AddMinutes(30)), new(Guid.NewGuid().ToString(), "Já concluído", DateTimeOffset.Now, DateTimeOffset.Now.AddMinutes(30), Etapa: EtapaCompromisso.Concluido)];
+        public Compromisso Salvar(Compromisso item) => throw new NotSupportedException();
+    }
+    private sealed class Email(bool conectado) : IEmailService
+    {
+        public bool Configurado => conectado;
+        public bool Conectado => conectado;
+        public int Consultas;
+        public Task<CaixaEntrada> SincronizarAsync(CancellationToken ct = default) { ct.ThrowIfCancellationRequested(); Consultas++; return Task.FromResult(new CaixaEntrada([new("1", "Remetente", "Assunto real", "", DateTimeOffset.Now, true)], 1, 1)); }
+        public Task ConfigurarClienteAsync(string file) => throw new NotSupportedException();
+        public Task ConectarAsync(CancellationToken ct = default) => throw new NotSupportedException();
+        public Task DesconectarAsync(CancellationToken ct = default) => throw new NotSupportedException();
+    }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResumoUsaFontesReaisENaoConsultaContaDesconectada(bool conectado)
+    {
+        var email = new Email(conectado); var resumo = await new ResumoDiaService(new Agenda(), email).GerarAsync(default);
+        Assert.Contains("Reunião de hoje", resumo); Assert.DoesNotContain("Já concluído", resumo); Assert.Contains("Fonte: agenda local", resumo);
+        Assert.Equal(conectado ? 1 : 0, email.Consultas);
+        if (conectado) Assert.Contains("Assunto real", resumo); else { Assert.Contains("desconectado", resumo); Assert.DoesNotContain("Assunto real", resumo); }
+    }
 }
