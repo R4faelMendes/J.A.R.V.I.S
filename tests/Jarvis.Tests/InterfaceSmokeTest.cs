@@ -241,7 +241,8 @@ public sealed class InterfaceSmokeTest
     }
     private static void VerificarSeletorData(Application app, string pasta)
     {
-        var picker = new DatePicker { Style = (Style)app.Resources["SeletorDataAgenda"], SelectedDate = DateTime.Today, DisplayDateStart = DateTime.Today, Margin = new Thickness(20) };
+        var picker = new DatePicker { Style = (Style)app.Resources["SeletorDataAgenda"], SelectedDate = DateTime.Today, DisplayDateStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1), Margin = new Thickness(20) };
+        picker.BlackoutDates.AddDatesInPast();
         var window = new Window { Width = 420, Height = 150, Content = picker, ShowActivated = false };
         void Processar() { var frame = new System.Windows.Threading.DispatcherFrame(); window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => frame.Continue = false)); System.Windows.Threading.Dispatcher.PushFrame(frame); }
         try {
@@ -251,7 +252,9 @@ public sealed class InterfaceSmokeTest
             var popup = (System.Windows.Controls.Primitives.Popup)picker.Template.FindName("PART_Popup", picker);
             var calendar = Assert.IsType<Calendar>(popup.Child); calendar.ApplyTemplate(); calendar.UpdateLayout();
             var days = Descendentes(calendar).OfType<System.Windows.Controls.Primitives.CalendarDayButton>().ToArray();
-            Assert.Equal(42, days.Length);
+            Assert.Equal(42, days.Length); Assert.Equal(DayOfWeek.Monday, calendar.FirstDayOfWeek);
+            var month = Descendentes(calendar).OfType<Grid>().Single(g => g.Name == "PART_MonthView");
+            Assert.Equal(7, month.Children.OfType<TextBlock>().Count(t => !string.IsNullOrWhiteSpace(t.Text)));
             var selected = Assert.Single(days.Where(d => d.IsSelected));
             Assert.Equal(Colors.Black, ((SolidColorBrush)selected.Foreground).Color);
             var bitmap = new RenderTargetBitmap((int)Math.Ceiling(calendar.ActualWidth), (int)Math.Ceiling(calendar.ActualHeight), 96, 96, PixelFormats.Pbgra32); bitmap.Render(calendar);

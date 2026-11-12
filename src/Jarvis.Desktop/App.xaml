@@ -127,9 +127,9 @@
         <Style.Triggers><Trigger Property="HasSelectedDays" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AcaoCiano}"/><Setter Property="Foreground" Value="{DynamicResource AcaoCiano}"/></Trigger></Style.Triggers>
       </Style>
       <Style x:Key="ItemSeletorAgenda" TargetType="primitives:CalendarItem">
-        <Style.Resources><DataTemplate x:Key="{x:Static primitives:CalendarItem.DayTitleTemplateResourceKey}"><TextBlock Text="{Binding}" Foreground="{DynamicResource TextoNevoa}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/></DataTemplate></Style.Resources>
         <Setter Property="Foreground" Value="{DynamicResource TextoGelo}"/>
         <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="primitives:CalendarItem">
+          <ControlTemplate.Resources><DataTemplate x:Key="{x:Static primitives:CalendarItem.DayTitleTemplateResourceKey}"><TextBlock Text="{Binding}" Foreground="{DynamicResource TextoNevoa}" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/></DataTemplate></ControlTemplate.Resources>
           <Border Background="{DynamicResource PainelVidroEscuroFundo}" BorderBrush="{DynamicResource BordaLinha}" BorderThickness="1" CornerRadius="12" Padding="12">
             <Grid x:Name="PART_Root"><Grid.RowDefinitions><RowDefinition Height="44"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
               <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="38"/><ColumnDefinition Width="*"/><ColumnDefinition Width="38"/></Grid.ColumnDefinitions>
@@ -157,6 +157,7 @@
         <Setter Property="CalendarItemStyle" Value="{StaticResource ItemSeletorAgenda}"/>
       </Style>
       <Style x:Key="SeletorDataAgenda" TargetType="DatePicker">
+        <Setter Property="FirstDayOfWeek" Value="Monday"/>
         <Setter Property="Language" Value="pt-BR"/><Setter Property="SelectedDateFormat" Value="Short"/><Setter Property="MinHeight" Value="44"/>
         <Setter Property="Foreground" Value="{DynamicResource TextoGelo}"/><Setter Property="Background" Value="{DynamicResource PainelVidroEscuroFundo}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource BordaLinha}"/><Setter Property="BorderThickness" Value="1"/>
