@@ -51,9 +51,8 @@ public sealed class InterfaceSmokeTest
                     page.Measure(new Size(1180, 680)); page.Arrange(new Rect(0, 0, 1180, 680)); page.UpdateLayout();
                     if (tipo == PageType.Configuracoes) {
                         page.ApplyTemplate();
-                        var intro = Descendentes(page).OfType<TextBlock>().FirstOrDefault(t => t.Text.StartsWith("Tema sincronizado"));
-                        Assert.NotNull(intro);
-                        Assert.NotEqual(Colors.Black, ((SolidColorBrush)intro!.Foreground).Color);
+                        Assert.DoesNotContain(Descendentes(page).OfType<TextBlock>(), t => t.Text.StartsWith("Tema sincronizado"));
+                        Assert.DoesNotContain(Descendentes(page).OfType<ComboBox>(), c => ReferenceEquals(c.ItemsSource, TemasJarvis.Catalogo));
                     }
 
                     Assert.True(page.DesiredSize.Width > 0);
@@ -134,7 +133,7 @@ public sealed class InterfaceSmokeTest
                     Assert.Equal(((SolidColorBrush)app.Resources["AcaoCiano"]).Color, ((SolidColorBrush)themedButton.Foreground).Color);
                     var styledButton = new Button { Content = "Estilo primário", Style = (Style)app.Resources["BotaoPrimario"] };
                     themeHost.Content = styledButton; themeHost.UpdateLayout();
-                    Assert.Equal(Color.FromRgb(210, 220, 231), ((SolidColorBrush)styledButton.Background).Color);
+                    Assert.Equal((Color)ColorConverter.ConvertFromString(Theme.VerdeSistema), ((SolidColorBrush)styledButton.Background).Color);
                     // Um cartão criado com recursos já coloridos deve acompanhar
                     // as próximas trocas, incluindo a volta para o azul.
                     var lateCard = new Border { Background = (Brush)app.Resources["PainelVidroEscuroFundo"] };

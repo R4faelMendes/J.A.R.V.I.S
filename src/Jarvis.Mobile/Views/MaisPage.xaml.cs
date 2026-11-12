@@ -14,7 +14,6 @@ public partial class MaisPage : ContentPage
     {
         var destino = (s as Button)?.ClassId ?? "";
         if (destino == "falar") await Shell.Current.GoToAsync("falar");
-        else if (destino == "temas") await Navigation.PushAsync(new TemasPage());
         else if (destino == "parear") await Shell.Current.GoToAsync("parear");
         else if (destino is "janelas" or "tela") await Shell.Current.GoToAsync(destino);
         else if (destino == "vpn") await Shell.Current.GoToAsync("rede-privada");

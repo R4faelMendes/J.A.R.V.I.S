@@ -13,7 +13,7 @@ public partial class InicioPage : ContentPage
         Estado(this, App.Conexao.Conectado ? "Online" : "Offline");
     }
     protected override void OnDisappearing() { Reator.Animar(false); Player.Ativar(false); App.Conexao.EstadoMudou -= Estado; base.OnDisappearing(); }
-    private void Estado(object? sender, string text) => MainThread.BeginInvokeOnMainThread(() => { Status.Text = text; Status.TextColor = Color.FromArgb(App.Conexao.Conectado ? "#4DE3A1" : "#F4B544"); PcLinha.Text = App.Conexao.Identidade?.Nome ?? "Pareie seu computador"; });
+    private void Estado(object? sender, string text) => MainThread.BeginInvokeOnMainThread(() => { Status.Text = text; Status.TextColor = Color.FromArgb(App.Conexao.Conectado ? "#00D800" : "#F4B544"); PcLinha.Text = App.Conexao.Identidade?.Nome ?? "Pareie seu computador"; });
 
     private async void Bloquear(object? s, EventArgs e)
     {

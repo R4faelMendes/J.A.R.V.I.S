@@ -21,7 +21,7 @@ public sealed class EmailsPage : PaginaBase
         Loaded += async (_, _) => { if (_email.Conectado) await AcaoAsync(SincronizarAsync); };
         Unloaded += (_, _) => _vida.Cancel();
     }
-    private static TextBlock Texto(string t, int size = 13, string color = "#8FA9BF") => new()
+    private static TextBlock Texto(string t, int size = 13, string color = "#BBBBBB") => new()
     { Text = t, FontSize = size, TextWrapping = TextWrapping.Wrap, Foreground = (Brush)new BrushConverter().ConvertFromString(color)!, Margin = new Thickness(0, 0, 0, 10) };
     private Button Botao(string t, Func<Task> acao, bool primario = false)
     {

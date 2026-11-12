@@ -1,9 +1,9 @@
-﻿<?xml version="1.0" encoding="UTF-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <Shell x:Class="Jarvis.Mobile.AppShell"
        xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:views="clr-namespace:Jarvis.Mobile.Views"
-       Shell.FlyoutBehavior="Disabled" Title="Jarvis" Shell.BackgroundColor="#030D16" Shell.ForegroundColor="#E6F6FF" Shell.TitleColor="#E6F6FF" Shell.TabBarBackgroundColor="#04111B" Shell.TabBarForegroundColor="#4FD6FF" Shell.TabBarTitleColor="#4FD6FF" Shell.TabBarUnselectedColor="#7892A5">
+       Shell.FlyoutBehavior="Disabled" Title="Jarvis" Shell.BackgroundColor="#000000" Shell.ForegroundColor="#FFFFFF" Shell.TitleColor="#FFFFFF" Shell.TabBarBackgroundColor="#04111B" Shell.TabBarForegroundColor="#00D800" Shell.TabBarTitleColor="#00D800" Shell.TabBarUnselectedColor="#BBBBBB">
   <TabBar>
     <ShellContent Title="Início" Icon="home_icon.png" ContentTemplate="{DataTemplate views:InicioPage}" Route="inicio"/>
     <ShellContent Title="Apps" Icon="apps_icon.png" ContentTemplate="{DataTemplate views:AppsPage}" Route="apps"/>

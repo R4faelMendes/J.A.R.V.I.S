@@ -103,7 +103,7 @@ public abstract class PaginaBase : UserControl
         };
     }
 
-    protected static Border CriarChip(string texto, string corHex = "#4FD6FF", string fundoHex = "#0F2E45")
+    protected static Border CriarChip(string texto, string corHex = "#00D800", string fundoHex = "#0F2E45")
     {
         return new Border
         {
@@ -283,7 +283,7 @@ public sealed class AppsPage : PaginaBase
             var top = new DockPanel();
             var chip = app.Aberto
                 ? CriarChip("● Aberto", Theme.VerdeSistema, "#143528")
-                : CriarChip("Fechado", "#8FA9BF", "#1B2A38");
+                : CriarChip("Fechado", "#BBBBBB", "#1B2A38");
             DockPanel.SetDock(chip, Dock.Right);
             var tit = new TextBlock { Text = $"{app.Icone} {app.Nome}", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = (Brush)Application.Current.Resources["TextoGelo"], TextTrimming = TextTrimming.CharacterEllipsis };
             top.Children.Add(chip);
@@ -732,13 +732,6 @@ public sealed class ConfiguracoesPage : PaginaBase
     {
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var stack = new StackPanel();
-
-        var temas = new ComboBox { ItemsSource = TemasJarvis.Catalogo, DisplayMemberPath = "Nome", SelectedValuePath = "Id", SelectedValue = TemasJarvis.Estado.Id, MinHeight = 40 };
-        temas.SelectionChanged += (_, _) => { if (temas.SelectedValue is string id && id != TemasJarvis.Estado.Id) TemasJarvis.Escolher(id); };
-        EventHandler sincronizarTema = (_, _) => Dispatcher.InvokeAsync(() => temas.SelectedValue = TemasJarvis.Estado.Id);
-        Loaded += (_, _) => TemasJarvis.Alterado += sincronizarTema; Unloaded += (_, _) => TemasJarvis.Alterado -= sincronizarTema;
-        var temaBox = new StackPanel(); temaBox.Children.Add(new TextBlock { Text = "Tema sincronizado · PC e celular", FontSize = 18, Margin = new Thickness(0, 0, 0, 12) }); temaBox.Children.Add(temas);
-        temaBox.Children.Add(new TextBlock { Text = "A interface e a energia do reator mudam juntas. O celular recebe a alteração ao se conectar.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 10, 0, 0) }); stack.Children.Add(CriarCardVidro(conteudo: temaBox));
 
         // 1. DADOS DO USUÁRIO
         var cardUser = new Border

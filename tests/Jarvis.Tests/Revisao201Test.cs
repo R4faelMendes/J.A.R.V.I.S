@@ -32,8 +32,8 @@ public sealed class Revisao201Test
                 Assert.Equal(TemasJarvis.Rgb(paleta.Acento), TemasJarvis.Colorir(0x4FD6FF));
                 Assert.NotEqual(0x00D9CFu, TemasJarvis.Colorir(0x00D9CF));
                 Assert.Equal(0xFF4D3Du, TemasJarvis.Colorir(0xFF4D3D));
-                Assert.Equal(0x4DE3A1u, TemasJarvis.Colorir(0x4DE3A1));
-                Assert.Equal(0xE6F6FFu, TemasJarvis.Colorir(0xE6F6FF));
+                Assert.Equal(0x00D800u, TemasJarvis.Colorir(0x4DE3A1));
+                Assert.Equal(0xFFFFFFu, TemasJarvis.Colorir(0xE6F6FF));
                 // Contraste do texto sobre as superfícies escuras.
                 double Lum(uint c) { double F(int n) { var v = n / 255d; return v <= .04045 ? v / 12.92 : Math.Pow((v + .055) / 1.055, 2.4); } return .2126 * F((int)(c >> 16 & 255)) + .7152 * F((int)(c >> 8 & 255)) + .0722 * F((int)(c & 255)); }
                 Assert.True((Lum(0xE6F6FF) + .05) / (Lum(TemasJarvis.Rgb(paleta.Painel)) + .05) >= 4.5);

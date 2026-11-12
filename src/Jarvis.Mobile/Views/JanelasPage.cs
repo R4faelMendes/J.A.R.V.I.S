@@ -3,7 +3,7 @@ namespace Jarvis.Mobile.Views;
 
 public sealed class JanelasPage : ContentPage
 {
-    private readonly Label _status = new() { Text = "Carregando janelas…", TextColor = Color.FromArgb("#4FD6FF") };
+    private readonly Label _status = new() { Text = "Carregando janelas…", TextColor = Color.FromArgb("#00D800") };
     private readonly Label _selection = new() { Text = "Nenhuma janela selecionada" };
     private readonly VerticalStackLayout _lista = new() { Spacing = 12 };
     private readonly Picker _monitor = new() { Title = "Monitor de destino", ItemDisplayBinding = new Binding("Nome") };
@@ -53,10 +53,10 @@ public sealed class JanelasPage : ContentPage
         {
             var row = new VerticalStackLayout { Spacing = 8, Padding = 12, BackgroundColor = Color.FromArgb("#0A1D2C") };
             var header = new Grid { ColumnSpacing = 8, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
-            var check = new CheckBox { IsChecked = _ordem.Contains(window.Id), Color = Color.FromArgb("#4FD6FF") };
+            var check = new CheckBox { IsChecked = _ordem.Contains(window.Id), Color = Color.FromArgb("#00D800") };
             check.CheckedChanged += (_, e) => { if (e.Value && !_ordem.Contains(window.Id)) _ordem.Add(window.Id); if (!e.Value) _ordem.Remove(window.Id); Numerar(); };
             header.Add(check, 0); header.Add(new Label { Text = window.Titulo, MaxLines = 2, LineBreakMode = LineBreakMode.TailTruncation, VerticalOptions = LayoutOptions.Center }, 1); row.Add(header);
-            var number = new Label { FontSize = 12, TextColor = Color.FromArgb("#4FD6FF") }; _numbers[window.Id] = number; row.Add(number);
+            var number = new Label { FontSize = 12, TextColor = Color.FromArgb("#00D800") }; _numbers[window.Id] = number; row.Add(number);
             var names = PosicoesGrade.Nomes(Modelos[Math.Max(0, _layout.SelectedIndex)]);
             var position = new Picker { Title = "Posição desta janela", ItemsSource = new[] { "Automática" }.Concat(names).ToArray(), SelectedIndex = _posicoes.GetValueOrDefault(window.Id, -1) + 1 };
             position.SelectedIndexChanged += (_, _) => { if (position.SelectedIndex > 0) { _posicoes[window.Id] = position.SelectedIndex - 1; check.IsChecked = true; } else _posicoes.Remove(window.Id); Numerar(); }; row.Add(position);

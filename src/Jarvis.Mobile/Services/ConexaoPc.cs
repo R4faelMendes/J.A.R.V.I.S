@@ -10,11 +10,7 @@ namespace Jarvis.Mobile.Services;
 /// <summary>Fala com o servidor do PC. Token no SecureStorage, pinning da impressão.</summary>
 public sealed class ConexaoPc
 {
-    public async Task EscolherTemaAsync(string id)
-    {
-        using var response = await (_http ?? throw new InvalidOperationException("Conecte ao PC para mudar o tema dos dois apps.")).PostAsJsonAsync("/api/tema", new EstadoTema(id, 0));
-        response.EnsureSuccessStatusCode(); var estado = await response.Content.ReadFromJsonAsync<EstadoTema>(); if (estado is not null) await MainThread.InvokeOnMainThreadAsync(() => TemasJarvis.Sincronizar(estado));
-    }
+
     public async Task<string> TranscreverAudioAsync(byte[] pcm, CancellationToken ct)
     {
         var client = _http ?? throw new InvalidOperationException("Conecte ao PC antes de falar.");
@@ -305,7 +301,6 @@ public sealed class ConexaoPc
                     if (identity is not null) await SecureStorage.SetAsync("jarvis_identidade", JsonSerializer.Serialize(identity));
                 }
                 if (identity is not null) await AprenderEnderecosAsync(identity);
-                try { var tema = await client.GetFromJsonAsync<EstadoTema>("/api/tema"); if (version == _versao && tema is not null) await MainThread.InvokeOnMainThreadAsync(() => TemasJarvis.Sincronizar(tema)); } catch { }
                 UltimoDiagnostico = RedeDireta.Publico(BaseUrl) ? "Online · internet direta" : "Online · conexão direta";
                 try { Telemetria = await client.GetFromJsonAsync<TelemetriaPc>("/api/telemetria"); if (version == _versao && Telemetria is not null) TelemetriaMudou?.Invoke(this, Telemetria); }
                 catch { Telemetria = null; }

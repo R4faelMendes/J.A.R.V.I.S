@@ -4,15 +4,15 @@
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
-  <Color x:Key="Abismo">#030D16</Color>
-  <Color x:Key="Vidro">#081B29</Color>
-  <Color x:Key="Linha">#1B3A57</Color>
-  <Color x:Key="CianoHolo">#4FD6FF</Color>
-  <Color x:Key="Gelo">#EDF5F5</Color>
-  <Color x:Key="Nevoa">#A5BBC7</Color>
+  <Color x:Key="Abismo">#000000</Color>
+  <Color x:Key="Vidro">#101010</Color>
+  <Color x:Key="Linha">#333333</Color>
+  <Color x:Key="CianoHolo">#00D800</Color>
+  <Color x:Key="Gelo">#FFFFFF</Color>
+  <Color x:Key="Nevoa">#BBBBBB</Color>
   <Color x:Key="Ouro">#F4B544</Color>
   <Color x:Key="Vermelho">#FF4D3D</Color>
-  <Color x:Key="Verde">#35F29A</Color>
+  <Color x:Key="Verde">#00D800</Color>
 
   <Style TargetType="Page" ApplyToDerivedTypes="True">
     <Setter Property="BackgroundColor" Value="{StaticResource Abismo}"/>
@@ -41,14 +41,14 @@
   </Style>
   <Style x:Key="Primario" TargetType="Button">
     <Setter Property="BackgroundColor" Value="{StaticResource CianoHolo}"/>
-    <Setter Property="TextColor" Value="#050D18"/>
+    <Setter Property="TextColor" Value="#000000"/>
     <Setter Property="CornerRadius" Value="4"/>
     <Setter Property="MinimumHeightRequest" Value="44"/>
     <Setter Property="FontFamily" Value="IBMPlexSansMedium"/>
   </Style>
-  <Style TargetType="Button"><Setter Property="BackgroundColor" Value="#0B2434"/><Setter Property="TextColor" Value="#EDF5F5"/><Setter Property="CornerRadius" Value="4"/><Setter Property="BorderWidth" Value="1"/><Setter Property="BorderColor" Value="#3B5263"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansMedium"/><Setter Property="FontSize" Value="14"/></Style>
-  <Style TargetType="Entry"><Setter Property="BackgroundColor" Value="#0B202F"/><Setter Property="TextColor" Value="#EDF5F5"/><Setter Property="PlaceholderColor" Value="#7892A5"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansRegular"/></Style>
-  <Style TargetType="SearchBar"><Setter Property="BackgroundColor" Value="#0B202F"/><Setter Property="TextColor" Value="#EDF5F5"/><Setter Property="PlaceholderColor" Value="#7892A5"/></Style>
+  <Style TargetType="Button"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="CornerRadius" Value="4"/><Setter Property="BorderWidth" Value="1"/><Setter Property="BorderColor" Value="#333333"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansMedium"/><Setter Property="FontSize" Value="14"/></Style>
+  <Style TargetType="Entry"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansRegular"/></Style>
+  <Style TargetType="SearchBar"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/></Style>
   <Style TargetType="Slider">
     <Setter Property="MinimumTrackColor" Value="{StaticResource CianoHolo}"/>
     <Setter Property="MaximumTrackColor" Value="{StaticResource Linha}"/>

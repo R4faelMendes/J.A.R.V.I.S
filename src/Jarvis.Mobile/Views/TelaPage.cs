@@ -32,7 +32,7 @@ public sealed class TelaPage : ContentPage
             var button = new Button { Text = label, FontSize = 11, Padding = new Thickness(8, 6) };
             button.Clicked += async (_, _) => { if (_monitor.SelectedItem is Jarvis.Core.MonitorInfo m) await EnviarGestoAsync(new(m.Id, acao, Rolagem: ticks, Tecla: key)); }; controls.Add(button, column);
         }
-        header.Add(controls); header.Add(new Label { Text = "Toque: clique · 2 toques: abrir · segurar: botão direito · deslizar: arrastar · 2 dedos: rolar", FontSize = 10, TextColor = Color.FromArgb("#8FA9BF") });
+        header.Add(controls); header.Add(new Label { Text = "Toque: clique · 2 toques: abrir · segurar: botão direito · deslizar: arrastar · 2 dedos: rolar", FontSize = 10, TextColor = Color.FromArgb("#BBBBBB") });
         _screen.Gesto += async pedido => await EnviarGestoAsync(pedido);
         root.Add(header, 0, 0); root.Add(_screen, 0, 1); root.Add(_status, 0, 2); root.Add(_toggle, 0, 3);
         root.Add(_exit, 0, 0); Grid.SetRowSpan(_exit, 4); _exit.ZIndex = 10; _exit.Clicked += (_, _) => TelaCheia(false);

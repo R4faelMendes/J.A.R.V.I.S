@@ -1,18 +1,18 @@
-// JARVIS — tokens visuais (valores do protótipo; o protótipo vence divergências).
+// JARVIS — identidade única: preto, branco e verde #00D800.
 namespace Jarvis.Core;
 
 /// <summary>Cores, raios e escala. Dark mode padrão.</summary>
 public static class Theme
 {
-    public const string Abismo = "#030D16";
-    public const string Vidro = "#081B29";
-    public const string Linha = "#1B3A57";
-    public const string CianoHolo = "#4FD6FF";
-    public const string Gelo = "#E6F6FF";
-    public const string Nevoa = "#8FA9BF";
+    public const string Abismo = "#000000";
+    public const string Vidro = "#101010";
+    public const string Linha = "#333333";
+    public const string CianoHolo = "#00D800";
+    public const string Gelo = "#FFFFFF";
+    public const string Nevoa = "#BBBBBB";
     public const string Ouro = "#F4B544";
     public const string VermelhoNucleo = "#FF4D3D";
-    public const string VerdeSistema = "#35F29A";
+    public const string VerdeSistema = "#00D800";
 
     public const int Grade = 8;
     public const int RaioBotao = 10;

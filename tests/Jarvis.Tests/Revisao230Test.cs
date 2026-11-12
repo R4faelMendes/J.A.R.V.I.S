@@ -7,13 +7,13 @@ public sealed class Revisao230Test
 {
     [Fact] public void PaletaRosaRemovidaEConfiguracaoAntigaMigrada() {
         var anterior = TemasJarvis.Estado;
-        try { Assert.DoesNotContain(TemasJarvis.Catalogo, p => p.Id == "rubi"); TemasJarvis.Sincronizar(new("rubi", anterior.Revisao + 1)); Assert.Equal("ambar", TemasJarvis.Estado.Id); }
+        try { Assert.DoesNotContain(TemasJarvis.Catalogo, p => p.Id == "rubi"); TemasJarvis.Sincronizar(new("rubi", anterior.Revisao + 1)); Assert.Equal("jarvis", TemasJarvis.Estado.Id); }
         finally { TemasJarvis.Sincronizar(anterior); }
     }
     [Fact] public void TonsAzuisIncluindoDetalhesSuavesAcompanhamTema() {
         var anterior = TemasJarvis.Estado;
         try { TemasJarvis.Escolher("ambar"); foreach (var rgb in new uint[] { 0x8FA9BF, 0xA5BBC7, 0x778899, 0x708090, 0x00BFFF, 0xE0FFFF, 0x1D2D3C, 0x146987 }) {
-            var c = TemasJarvis.Colorir(rgb); Assert.NotEqual(rgb, c); Assert.True((c >> 16 & 255) >= (c & 255), $"{rgb:X6} continuou azulado: {c:X6}");
+            var c = TemasJarvis.Colorir(rgb); Assert.NotEqual(rgb, c); Assert.True((c >> 8 & 255) >= (c & 255), $"{rgb:X6} continuou azulado: {c:X6}");
         } } finally { TemasJarvis.Sincronizar(anterior); }
     }
     [Fact] public void WidgetMostraProximosCompromissosNaoConcluidosNemExcluidos() {

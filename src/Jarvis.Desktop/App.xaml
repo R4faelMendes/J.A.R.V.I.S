@@ -5,20 +5,20 @@
   <Application.Resources>
     <ResourceDictionary>
       <!-- Cores Principais -->
-      <Color x:Key="Abismo">#030D16</Color>
-      <Color x:Key="Vidro">#081B29</Color>
-      <Color x:Key="VidroEscuro">#081422</Color>
-      <Color x:Key="Linha">#1B3A57</Color>
-      <Color x:Key="CianoHolo">#4FD6FF</Color>
-      <Color x:Key="Gelo">#EDF5F5</Color>
-      <Color x:Key="Nevoa">#A5BBC7</Color>
+      <Color x:Key="Abismo">#000000</Color>
+      <Color x:Key="Vidro">#101010</Color>
+      <Color x:Key="VidroEscuro">#101010</Color>
+      <Color x:Key="Linha">#333333</Color>
+      <Color x:Key="CianoHolo">#00D800</Color>
+      <Color x:Key="Gelo">#FFFFFF</Color>
+      <Color x:Key="Nevoa">#BBBBBB</Color>
       <Color x:Key="Ouro">#F4B544</Color>
       <Color x:Key="VermelhoNucleo">#FF4D3D</Color>
-      <Color x:Key="VerdeSistema">#35F29A</Color>
+      <Color x:Key="VerdeSistema">#00D800</Color>
 
       <!-- Brushes -->
       <SolidColorBrush x:Key="FundoAbismo" Color="{StaticResource Abismo}"/>
-      <LinearGradientBrush x:Key="PainelVidroFundo" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#102235" Offset="0"/><GradientStop Color="#08121E" Offset="1"/></LinearGradientBrush>
+      <LinearGradientBrush x:Key="PainelVidroFundo" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#181818" Offset="0"/><GradientStop Color="#101010" Offset="1"/></LinearGradientBrush>
       <SolidColorBrush x:Key="PainelVidroEscuroFundo" Color="{StaticResource VidroEscuro}"/>
       <SolidColorBrush x:Key="BordaLinha" Color="{StaticResource Linha}"/>
       <SolidColorBrush x:Key="TextoGelo" Color="{StaticResource Gelo}"/>
@@ -124,7 +124,7 @@
       <!-- Botão Primário (Ciano Arredondado) -->
       <Style x:Key="BotaoPrimario" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
         <Setter Property="Background" Value="{DynamicResource AcaoCiano}"/>
-        <Setter Property="Foreground" Value="#050D18"/>
+        <Setter Property="Foreground" Value="#000000"/>
         <Setter Property="FontFamily" Value="{StaticResource FonteTexto}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="SemiBold"/>

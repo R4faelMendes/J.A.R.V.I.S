@@ -31,7 +31,7 @@ public sealed class CelularCentralPage : PaginaBase
     {
         var stack = new StackPanel();
         stack.Children.Add(new Jarvis.Desktop.Views.PainelAparelhoView(ServicosAplicacao.Aparelhos));
-        stack.Children.Add(DiagnosticoPage.Label("1 · INSTALAR NO CELULAR SEM USB", "#4FD6FF"));
+        stack.Children.Add(DiagnosticoPage.Label("1 · INSTALAR NO CELULAR SEM USB", "#00D800"));
         var install = ServicosAplicacao.ConexaoCelular.ObterInstalacao();
         var downloadQr = new Image { Width = 180, Height = 180, HorizontalAlignment = HorizontalAlignment.Left };
         var chooseNetwork = new ComboBox { ItemsSource = install.Alternativa is null ? new[] { "Mesmo Wi-Fi do PC" } : new[] { "Mesmo Wi-Fi do PC", "Conexão direta" }, SelectedIndex = 0, Width = 250, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 10, 0, 10) };
@@ -42,7 +42,7 @@ public sealed class CelularCentralPage : PaginaBase
         stack.Children.Add(DiagnosticoPage.Label("Leia este QR com a câmera do celular, toque em Baixar Jarvis e abra o APK. Depois, use o QR de pareamento abaixo dentro do app."));
         stack.Children.Add(chooseNetwork); stack.Children.Add(downloadQr); stack.Children.Add(downloadUrl);
         var copyLink = new Button { Content = "Copiar link para baixar o app", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 10, 0, 20) }; copyLink.Click += (_, _) => { Clipboard.SetText(CurrentDownload()); MostrarToast("Link copiado. Pode abrir no celular sem cabo USB."); }; stack.Children.Add(copyLink);
-        stack.Children.Add(DiagnosticoPage.Label("ACESSO DIRETO PELA INTERNET", "#4FD6FF"));
+        stack.Children.Add(DiagnosticoPage.Label("ACESSO DIRETO PELA INTERNET", "#00D800"));
         var remote = DiagnosticoPage.Label(ServicosAplicacao.AcessoExterno.Endereco ?? "Nenhum IPv6 público detectado. Você pode informar um domínio/IP público e configurar a porta HTTPS no roteador."); stack.Children.Add(remote);
         var direct = new TextBox { Text = ServicosAplicacao.AcessoExterno.Endereco ?? "", MaxLength = 250, Margin = new Thickness(0, 8, 0, 8) }; stack.Children.Add(direct);
         var saveRemote = new Button { Content = "Salvar endereço direto", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 10) }; saveRemote.Click += (_, _) => { try { ServicosAplicacao.AcessoExterno.Salvar(direct.Text); remote.Text = "Endereço salvo. O app pareado aprende este endereço ao conectar no Wi-Fi. Teste depois pelos dados móveis."; } catch (Exception ex) { MostrarToast(ex.Message); } }; stack.Children.Add(saveRemote);
@@ -50,14 +50,14 @@ public sealed class CelularCentralPage : PaginaBase
         stack.Children.Add(DiagnosticoPage.Label("Sem aplicativo de VPN. IPv6 exige IPv6 também na rede do celular e liberação da porta HTTPS 5189 no roteador/firewall. IPv4 exige IP público e redirecionamento dessa porta; CGNAT bloqueia conexões de entrada. O endereço pode mudar conforme o provedor."));
         var telaEstado = DiagnosticoPage.Label("Celulares pareados podem visualizar e controlar o PC ao iniciar Tela ao vivo. Feche a visualização no app para parar."); stack.Children.Add(telaEstado);
         _timer.Tick += (_, _) => { var ultima = ServicosAplicacao.Tela.UltimaVisualizacao; telaEstado.Text = ultima.HasValue && DateTimeOffset.UtcNow - ultima.Value < TimeSpan.FromSeconds(3) ? "TRANSMITINDO · celular pareado conectado à tela do PC." : "Abra Tela ao vivo no app pareado. Visualização e toque já estão disponíveis."; };
-        _connected = DiagnosticoPage.Label("Aguardando o aplicativo do celular", "#4FD6FF"); stack.Children.Add(_connected);
-        stack.Children.Add(DiagnosticoPage.Label("2 · CONECTAR O APP AO PC", "#4FD6FF"));
+        _connected = DiagnosticoPage.Label("Aguardando o aplicativo do celular", "#00D800"); stack.Children.Add(_connected);
+        stack.Children.Add(DiagnosticoPage.Label("2 · CONECTAR O APP AO PC", "#00D800"));
         stack.Children.Add(DiagnosticoPage.Label("Após instalar pelo link acima, abra o Jarvis no Android e toque em Fotografar QR code para ler o código abaixo. O pareamento registra os endereços Wi-Fi e internet direta para as próximas conexões automáticas."));
         var pair = new Grid(); pair.ColumnDefinitions.Add(new() { Width = new GridLength(300) }); pair.ColumnDefinitions.Add(new());
         _qr = new Image { Width = 280, Height = 280, Stretch = Stretch.Uniform }; RenderOptions.SetBitmapScalingMode(_qr, BitmapScalingMode.NearestNeighbor);
         pair.Children.Add(new Border { Background = Brushes.White, CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Child = _qr });
         var details = new StackPanel { Margin = new Thickness(28, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        details.Children.Add(DiagnosticoPage.Label("PAREAMENTO DIRETO NO APP")); _pin = DiagnosticoPage.Label("••• •••", "#4FD6FF"); _pin.FontSize = 42; details.Children.Add(_pin);
+        details.Children.Add(DiagnosticoPage.Label("PAREAMENTO DIRETO NO APP")); _pin = DiagnosticoPage.Label("••• •••", "#00D800"); _pin.FontSize = 42; details.Children.Add(_pin);
         _address = DiagnosticoPage.Label("Conectando ao servidor local…"); details.Children.Add(_address); _expiry = DiagnosticoPage.Label("", "#F4B544"); details.Children.Add(_expiry);
         var renew = new Button { Content = "Gerar novo código", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 12, 0, 0), Style = (Style)Application.Current.Resources["BotaoPrimario"] }; renew.Click += async (_, _) => await GerarAsync(); details.Children.Add(renew);
         Grid.SetColumn(details, 1); pair.Children.Add(details); stack.Children.Add(CriarCardVidro(conteudo: pair));

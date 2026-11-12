@@ -5,7 +5,7 @@
   <ScrollView><VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
     <Label Text="Parear com o PC" Style="{StaticResource Titulo}" HorizontalTextAlignment="Center"/>
     <Label Text="O Jarvis procura seu PC automaticamente neste Wi-Fi. Confirme uma vez com o PIN de Dispositivos no computador; depois ele reconecta sozinho." HorizontalTextAlignment="Center"/>
-    <Label x:Name="BuscaStatus" Text="Procurando seu PC…" TextColor="#4FD6FF" HorizontalTextAlignment="Center"/>
+    <Label x:Name="BuscaStatus" Text="Procurando seu PC…" TextColor="#00D800" HorizontalTextAlignment="Center"/>
     <Picker x:Name="Computadores" Title="Selecione seu computador" IsVisible="False" SelectedIndexChanged="SelecionarPc"/>
     <Button Text="Fotografar QR code" Style="{StaticResource Primario}" Clicked="Fotografar"/>
     <Button x:Name="Buscar" Text="Buscar novamente no Wi-Fi" Clicked="Descobrir"/>

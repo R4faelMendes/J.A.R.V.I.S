@@ -44,7 +44,10 @@ public static class TemaDesktop
     public static void Iniciar()
     {
         if (_iniciado) return; _iniciado = true; AtualizarRecursos();
-        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) => AplicarElemento((DependencyObject)sender)));
+        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) => {
+            if (sender is Window janela) Aplicar(janela);
+            else AplicarElemento((DependencyObject)sender);
+        }));
         EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.UnloadedEvent, new RoutedEventHandler((sender, _) => {
             if (!Observacoes.TryGetValue((DependencyObject)sender, out var state)) return;
             foreach (var entry in state.Eventos.Values) entry.Descriptor.RemoveValueChanged(sender, entry.Handler);

@@ -34,7 +34,7 @@ public static class ConfiguracaoApp
             if (p is not null)
             {
                 NomeUsuario = p.NomeUsuario; IniciaisUsuario = p.IniciaisUsuario;
-                CorReatorHex = System.Text.RegularExpressions.Regex.IsMatch(p.CorReatorHex ?? "", "^#[0-9a-fA-F]{6}$") ? p.CorReatorHex! : Theme.CianoHolo;
+                CorReatorHex = Theme.VerdeSistema;
                 ModeloVoz = Path.GetFileName(p.ModeloVoz ?? "pt_BR-faber-medium.onnx");
                 VelocidadeVoz = Math.Clamp(p.VelocidadeVoz, .7, 1.3);
                 LerEmailsAoAbrir = p.LerEmailsAoAbrir; WakeWordAtiva = p.WakeWordAtiva; ModoEconomico = p.ModoEconomico;
