@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text;
 using Jarvis.Core;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -11,7 +12,7 @@ public sealed class PreparacaoVozService : IPreparacaoVoz
     private readonly SemaphoreSlim _gate = new(1, 1);
     public string Pasta { get; }
     public const string PiperUrl = "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip";
-    public const string VozUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx";
+    public const string VozUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx";
     public PreparacaoVozService(string? pasta = null) => Pasta = pasta ?? Localizar();
     private static string Localizar()
     {
@@ -26,7 +27,7 @@ public sealed class PreparacaoVozService : IPreparacaoVoz
     {
         var nomeVoz = Path.GetFileName(ConfiguracaoApp.ModeloVoz);
         bool json = false;
-        try { using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Pasta, "piper-voices", nomeVoz + ".json"))); json = doc.RootElement.TryGetProperty("audio", out _); } catch (IOException) { } catch (JsonException) { }
+        try { using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Pasta, "piper-voices", nomeVoz + ".json"))); json = doc.RootElement.TryGetProperty("audio", out _) && doc.RootElement.TryGetProperty("phoneme_id_map", out var map) && map.EnumerateObject().All(p => p.Name.EnumerateRunes().Count() == 1); } catch (IOException) { } catch (JsonException) { }
         return new[] {
             new RecursoVoz("Vosk português", ModeloVosk.Completo(Path.Combine(Pasta, "vosk-model-small-pt-0.3")), "Ativação por voz · modelo oficial Alpha Cephei"),
             new RecursoVoz("Whisper tiny", Arquivo("ggml-tiny.bin", 50_000_000), "Transcrição local · modelo oficial whisper.cpp"),
@@ -66,11 +67,13 @@ public sealed class PreparacaoVozService : IPreparacaoVoz
                 var voz = Path.Combine(temporario, "pt_BR-faber-medium.onnx");
                 await Download("Baixando voz Faber", VozUrl, voz);
                 await Download("Baixando configuração da voz", VozUrl + ".json", voz + ".json");
+                await Download("Baixando licença da voz", VozUrl[..VozUrl.LastIndexOf('/')] + "/MODEL_CARD", voz + ".MODEL_CARD");
                 if (new FileInfo(voz).Length < 1_000_000) throw new InvalidDataException("Voz incompleta.");
                 using (var doc = JsonDocument.Parse(await File.ReadAllTextAsync(voz + ".json", ct))) _ = doc.RootElement.GetProperty("audio");
                 Directory.CreateDirectory(Path.Combine(Pasta, "piper-voices"));
                 File.Move(voz, Path.Combine(Pasta, "piper-voices", "pt_BR-faber-medium.onnx"), true);
                 File.Move(voz + ".json", Path.Combine(Pasta, "piper-voices", "pt_BR-faber-medium.onnx.json"), true);
+                File.Move(voz + ".MODEL_CARD", Path.Combine(Pasta, "piper-voices", "pt_BR-faber-medium.MODEL_CARD"), true);
                 ConfiguracaoApp.ModeloVoz = "pt_BR-faber-medium.onnx"; ConfiguracaoApp.NotificarAlteracao();
             }
             if (Verificar().Any(r => !r.Pronto)) throw new InvalidDataException("A validação encontrou arquivos incompletos. Execute Reparar novamente.");
