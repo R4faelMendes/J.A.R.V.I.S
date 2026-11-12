@@ -12,7 +12,7 @@ public static class Theme
     public const string Nevoa = "#8FA9BF";
     public const string Ouro = "#F4B544";
     public const string VermelhoNucleo = "#FF4D3D";
-    public const string VerdeSistema = "#4DE3A1";
+    public const string VerdeSistema = "#35F29A";
 
     public const int Grade = 8;
     public const int RaioBotao = 10;

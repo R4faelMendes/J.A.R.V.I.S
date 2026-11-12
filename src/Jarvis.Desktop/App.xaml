@@ -14,7 +14,7 @@
       <Color x:Key="Nevoa">#A5BBC7</Color>
       <Color x:Key="Ouro">#F4B544</Color>
       <Color x:Key="VermelhoNucleo">#FF4D3D</Color>
-      <Color x:Key="VerdeSistema">#4DE3A1</Color>
+      <Color x:Key="VerdeSistema">#35F29A</Color>
 
       <!-- Brushes -->
       <SolidColorBrush x:Key="FundoAbismo" Color="{StaticResource Abismo}"/>

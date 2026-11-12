@@ -29,6 +29,12 @@ public static class ReatorRealista
             if (_tema == "azul" || c.Blue <= c.Red + 4 || c.Green < c.Red || c.Blue < c.Green * .85) continue;
             var max = Math.Max(c.Red, Math.Max(c.Green, c.Blue)); var min = Math.Min(c.Red, Math.Min(c.Green, c.Blue)); float delta = max - min;
             if (max == 0 || delta < 7) continue;
+            // Realça a energia verde sem alterar os metais e as áreas transparentes.
+            if (_tema == "esmeralda") {
+                var brilho = Math.Min(255f, max * 1.12f);
+                delta = Math.Min(brilho, delta * 1.4f);
+                min = (byte)(brilho - delta);
+            }
             var sector = (hue % 360) / 60f; var second = delta * (1 - Math.Abs(sector % 2 - 1));
             (float r, float g, float b) = sector switch { < 1 => (delta, second, 0f), < 2 => (second, delta, 0f), < 3 => (0f, delta, second), < 4 => (0f, second, delta), < 5 => (second, 0f, delta), _ => (delta, 0f, second) };
             pixels[index] = new SKColor((byte)(r + min), (byte)(g + min), (byte)(b + min), c.Alpha);

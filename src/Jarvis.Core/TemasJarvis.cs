@@ -9,7 +9,7 @@ public static class TemasJarvis
         new PaletaJarvis("azul", "Mark IV · ciano", "#172431", "#1D2D3C", "#3B5263", "#82E0E6", "#E7BA7B"),
         new PaletaJarvis("ambar", "Grafite · champagne", "#282621", "#33312C", "#655F52", "#DEC498", "#F5E8D0"),
         new PaletaJarvis("violeta", "Grafite · lavanda", "#202536", "#2A3043", "#505D75", "#B9B5EA", "#DFDCF8"),
-        new PaletaJarvis("esmeralda", "Grafite · jade", "#1A2B30", "#243A3E", "#466367", "#91CCBE", "#D8ECE6"),
+        new PaletaJarvis("esmeralda", "Grafite · esmeralda", "#091D18", "#102E25", "#34785F", "#35F29A", "#C2FFE0"),
         new PaletaJarvis("prata", "Obsidiana · prata", "#242A33", "#303844", "#596575", "#D2DCE7", "#F5F7FA") });
     private static readonly object Gate = new();
     private static string Arquivo => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Jarvis", "tema.json");

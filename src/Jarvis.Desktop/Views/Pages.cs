@@ -282,7 +282,7 @@ public sealed class AppsPage : PaginaBase
             var stack = new StackPanel();
             var top = new DockPanel();
             var chip = app.Aberto
-                ? CriarChip("● Aberto", "#4DE3A1", "#143528")
+                ? CriarChip("● Aberto", Theme.VerdeSistema, "#143528")
                 : CriarChip("Fechado", "#8FA9BF", "#1B2A38");
             DockPanel.SetDock(chip, Dock.Right);
             var tit = new TextBlock { Text = $"{app.Icone} {app.Nome}", FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = (Brush)Application.Current.Resources["TextoGelo"], TextTrimming = TextTrimming.CharacterEllipsis };

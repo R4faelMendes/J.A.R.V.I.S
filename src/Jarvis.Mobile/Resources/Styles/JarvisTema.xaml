@@ -12,7 +12,7 @@
   <Color x:Key="Nevoa">#A5BBC7</Color>
   <Color x:Key="Ouro">#F4B544</Color>
   <Color x:Key="Vermelho">#FF4D3D</Color>
-  <Color x:Key="Verde">#4DE3A1</Color>
+  <Color x:Key="Verde">#35F29A</Color>
 
   <Style TargetType="Page" ApplyToDerivedTypes="True">
     <Setter Property="BackgroundColor" Value="{StaticResource Abismo}"/>
