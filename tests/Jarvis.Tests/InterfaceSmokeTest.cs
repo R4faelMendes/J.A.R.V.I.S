@@ -44,7 +44,7 @@ public sealed class InterfaceSmokeTest
                 var raiz = new DirectoryInfo(AppContext.BaseDirectory);
                 while (raiz is not null && !File.Exists(Path.Combine(raiz.FullName, "Jarvis.sln"))) raiz = raiz.Parent;
                 var pasta = Path.Combine(raiz!.FullName, "artifacts", "preview"); Directory.CreateDirectory(pasta);
-                foreach (var tipo in new[] { PageType.Nucleo, PageType.Apps, PageType.Emails, PageType.Configuracoes, PageType.ModoJogo, PageType.Agenda, PageType.Seguranca, PageType.Celular })
+                foreach (var tipo in new[] { PageType.Nucleo, PageType.Conversa, PageType.Rotinas, PageType.PreparacaoVoz, PageType.ConversaIa, PageType.Atualizacoes, PageType.ResumoDia, PageType.Diagnostico, PageType.Apps, PageType.Emails, PageType.Configuracoes, PageType.ModoJogo, PageType.Agenda, PageType.Seguranca, PageType.Celular })
                 {
                     var page = FabricaPaginas.Criar(tipo);
                     page.Width = 1180; page.Height = 680;
@@ -168,6 +168,7 @@ public sealed class InterfaceSmokeTest
                 var shellBitmap = new RenderTargetBitmap(2880, 1800, 192, 192, PixelFormats.Pbgra32);
                 shellBitmap.Render(visual);
                 // Testa a resposta nativa usada pelo Windows para arrastar, inclusive áreas vazias.
+                visual.ClearValue(FrameworkElement.WidthProperty); visual.ClearValue(FrameworkElement.HeightProperty);
                 shell.Left = 100; shell.Top = 100;
                 shell.ShowActivated = false; shell.Show(); shell.UpdateLayout();
                 var hwnd = new WindowInteropHelper(shell).EnsureHandle();
@@ -212,7 +213,7 @@ public sealed class InterfaceSmokeTest
                     var dock = (Jarvis.Desktop.Views.SidebarControl)shell.FindName("BarraLateral");
                     var dockLabels = Descendentes(dock).OfType<TextBlock>().ToArray();
                     File.WriteAllLines(Path.Combine(pasta,"Mark-IV-dock.txt"),dockLabels.Select(t => $"{t.Text}: {t.ActualWidth}x{t.ActualHeight} {t.Foreground} {t.Visibility}"));
-                    Assert.Equal(9,dockLabels.Length); Assert.All(dockLabels, t => Assert.True(t.ActualWidth > 0 && t.ActualHeight > 0 && t.Foreground is not null));
+                    Assert.Equal(11,dockLabels.Length); Assert.All(dockLabels, t => Assert.True(t.ActualWidth > 0 && t.ActualHeight > 0 && t.Foreground is not null));
                     var mark = new RenderTargetBitmap(1440,900,96,96,PixelFormats.Pbgra32); mark.Render(visual); var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(mark)); using (var file = File.Create(Path.Combine(pasta,"Mark-IV-PC.png"))) encoder.Save(file);
                     Assert.Equal((nint)2, Hit(new Point(220, 42))); // HTCAPTION: título e barra vazia arrastáveis.
                     Assert.Null(shell.FindName("BuscaComando"));

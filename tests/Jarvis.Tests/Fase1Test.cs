@@ -36,7 +36,8 @@ public sealed class NavegacaoTest
     public void Paginas_PreservamIdsEIncluemEmails()
     {
         var paginas = Enum.GetValues<PageType>();
-        Assert.Equal(12, paginas.Length);
+        Assert.Equal(17, paginas.Length);
+        Assert.Contains(PageType.Atualizacoes, paginas); Assert.Contains(PageType.Rotinas, paginas); Assert.Contains(PageType.ResumoDia, paginas);
         Assert.Equal(PageType.Nucleo, paginas[0]);
         Assert.Equal(7, (int)PageType.Configuracoes);
         Assert.Contains(PageType.Emails, paginas);

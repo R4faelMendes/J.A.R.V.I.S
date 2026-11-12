@@ -13,19 +13,19 @@ public sealed class ModoJogoTest
     [Fact]
     public async Task AtivacaoEconomizaJarvisERestauraPreferenciaAnterior()
     {
-        var anterior = ConfiguracaoApp.ModoEconomico;
+        var anterior = ConfiguracaoApp.ModoEconomico; var animacoes = ConfiguracaoApp.ReduzirAnimacoes; var silencio = ConfiguracaoApp.ModoDiscretoAtivo; var discreto = ConfiguracaoApp.ModoDiscretoJogo;
         var energia = new Energia(); var jogo = new ModoJogoService(energia);
         try {
-            ConfiguracaoApp.ModoEconomico = false;
+            ConfiguracaoApp.ModoEconomico = false; ConfiguracaoApp.ReduzirAnimacoes = false; ConfiguracaoApp.ModoDiscretoJogo = true; ConfiguracaoApp.ModoDiscretoAtivo = false;
             Assert.True((await jogo.AtivarAsync(Array.Empty<int>())).Ativo);
-            Assert.True(ConfiguracaoApp.ModoEconomico);
+            Assert.True(ConfiguracaoApp.ModoEconomico); Assert.True(ConfiguracaoApp.ReduzirAnimacoes); Assert.True(ConfiguracaoApp.ModoDiscretoAtivo);
             await jogo.AtivarAsync(Array.Empty<int>()); Assert.Equal(1, energia.Ativacoes);
             energia.Restauracao = false;
             Assert.True((await jogo.DesativarAsync()).Ativo); Assert.True(ConfiguracaoApp.ModoEconomico);
             energia.Restauracao = true;
             Assert.False((await jogo.DesativarAsync()).Ativo); Assert.False(ConfiguracaoApp.ModoEconomico);
-            Assert.Equal(2, energia.Restauracoes);
-        } finally { if (jogo.Ativo) { energia.Restauracao = true; await jogo.DesativarAsync(); } ConfiguracaoApp.ModoEconomico = anterior; ConfiguracaoApp.NotificarAlteracao(); }
+            Assert.Equal(2, energia.Restauracoes); Assert.False(ConfiguracaoApp.ReduzirAnimacoes); Assert.False(ConfiguracaoApp.ModoDiscretoAtivo);
+        } finally { if (jogo.Ativo) { energia.Restauracao = true; await jogo.DesativarAsync(); } ConfiguracaoApp.ModoEconomico = anterior; ConfiguracaoApp.ReduzirAnimacoes = animacoes; ConfiguracaoApp.ModoDiscretoAtivo = silencio; ConfiguracaoApp.ModoDiscretoJogo = discreto; ConfiguracaoApp.NotificarAlteracao(); }
     }
     [Fact]
     public async Task ProcessoNaoAutorizadoNaoMudaPlanoNemFechaApps()
