@@ -40,6 +40,14 @@ public sealed class WakeWordListener : IDisposable
     }
     public void Carregar(string pastaModelo)
     {
+        // Vosk pode encerrar o processo em código nativo quando a pasta não é um modelo.
+        // Distribuições portáteis começam sem modelos: falhe antes de entrar na DLL.
+        if (!Directory.Exists(pastaModelo))
+            throw new DirectoryNotFoundException("Instale o modelo Vosk em: " + pastaModelo);
+        foreach (var arquivo in new[] { "am/final.mdl", "conf/model.conf" }) {
+            var caminho = Path.Combine(pastaModelo, arquivo);
+            if (!File.Exists(caminho)) throw new FileNotFoundException("Modelo Vosk incompleto. Reinstale o modelo de voz.", caminho);
+        }
         lock (_gate)
         {
             _rec?.Dispose(); _modelo?.Dispose();
