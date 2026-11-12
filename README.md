@@ -43,6 +43,8 @@ Os links acompanham a última release publicada. Consulte as [notas e verificaç
 - **Central pessoal:** conversa, aplicativos, desempenho, agenda, e-mails, rotinas, celular, segurança e configurações.
 - **Telemetria:** informações do sistema e processos, com sensores dependentes de hardware e permissões.
 - **PC + Android:** servidor local e SignalR, pareamento por código/QR e validação do certificado no companheiro.
+- **Janela adaptável:** abre maximizada na área útil do monitor, respeitando resolução, escala e barra de tarefas. F11 continua disponível para tela cheia.
+- **Agenda com contraste:** data selecionada em verde, calendário e campos de data no tema do Jarvis, navegação por mês/ano e semana iniciando na segunda-feira.
 - **Interface própria:** WPF com MVVM, reator SkiaSharp com fallback WPF, fontes locais e tema único preto e branco com verde `#00D800`, sem seletor de paletas.
 
 E-mails dependem da conexão da conta e ficam vazios quando desconectados. A agenda local do Jarvis funciona sem conta; integrações Google dependem de conexão. Clima e notícias usam serviços externos. As integrações dependem de autorizações, rede e recursos da máquina.
