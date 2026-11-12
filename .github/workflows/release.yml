@@ -1,0 +1,80 @@
+name: Publicar aplicativos
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag existente para publicar (ex. v2.3.1)
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Validar tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(?:[-.][a-zA-Z0-9.-]+)?$') { throw 'Tag inválida.' }
+          git rev-parse --verify "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'A tag precisa existir.' }
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar workload Android
+        run: dotnet workload install maui-android --skip-manifest-update
+      - name: Preparar SDK Android e chave de assinatura
+        shell: pwsh
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if (!$env:ANDROID_KEYSTORE_BASE64 -or !$env:ANDROID_KEYSTORE_PASSWORD) { throw 'Configure os secrets de assinatura Android descritos em docs/distribuicao.md.' }
+          & "$env:ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager.bat" 'platforms;android-34' 'build-tools;34.0.0'
+          if ($LASTEXITCODE -ne 0) { throw 'Falha ao preparar SDK Android.' }
+          $keystore = Join-Path $env:RUNNER_TEMP 'jarvis.keystore'
+          [IO.File]::WriteAllBytes($keystore, [Convert]::FromBase64String($env:ANDROID_KEYSTORE_BASE64))
+          "JARVIS_ANDROID_KEYSTORE=$keystore" >> $env:GITHUB_ENV
+          "JARVIS_ANDROID_PASSWORD=$env:ANDROID_KEYSTORE_PASSWORD" >> $env:GITHUB_ENV
+          "AndroidSdkDirectory=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "JavaSdkDirectory=$env:JAVA_HOME" >> $env:GITHUB_ENV
+      - name: Publicar Android e Windows
+        shell: pwsh
+        run: |
+          ./scripts/Publicar-Android.ps1
+          ./scripts/Publicar-Desktop.ps1
+          Get-ChildItem artifacts/release -File | Sort-Object Name | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          } | Set-Content artifacts/release/SHA256SUMS.txt -Encoding ascii
+      - name: Publicar release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:RELEASE_TAG --title "Jarvis $env:RELEASE_TAG" --generate-notes
+            if ($LASTEXITCODE -ne 0) { throw 'Falha ao criar release.' }
+          }
+          gh release upload $env:RELEASE_TAG artifacts/release/* --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Falha ao enviar os downloads.' }
+      - name: Remover chave temporária
+        if: always()
+        shell: pwsh
+        run: |
+          $keystore = Join-Path $env:RUNNER_TEMP 'jarvis.keystore'
+          if (Test-Path -LiteralPath $keystore) { Remove-Item -LiteralPath $keystore -Force }
