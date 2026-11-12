@@ -30,6 +30,16 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Selecionar SDK .NET 8 inclusive em tags anteriores
+        shell: pwsh
+        run: |
+          $sdkJarvis = dotnet --list-sdks | ForEach-Object {
+            if ($_ -match '^(8\.0\.\d+) ') { [version]$Matches[1] }
+          } | Sort-Object -Descending | Select-Object -First 1
+          if (!$sdkJarvis) { throw 'SDK .NET 8 não instalado.' }
+          @{ sdk = @{ version = $sdkJarvis.ToString(); rollForward = 'latestPatch'; allowPrerelease = $false } } |
+            ConvertTo-Json | Set-Content global.json -Encoding utf8
+          dotnet --version
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
