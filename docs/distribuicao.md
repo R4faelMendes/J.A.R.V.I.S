@@ -32,9 +32,9 @@ Configure no GitHub os secrets de Actions `ANDROID_KEYSTORE_BASE64` (conteúdo d
 Depois de testar as alterações e atualizar `ApplicationDisplayVersion`/`ApplicationVersion` no mobile:
 
 ```powershell
-git tag v2.3.2
+git tag v2.4.0
 git push origin main
-git push origin v2.3.2
+git push origin v2.4.0
 ```
 
 O workflow `release.yml` compila os dois aplicativos, valida o pacote Android e publica os arquivos e `SHA256SUMS.txt`. Também pode ser executado manualmente para uma tag já existente. Os botões do site passam a usar a última release sem edição manual de URLs. Um push de código atualiza o site e o histórico; novos binários só são publicados por uma tag ou execução manual do workflow de release.

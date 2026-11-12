@@ -25,6 +25,8 @@ As propostas da revisão de 12/11/2026 foram implementadas. Tema único: preto, 
 
 Testes automatizados cobrem opt-in/fallback/cota de IA, histórico SQL, horários inválidos, execução única de agendamentos, origem oficial e SHA-256 adulterado, restauração do modo discreto e renderização das novas páginas. Um teste real sintetizou uma frase com Piper e a transcreveu com Whisper, sem capturar áudio pessoal. A instalação automática do atualizador exige confirmação no aplicativo; não foi executada sobre a instância em uso.
 
+Na execução completa desta revisão: 207/213 testes aprovados. Seis falhas existentes permanecem: cinco testes de integração ainda procuram modelos em `models/` na raiz (a instalação guiada usa `%LocalAppData%/Jarvis/models`) e um teste de captura espera permissão inicial desativada, enquanto o serviço atual inicia permitido. Não foram alterados esses contratos fora do escopo. A bateria direcionada final aprovou 34 testes; a verificação de layout aprovou as páginas novas e o mobile aprovou 4 testes. O teste real separado de Piper/Whisper com os modelos instalados passou. Provedores externos de IA não foram chamados com credenciais reais; fallback, consentimento e cota foram testados com provedores controlados.
+
 ## Fontes dos recursos de voz
 
 - [Vosk português](https://alphacephei.com/vosk/models)
