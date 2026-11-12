@@ -1,5 +1,9 @@
 <!-- JARVIS — caminhos do Android SDK e JDK (instalados uma vez via InstallAndroidDependencies + OpenJDK 17). -->
 <Project>
+  <PropertyGroup>
+    <!-- CommunityToolkit.Mvvm 8.4.2 exige a revisão 56 do SDK Windows. -->
+    <WindowsSdkPackageVersion Condition="'$(WindowsSdkPackageVersion)' == ''">10.0.19041.56</WindowsSdkPackageVersion>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(AndroidSdkDirectory)' == '' and Exists('$(LOCALAPPDATA)\Android\Sdk')">
     <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\Sdk</AndroidSdkDirectory>
   </PropertyGroup>
