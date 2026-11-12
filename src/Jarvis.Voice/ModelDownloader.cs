@@ -15,19 +15,21 @@ public static class ModelDownloader
     {
         if (File.Exists(destino)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(destino)!);
-        using var http = new HttpClient();
+        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
         using var resp = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         resp.EnsureSuccessStatusCode();
         await using var rede = await resp.Content.ReadAsStreamAsync(ct);
-        await using var arq = File.Create(destino + ".part");
-        var buf = new byte[81920];
-        long total = 0; int lidos;
-        while ((lidos = await rede.ReadAsync(buf, ct)) > 0)
-        {
-            await arq.WriteAsync(buf.AsMemory(0, lidos), ct);
-            total += lidos;
-            progresso?.Report(total);
+        long total = 0;
+        await using (var arq = File.Create(destino + ".part")) {
+            var buf = new byte[81920]; int lidos;
+            while ((lidos = await rede.ReadAsync(buf, ct)) > 0) {
+                await arq.WriteAsync(buf.AsMemory(0, lidos), ct);
+                total += lidos; progresso?.Report(total);
+            }
         }
+        if (resp.Content.Headers.ContentLength is long esperado && total != esperado)
+            throw new IOException("Download incompleto. Tente novamente.");
+        ct.ThrowIfCancellationRequested();
         File.Move(destino + ".part", destino, overwrite: true);
     }
 }

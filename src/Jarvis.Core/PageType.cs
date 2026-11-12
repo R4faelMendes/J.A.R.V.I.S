@@ -15,5 +15,9 @@ public enum PageType
     Configuracoes = 7,
     Diagnostico = 9,
     Memoria = 10,
-    ModoJogo = 11
+    ModoJogo = 11,
+    Rotinas = 12,
+    PreparacaoVoz = 13,
+    Atualizacoes = 14,
+    ResumoDia = 15
 }

@@ -714,6 +714,11 @@ public sealed class ConfiguracoesPage : PaginaBase
     {
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         var stack = new StackPanel();
+        var prepararVoz = new Button { Content = "Preparar / reparar voz local", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16) };
+        prepararVoz.Click += (_, _) => Navegar(PageType.PreparacaoVoz); stack.Children.Add(prepararVoz);
+        var diagnostico = new Button { Content = "Abrir diagnóstico", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 16) };
+        diagnostico.Click += (_, _) => Navegar(PageType.Diagnostico); stack.Children.Add(diagnostico);
+
 
         // 1. DADOS DO USUÁRIO
         var cardUser = new Border
@@ -873,6 +878,7 @@ public static class FabricaPaginas
             PageType.Desempenho => new DesempenhoPage(),
             PageType.Agenda => new AgendaPage(),
             PageType.Diagnostico => new DiagnosticoPage(),
+            PageType.PreparacaoVoz => new PreparacaoVozPage(),
             PageType.Celular => new CelularCentralPage(),
             PageType.Seguranca => new SegurancaPage(),
             PageType.Configuracoes => new ConfiguracoesPage(),

@@ -141,17 +141,7 @@ public partial class MainWindow : Window
 
     private static string LocalizarModelos()
     {
-        var dir = new System.IO.DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-        while (dir is not null)
-        {
-            var cand = System.IO.Path.Combine(dir.FullName, "models");
-            if (System.IO.File.Exists(System.IO.Path.Combine(cand, "piper", "piper.exe")))
-                return cand;
-            dir = dir.Parent;
-        }
-        return System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Jarvis", "models");
+        return ServicosAplicacao.PreparacaoVoz.Pasta;
     }
 
     [DllImport("user32.dll")]
@@ -182,6 +172,8 @@ public partial class MainWindow : Window
                 _medidor.Interval = TimeSpan.FromMilliseconds(_vm.EstadoReator == ReactorState.Falando && !ConfiguracaoApp.ModoEconomico ? 33 : 100);
             };
             _medidor.Start();
+            if (ServicosAplicacao.PreparacaoVoz.Verificar().Any(r => !r.Pronto) && !Environment.GetCommandLineArgs().Contains("--startup"))
+                NavegarPara(PageType.PreparacaoVoz);
             _inicioVoz = InicializarServicosAsync();
         };
         Closed += (_, _) =>
