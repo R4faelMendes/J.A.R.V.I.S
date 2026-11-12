@@ -3,6 +3,7 @@ bin/
 obj/
 TestResults/
 publish/
+/Jarvis.exe
 
 # Cache de runtime (regenerado pelo app)
 models/cache-tts/
@@ -36,6 +37,8 @@ client_secret*.json
 *.pfx
 *.p12
 *.key
+*.keystore
+*.jks
 *.db
 *.db-shm
 *.db-wal
