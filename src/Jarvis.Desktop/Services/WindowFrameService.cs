@@ -10,11 +10,25 @@ public sealed class WindowFrameService
     private Rect _restore;
     private WindowState _state;
     private double _minHeight, _minWidth;
+    private readonly double _minimumWidth, _minimumHeight;
     public WindowFrameService(Window window)
     {
         _window = window;
-        window.SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(window).Handle)?.AddHook(Hook);
+        _minimumWidth = window.MinWidth; _minimumHeight = window.MinHeight;
+        window.SourceInitialized += (_, _) => {
+            HwndSource.FromHwnd(new WindowInteropHelper(window).Handle)?.AddHook(Hook);
+            AjustarMinimos();
+        };
         window.PreviewKeyDown += (_, e) => { if (e.Key == Key.F11 || (_full && e.Key == Key.Escape)) { Alternar(); e.Handled = true; } };
+    }
+    private void AjustarMinimos()
+    {
+        if (_full) return;
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(MonitorFromWindow(new WindowInteropHelper(_window).Handle, 2), ref info)) return;
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(_window);
+        _window.MinWidth = Math.Min(_minimumWidth, (info.Work.Right - info.Work.Left) / dpi.DpiScaleX);
+        _window.MinHeight = Math.Min(_minimumHeight, (info.Work.Bottom - info.Work.Top) / dpi.DpiScaleY);
     }
     public void Alternar()
     {
@@ -32,11 +46,13 @@ public sealed class WindowFrameService
     }
     private nint Hook(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
+        if (message is 0x02E0 or 0x007E) _window.Dispatcher.BeginInvoke(new Action(AjustarMinimos));
         if (message != 0x0024) return 0;
         var monitor = MonitorFromWindow(hwnd, 2); var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
         if (!GetMonitorInfo(monitor, ref info)) return 0;
         var limits = Marshal.PtrToStructure<MinMax>(lParam); var bounds = _full ? info.Bounds : info.Work;
         limits.MaxPosition = new(bounds.Left - info.Bounds.Left, bounds.Top - info.Bounds.Top); limits.MaxSize = new(bounds.Right - bounds.Left, bounds.Bottom - bounds.Top);
+        limits.MinTrackSize = new(Math.Min(limits.MinTrackSize.X, limits.MaxSize.X), Math.Min(limits.MinTrackSize.Y, limits.MaxSize.Y));
         Marshal.StructureToPtr(limits, lParam, false); handled = true; return 0;
     }
     [StructLayout(LayoutKind.Sequential)] private struct Point(int x, int y) { public int X = x, Y = y; }

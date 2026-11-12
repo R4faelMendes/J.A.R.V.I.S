@@ -161,6 +161,7 @@ public sealed class InterfaceSmokeTest
                 } finally { themeHost.Close(); TemasJarvis.Sincronizar(originalTheme); }
                 var beforeShellTheme = TemasJarvis.Estado;
                 var shell = new Jarvis.Desktop.MainWindow();
+                Assert.Equal(WindowState.Maximized, shell.WindowState);
                 ((TextBlock)shell.FindName("TxtStatusCelular")).Text = "Prévia da interface";
                 var visual = (FrameworkElement)shell.Content;
                 visual.Width = 1440; visual.Height = 900;
@@ -170,7 +171,7 @@ public sealed class InterfaceSmokeTest
                 // Testa a resposta nativa usada pelo Windows para arrastar, inclusive áreas vazias.
                 visual.ClearValue(FrameworkElement.WidthProperty); visual.ClearValue(FrameworkElement.HeightProperty);
                 shell.Left = 100; shell.Top = 100;
-                shell.ShowActivated = false; shell.Show(); shell.UpdateLayout();
+                shell.Show(); shell.UpdateLayout();
                 var hwnd = new WindowInteropHelper(shell).EnsureHandle();
                 nint Hit(Point point)
                 {

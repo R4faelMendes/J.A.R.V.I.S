@@ -1,7 +1,7 @@
 <Window x:Class="Jarvis.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:views="clr-namespace:Jarvis.Desktop.Views" xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
- Title="Jarvis — Central de comando" Width="1440" Height="940" MinWidth="1050" MinHeight="720" Icon="Assets/jarvis.ico" WindowStyle="None" WindowStartupLocation="CenterScreen">
+ Title="Jarvis — Central de comando" Width="1440" Height="940" MinWidth="1050" MinHeight="720" WindowState="Maximized" Icon="Assets/jarvis.ico" WindowStyle="None" WindowStartupLocation="CenterScreen">
  <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="98" ResizeBorderThickness="6" CornerRadius="5" GlassFrameThickness="0" UseAeroCaptionButtons="False"/></shell:WindowChrome.WindowChrome>
  <Border BorderBrush="{DynamicResource BordaLinha}" BorderThickness="1" CornerRadius="5" Background="{DynamicResource FundoAbismo}">
  <Grid><Grid.RowDefinitions><RowDefinition Height="32"/><RowDefinition Height="66"/><RowDefinition Height="*"/><RowDefinition Height="58"/><RowDefinition Height="78"/><RowDefinition Height="25"/></Grid.RowDefinitions>
