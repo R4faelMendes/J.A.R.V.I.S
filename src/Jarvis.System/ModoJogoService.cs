@@ -12,7 +12,7 @@ public sealed class ModoJogoService : IModoJogo
     private readonly SemaphoreSlim _mutex = new(1);
     private readonly IPlanoEnergiaJogo _energia;
     private readonly IInstrumentacaoJogo? _instrumentacao;
-    private bool _economiaAnterior;
+    private bool _economiaAnterior, _animacoesAnteriores, _silencioAnterior;
     public ModoJogoService(IPlanoEnergiaJogo? energia = null, IInstrumentacaoJogo? instrumentacao = null) { _energia = energia ?? new PlanoEnergiaJogo(); _instrumentacao = instrumentacao; }
     public bool Ativo { get; private set; }
     public IReadOnlyList<AppSegundoPlano> ListarCandidatos()
@@ -33,9 +33,12 @@ public sealed class ModoJogoService : IModoJogo
             var candidatos = ListarCandidatos().ToDictionary(p => p.Id);
             if (processos.Any(id => !candidatos.ContainsKey(id))) return new(false, "A lista de aplicativos mudou. Atualize e selecione novamente.");
             _economiaAnterior = ConfiguracaoApp.ModoEconomico;
+            _animacoesAnteriores = ConfiguracaoApp.ReduzirAnimacoes; _silencioAnterior = ConfiguracaoApp.ModoDiscretoAtivo;
             if (!_energia.Ativar()) return new(false, "O Windows não disponibilizou um modo de alto desempenho. Nenhum app foi fechado.");
             Ativo = true;
-            ConfiguracaoApp.ModoEconomico = true; ConfiguracaoApp.NotificarAlteracao();
+            ConfiguracaoApp.ModoEconomico = true;
+            if (ConfiguracaoApp.ModoDiscretoJogo) { ConfiguracaoApp.ReduzirAnimacoes = true; ConfiguracaoApp.ModoDiscretoAtivo = true; }
+            ConfiguracaoApp.NotificarAlteracao();
             var fechados = 0; var mantidos = 0;
             foreach (var id in processos.Distinct()) {
                 try {
@@ -58,6 +61,7 @@ public sealed class ModoJogoService : IModoJogo
             if (!Ativo) return new(false, "O modo de jogo está desativado.");
             _instrumentacao?.Restaurar();
             if (!_energia.Restaurar()) return new(true, "Não foi possível restaurar o plano anterior. Tente desativar novamente.");
+            ConfiguracaoApp.ReduzirAnimacoes = _animacoesAnteriores; ConfiguracaoApp.ModoDiscretoAtivo = _silencioAnterior;
             ConfiguracaoApp.ModoEconomico = _economiaAnterior; ConfiguracaoApp.NotificarAlteracao(); Ativo = false;
             return new(false, "Modo de jogo encerrado. Plano de energia e economia do Jarvis restaurados.");
         } finally { _mutex.Release(); }

@@ -9,6 +9,8 @@ public static class ConfiguracaoApp
     public static string IniciaisUsuario { get; set; } = "RM";
     public static string CorReatorHex { get; set; } = Theme.CianoHolo;
     public static bool ModoEconomico { get; set; } = false;
+    public static bool ModoDiscretoAtivo { get; set; }
+    public static bool ModoDiscretoJogo { get; set; } = true;
     public static bool ModoDia { get; set; } = false;
     public static string Voz { get; set; } = "Faber · Piper PT-BR";
     public static string ModeloVoz { get; set; } = "pt_BR-faber-medium.onnx";
@@ -24,7 +26,7 @@ public static class ConfiguracaoApp
     public static string MicrofonePreferido { get; set; } = "";
 
     private sealed record Preferencias(string NomeUsuario, string IniciaisUsuario, string CorReatorHex,
-        string ModeloVoz, double VelocidadeVoz, bool LerEmailsAoAbrir, bool WakeWordAtiva, bool ModoEconomico, bool ReduzirAnimacoes = false, string MicrofonePreferido = "", double SensibilidadeMic = .7);
+        string ModeloVoz, double VelocidadeVoz, bool LerEmailsAoAbrir, bool WakeWordAtiva, bool ModoEconomico, bool ReduzirAnimacoes = false, string MicrofonePreferido = "", double SensibilidadeMic = .7, bool ModoDiscretoJogo = true);
     private static string Arquivo => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Jarvis", "preferencias.json");
     static ConfiguracaoApp()
     {
@@ -38,7 +40,7 @@ public static class ConfiguracaoApp
                 ModeloVoz = Path.GetFileName(p.ModeloVoz ?? "pt_BR-faber-medium.onnx");
                 VelocidadeVoz = Math.Clamp(p.VelocidadeVoz, .7, 1.3);
                 LerEmailsAoAbrir = p.LerEmailsAoAbrir; WakeWordAtiva = p.WakeWordAtiva; ModoEconomico = p.ModoEconomico;
-                ReduzirAnimacoes = p.ReduzirAnimacoes;
+                ReduzirAnimacoes = p.ReduzirAnimacoes; ModoDiscretoJogo = p.ModoDiscretoJogo;
                 MicrofonePreferido = p.MicrofonePreferido ?? ""; SensibilidadeMic = Math.Clamp(p.SensibilidadeMic, .1, 1);
             }
         }
@@ -48,7 +50,7 @@ public static class ConfiguracaoApp
     private static void Salvar()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Arquivo)!);
-        File.WriteAllText(Arquivo + ".tmp", System.Text.Json.JsonSerializer.Serialize(new Preferencias(NomeUsuario, IniciaisUsuario, CorReatorHex, ModeloVoz, VelocidadeVoz, LerEmailsAoAbrir, WakeWordAtiva, ModoEconomico, ReduzirAnimacoes, MicrofonePreferido, SensibilidadeMic)));
+        File.WriteAllText(Arquivo + ".tmp", System.Text.Json.JsonSerializer.Serialize(new Preferencias(NomeUsuario, IniciaisUsuario, CorReatorHex, ModeloVoz, VelocidadeVoz, LerEmailsAoAbrir, WakeWordAtiva, ModoEconomico, ReduzirAnimacoes, MicrofonePreferido, SensibilidadeMic, ModoDiscretoJogo)));
         File.Move(Arquivo + ".tmp", Arquivo, true);
     }
     public static event EventHandler? ConfiguracoesAlteradas;

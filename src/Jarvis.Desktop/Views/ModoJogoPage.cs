@@ -72,6 +72,9 @@ public sealed class ModoJogoPage : PaginaBase
         var stack = new StackPanel();
         Monitor(stack);
         stack.Children.Add(DiagnosticoPage.Label("Ativa o alto desempenho disponível no Windows e reduz o consumo do Jarvis. Selecione os apps indesejados para fechar; processos do sistema, jogos e ferramentas de trabalho ficam protegidos. Salve seu trabalho antes de ativar."));
+        var discreto = new CheckBox { Content = "Modo discreto: silenciar voz e avisos e reduzir animações", IsChecked = ConfiguracaoApp.ModoDiscretoJogo, IsEnabled = !jogo.Ativo, Foreground = System.Windows.Media.Brushes.White, Margin = new Thickness(0, 8, 0, 8) };
+        discreto.Click += (_, _) => { ConfiguracaoApp.ModoDiscretoJogo = discreto.IsChecked == true; ConfiguracaoApp.NotificarAlteracao(); }; stack.Children.Add(discreto);
+        stack.Children.Add(DiagnosticoPage.Label("Prévia: economia ligada; com modo discreto, voz e avisos ficam silenciosos e animações são reduzidas. Ao sair, cada ajuste anterior é restaurado. Comandos e confirmações continuam visíveis."));
         var status = DiagnosticoPage.Label(jogo.Ativo ? "Modo de jogo ativo." : "Modo de jogo desativado."); stack.Children.Add(status);
         var list = new StackPanel(); var selections = new List<CheckBox>();
         void Atualizar() {
@@ -89,7 +92,7 @@ public sealed class ModoJogoPage : PaginaBase
             toggle.IsEnabled = false; refresh.IsEnabled = false;
             try {
                 var result = jogo.Ativo ? await jogo.DesativarAsync() : await jogo.AtivarAsync(selections.Where(c => c.IsChecked == true).Select(c => (int)c.Tag).ToArray());
-                status.Text = result.Mensagem; toggle.Content = jogo.Ativo ? "Sair do modo de jogo" : "Ativar modo de jogo"; Atualizar();
+                discreto.IsEnabled = !jogo.Ativo; status.Text = result.Mensagem; toggle.Content = jogo.Ativo ? "Sair do modo de jogo" : "Ativar modo de jogo"; Atualizar();
             } catch (Exception ex) { status.Text = "Não foi possível concluir: " + ex.Message; }
             finally { toggle.IsEnabled = true; refresh.IsEnabled = true; }
         };

@@ -106,6 +106,7 @@ public partial class MainWindow : Window
 
     public void MostrarToast(string mensagem)
     {
+        if (ConfiguracaoApp.ModoDiscretoAtivo) return;
         Dispatcher.Invoke(() =>
         {
             ToastTexto.Text = mensagem;

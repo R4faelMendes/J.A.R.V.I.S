@@ -91,6 +91,7 @@ public sealed class MotorVoz : IDisposable
     public double Calibrar() => _voz.Calibrar(2);
     private async void AtualizarMicrofone(object? sender, EventArgs e)
     {
+        if (ConfiguracaoApp.ModoDiscretoAtivo) PararFala();
         if (_vida.IsCancellationRequested || _voz.FiltroMicrofone == ConfiguracaoApp.MicrofonePreferido) return;
         await _micGate.WaitAsync();
         try
@@ -105,6 +106,7 @@ public sealed class MotorVoz : IDisposable
     public void Falar(string texto) => _ = FalarAsync(texto, guardarCache: false);
     public async Task FalarAsync(string texto, bool guardarCache = true)
     {
+        if (ConfiguracaoApp.ModoDiscretoAtivo) return;
         CancellationTokenSource fala;
         lock (_falaGate)
         {
