@@ -198,7 +198,10 @@ public sealed class MotorVoz : IDisposable
             var intencao = RoteadorIntencoes.Rotear(comando);
             if (intencao?.Acao is { } acao) resposta = await ExecutarAcaoAsync(acao, intencao.Alvo);
             else if (intencao?.Resposta is { } pronta) resposta = pronta;
-            else resposta = AssistenteLocal.Responder(comando);
+            else {
+                var conversa = await ServicosAplicacao.ConversaIa.PerguntarAsync(comando, ct);
+                resposta = conversa.Online ? $"IA · {conversa.Provedor}: {conversa.Texto}" : conversa.Texto;
+            }
             if (intencao?.Acao != "read_inbox") resposta = PersonalizacaoVoz.Resposta(resposta, ConfiguracaoApp.NomeUsuario);
             if (falar) await FalarAsync(resposta, intencao?.Acao != "read_inbox");
             return resposta;

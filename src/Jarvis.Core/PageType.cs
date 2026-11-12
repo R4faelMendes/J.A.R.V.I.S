@@ -19,5 +19,6 @@ public enum PageType
     Rotinas = 12,
     PreparacaoVoz = 13,
     Atualizacoes = 14,
-    ResumoDia = 15
+    ResumoDia = 15,
+    ConversaIa = 16
 }

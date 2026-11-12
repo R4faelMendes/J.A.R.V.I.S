@@ -8,6 +8,7 @@ using System.IO;
 public static class ServicosAplicacao
 {
     public static IHistoricoComandos Historico { get; } = new Jarvis.Data.HistoricoComandos();
+    public static IConversaIa ConversaIa { get; } = new Jarvis.Ai.ConversaIaService();
     public static IPreparacaoVoz PreparacaoVoz { get; } = new Jarvis.Voice.PreparacaoVozService();
     public static IPerfMonitor CriarMonitor() => new PerfMonitor();
     public static IEmailService Email { get; } = new EmailImapService();

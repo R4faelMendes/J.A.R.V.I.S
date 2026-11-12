@@ -18,13 +18,15 @@ public abstract class ProvedorBase : IChatProvider
 public sealed class GeminiProvider : ProvedorBase
 {
     public override string Nome => "Gemini";
+    public string Modelo { get; set; } = "gemini-3.5-flash-lite";
     public override async Task<string> PerguntarAsync(string texto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(Chave)) throw new InvalidOperationException("Sem chave.");
         var corpo = new { contents = new[] { new { parts = new[] { new { text = texto } } } } };
-        using var r = await Http.PostAsJsonAsync(
-            $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={Chave}",
-            corpo, ct);
+        using var req = new HttpRequestMessage(HttpMethod.Post, $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(Modelo)}:generateContent");
+        req.Headers.Add("x-goog-api-key", Chave);
+        req.Content = JsonContent.Create(corpo);
+        using var r = await Http.SendAsync(req, ct);
         r.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await r.Content.ReadAsStringAsync(ct));
         return doc.RootElement.GetProperty("candidates")[0]
@@ -37,7 +39,7 @@ public sealed class GeminiProvider : ProvedorBase
 public sealed class GroqProvider : ProvedorBase
 {
     public override string Nome => "Groq";
-    public string Modelo { get; set; } = "llama-3.3-70b-versatile";
+    public string Modelo { get; set; } = "openai/gpt-oss-20b";
     public override async Task<string> PerguntarAsync(string texto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(Chave)) throw new InvalidOperationException("Sem chave.");
@@ -61,7 +63,7 @@ public sealed class GroqProvider : ProvedorBase
 public sealed class OpenRouterProvider : ProvedorBase
 {
     public override string Nome => "OpenRouter";
-    public string Modelo { get; set; } = "meta-llama/llama-3.3-70b-instruct:free";
+    public string Modelo { get; set; } = "openrouter/free";
     public override async Task<string> PerguntarAsync(string texto, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(Chave)) throw new InvalidOperationException("Sem chave.");
