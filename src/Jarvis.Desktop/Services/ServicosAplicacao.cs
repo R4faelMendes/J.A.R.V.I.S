@@ -13,6 +13,7 @@ public static class ServicosAplicacao
     public static IPerfMonitor CriarMonitor() => new PerfMonitor();
     public static IEmailService Email { get; } = new EmailImapService();
     public static IAgendaService Agenda { get; } = new Jarvis.Data.AgendaService();
+    public static IResumoDia ResumoDia { get; } = new ResumoDiaService(Agenda, Email);
     public static IAcessoExterno AcessoExterno { get; } = new AcessoExternoService();
     public static IMediaController Midia { get; } = new MediaController();
     public static TelemetriaService Telemetria { get; } = new();

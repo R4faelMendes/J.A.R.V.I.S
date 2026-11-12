@@ -191,6 +191,7 @@ public sealed class MotorVoz : IDisposable
             var normal = RoteadorIntencoes.Normalizar(comando);
             normal = System.Text.RegularExpressions.Regex.Replace(normal, @"^jarvis\s+", "");
             if (normal is "rotinas" or "minhas rotinas") { SolicitouNavegacao?.Invoke(this, PageType.Rotinas); return await FinalizarRespostaAsync("Aqui estão suas rotinas.", falar); }
+            if (normal is "resumo do dia" or "meu dia") return await FinalizarRespostaAsync(await ServicosAplicacao.ResumoDia.GerarAsync(ct), falar);
             var fraseRotina = normal.StartsWith("executar rotina ") ? normal[15..] : normal.StartsWith("rotina ") ? normal[7..] : null;
             var rotina = ServicosAplicacao.CatalogoRotinas.Listar().FirstOrDefault(r => r.Ativa && (RoteadorIntencoes.Normalizar(r.Nome) == fraseRotina || RoteadorIntencoes.Normalizar(r.Gatilho.Replace("Voz: ", "")) == normal));
             if (rotina is not null) { await ServicosAplicacao.Rotinas.ExecutarAsync(rotina.Acoes, new Progress<ProgressoRotina>(), ct); return await FinalizarRespostaAsync("Rotina " + rotina.Nome + " concluída.", falar); }
