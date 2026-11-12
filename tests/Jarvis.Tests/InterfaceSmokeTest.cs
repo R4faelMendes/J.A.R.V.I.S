@@ -44,6 +44,7 @@ public sealed class InterfaceSmokeTest
                 var raiz = new DirectoryInfo(AppContext.BaseDirectory);
                 while (raiz is not null && !File.Exists(Path.Combine(raiz.FullName, "Jarvis.sln"))) raiz = raiz.Parent;
                 var pasta = Path.Combine(raiz!.FullName, "artifacts", "preview"); Directory.CreateDirectory(pasta);
+                VerificarSeletorData(app, pasta);
                 foreach (var tipo in new[] { PageType.Nucleo, PageType.Conversa, PageType.Rotinas, PageType.PreparacaoVoz, PageType.ConversaIa, PageType.Atualizacoes, PageType.ResumoDia, PageType.Diagnostico, PageType.Apps, PageType.Emails, PageType.Configuracoes, PageType.ModoJogo, PageType.Agenda, PageType.Seguranca, PageType.Celular })
                 {
                     var page = FabricaPaginas.Criar(tipo);
@@ -237,6 +238,29 @@ public sealed class InterfaceSmokeTest
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(30)), "A construção das telas não deve bloquear nem recorrer indefinidamente.");
         Assert.Null(falha);
+    }
+    private static void VerificarSeletorData(Application app, string pasta)
+    {
+        var picker = new DatePicker { Style = (Style)app.Resources["SeletorDataAgenda"], SelectedDate = DateTime.Today, DisplayDateStart = DateTime.Today, Margin = new Thickness(20) };
+        var window = new Window { Width = 420, Height = 150, Content = picker, ShowActivated = false };
+        void Processar() { var frame = new System.Windows.Threading.DispatcherFrame(); window.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action(() => frame.Continue = false)); System.Windows.Threading.Dispatcher.PushFrame(frame); }
+        try {
+            window.Show(); window.UpdateLayout(); picker.ApplyTemplate();
+            ((Button)picker.Template.FindName("PART_Button", picker)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Processar();
+            Assert.True(picker.IsDropDownOpen);
+            var popup = (System.Windows.Controls.Primitives.Popup)picker.Template.FindName("PART_Popup", picker);
+            var calendar = Assert.IsType<Calendar>(popup.Child); calendar.ApplyTemplate(); calendar.UpdateLayout();
+            var days = Descendentes(calendar).OfType<System.Windows.Controls.Primitives.CalendarDayButton>().ToArray();
+            Assert.Equal(42, days.Length);
+            var selected = Assert.Single(days.Where(d => d.IsSelected));
+            Assert.Equal(Colors.Black, ((SolidColorBrush)selected.Foreground).Color);
+            var bitmap = new RenderTargetBitmap((int)Math.Ceiling(calendar.ActualWidth), (int)Math.Ceiling(calendar.ActualHeight), 96, 96, PixelFormats.Pbgra32); bitmap.Render(calendar);
+            var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(bitmap)); using (var file = File.Create(Path.Combine(pasta, "SeletorDataAgenda.png"))) png.Save(file);
+            var next = Descendentes(calendar).OfType<Button>().Single(b => b.Name == "PART_NextButton"); var before = calendar.DisplayDate;
+            next.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Processar(); Assert.Equal(before.AddMonths(1).Month, calendar.DisplayDate.Month);
+            calendar.SelectedDate = calendar.DisplayDate.Date.AddDays(4); Processar(); Assert.Equal(calendar.SelectedDate, picker.SelectedDate);
+            picker.IsDropDownOpen = false;
+        } finally { window.Close(); }
     }
     private static IEnumerable<DependencyObject> Descendentes(DependencyObject pai)
     {
