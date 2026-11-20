@@ -83,7 +83,9 @@ public sealed class MotorVoz : IDisposable
         catch (Exception ex)
         {
             RegistrarVoz("boot-erro", ex.GetType().Name);
-            Transcricao?.Invoke(this, "Microfone indisponível. Verifique o dispositivo padrão do Windows.");
+            Transcricao?.Invoke(this, ex is DirectoryNotFoundException or FileNotFoundException
+                ? "Reconhecimento local indisponível. Abra Preparar voz para reparar o modelo Vosk."
+                : "Não foi possível iniciar a captura de áudio. Confira o dispositivo padrão do Windows.");
             throw;
         }
         EstadoMudou?.Invoke(this, ReactorState.Repouso);

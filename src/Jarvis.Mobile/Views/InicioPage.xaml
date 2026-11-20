@@ -1,23 +1,38 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:views="clr-namespace:Jarvis.Mobile.Views"
              x:Class="Jarvis.Mobile.Views.InicioPage" Title="Início" Shell.NavBarIsVisible="False">
   <ScrollView>
-    <VerticalStackLayout Padding="20,18,20,28" Spacing="16" MaximumWidthRequest="760">
-      <Label Text="JARVIS" Style="{StaticResource Titulo}" CharacterSpacing="4"/>
-      <Border Style="{StaticResource Painel}">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-          <VerticalStackLayout Spacing="3">
-            <Label x:Name="PcLinha" FontFamily="ChakraPetchSemiBold" FontSize="20" Text="Nenhum PC selecionado"/>
-            <Label x:Name="Status" Text="Aguardando conexão"/>
-          </VerticalStackLayout>
-          <Button Grid.Column="1" Text="Trocar PC" Clicked="MeusPcs"/>
-        </Grid>
+    <VerticalStackLayout Padding="20,20,20,28" Spacing="16" MaximumWidthRequest="760">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+        <Label Text="JARVIS" Style="{StaticResource Titulo}" CharacterSpacing="4" VerticalOptions="Center"/>
+        <Button Grid.Column="1" Text="Meus PCs" Clicked="MeusPcs"/>
+      </Grid>
+      <Border Style="{StaticResource Painel}" Padding="20,18" Margin="0">
+        <VerticalStackLayout Spacing="12">
+          <Grid HeightRequest="152" HorizontalOptions="Center">
+            <Ellipse WidthRequest="124" HeightRequest="124" StrokeThickness="2" Stroke="{StaticResource Verde}" VerticalOptions="Center" HorizontalOptions="Center">
+              <Ellipse.Fill>
+                <RadialGradientBrush Center="0.34,0.30" Radius="0.76">
+                  <GradientStop Color="#164016" Offset="0"/>
+                  <GradientStop Color="#000000" Offset="1"/>
+                </RadialGradientBrush>
+              </Ellipse.Fill>
+            </Ellipse>
+          </Grid>
+          <Label x:Name="PcLinha" FontFamily="ChakraPetchSemiBold" FontSize="22" HorizontalTextAlignment="Center"/>
+          <Label x:Name="Status" HorizontalTextAlignment="Center"/>
+          <Button Text="Falar com Jarvis" Style="{StaticResource Primario}" Clicked="Falar"/>
+        </VerticalStackLayout>
       </Border>
-      <views:ReactorArt x:Name="Reator" HeightRequest="250" HorizontalOptions="Fill" Margin="0,-12,0,-12"/>
-      <Button Text="Falar com Jarvis" Style="{StaticResource Primario}" Clicked="Falar"/>
-      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+      <Border Style="{StaticResource Painel}" Padding="16" Margin="0">
+        <VerticalStackLayout Spacing="8">
+          <Label Text="Painel de atalhos" FontFamily="ChakraPetchSemiBold" FontSize="22"/>
+          <Label Text="Controle apps, volume e Spotify em tela horizontal." Style="{StaticResource Cabecalho}"/>
+          <Button Text="Abrir painel" Clicked="Painel"/>
+        </VerticalStackLayout>
+      </Border>
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
         <Button Text="Aplicativos" Clicked="Apps"/>
         <Button Grid.Column="1" Text="Janelas" Clicked="Controles"/>
         <Button Grid.Row="1" Text="Desempenho" Clicked="Desempenho"/>
@@ -25,7 +40,7 @@
         <Button Grid.Row="2" Text="Tela ao vivo" Clicked="TelaAoVivo"/>
         <Button Grid.Row="2" Grid.Column="1" Text="Acordar PC" Clicked="LigarPc"/>
       </Grid>
-      <views:MidiaCard x:Name="Player"/>
+      <views:MidiaCard xmlns:views="clr-namespace:Jarvis.Mobile.Views" x:Name="Player"/>
     </VerticalStackLayout>
   </ScrollView>
 </ContentPage>

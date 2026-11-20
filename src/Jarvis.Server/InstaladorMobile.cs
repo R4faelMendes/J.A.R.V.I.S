@@ -5,7 +5,7 @@ namespace Jarvis.Server;
 
 public static class InstaladorMobile
 {
-    public const string Versao = "2.5.0";
+    public const string Versao = "2.5.1";
     private static readonly ConcurrentDictionary<string, (long Size, long Modified, string Hash)> Hashes = new();
     public sealed record Pacote(string Arquitetura, long Bytes, string Sha256, string Url);
     private static string? Arquivo(string? apk, string arquitetura)

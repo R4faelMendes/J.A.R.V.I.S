@@ -44,6 +44,29 @@ public partial class ParearPage : ContentPage
         catch { BuscaStatus.Text = "Busca indisponível nesta rede. Use o QR ou informe o endereço do PC."; }
         finally { _procurando = false; Buscar.IsEnabled = true; }
     }
+    private bool _scannerAberto;
+
+    private async void Escanear(object? s, EventArgs e)
+    {
+#if ANDROID
+        if (_scannerAberto) return;
+        _scannerAberto = true;
+        try
+        {
+            if (await Permissions.RequestAsync<Permissions.Camera>() != PermissionStatus.Granted)
+            {
+                Msg.Text = "Permita a câmera ou use o PIN.";
+                return;
+            }
+            if (await Services.LeitorQrAndroid.LerAsync() is { } qr) await ConcluirAsync(qr);
+        }
+        catch (Exception ex) { Msg.Text = "Scanner indisponível. Use o PIN. " + ex.Message; }
+        finally { _scannerAberto = false; }
+#else
+        Fotografar(s, e);
+#endif
+    }
+
     private async void Fotografar(object? s, EventArgs e)
     {
         Msg.Text = "";
@@ -123,7 +146,9 @@ public partial class ParearPage : ContentPage
         }
         catch (Exception ex)
         {
-            Msg.Text = "Erro: " + ex.Message;
+            Msg.Text = ex is HttpRequestException or OperationCanceledException
+                ? $"O celular não alcançou {Ip.Text}:5189. Abra o Jarvis no PC, confira o endereço em Dispositivos e use o mesmo roteador. Redes de convidados podem isolar os aparelhos."
+                : ex.Message;
         }
     }
 

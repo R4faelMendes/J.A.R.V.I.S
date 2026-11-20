@@ -76,7 +76,7 @@ public sealed class CelularCentralPage : PaginaBase
         _timer.Tick += (_, _) => { var ultima = ServicosAplicacao.Tela.UltimaVisualizacao; telaEstado.Text = ultima.HasValue && DateTimeOffset.UtcNow - ultima.Value < TimeSpan.FromSeconds(3) ? "TRANSMITINDO · celular pareado conectado à tela do PC." : "Abra Tela ao vivo no app pareado. Visualização e toque já estão disponíveis."; };
         _connected = DiagnosticoPage.Label("Aguardando o aplicativo do celular", "#00D800"); stack.Children.Add(_connected);
         stack.Children.Add(DiagnosticoPage.Label("2 · CONECTAR O APP AO PC", "#00D800"));
-        stack.Children.Add(DiagnosticoPage.Label("Após instalar pelo link acima, abra o Jarvis no Android e toque em Fotografar QR code para ler o código abaixo. O pareamento registra os endereços Wi-Fi e internet direta para as próximas conexões automáticas."));
+        stack.Children.Add(DiagnosticoPage.Label("Após instalar pelo link acima, abra o Jarvis no Android e toque em Escanear com a câmera para ler o código abaixo. O pareamento registra os endereços Wi-Fi e internet direta para as próximas conexões automáticas."));
         var pair = new Grid(); pair.ColumnDefinitions.Add(new() { Width = new GridLength(300) }); pair.ColumnDefinitions.Add(new());
         _qr = new Image { Width = 280, Height = 280, Stretch = Stretch.Uniform }; RenderOptions.SetBitmapScalingMode(_qr, BitmapScalingMode.NearestNeighbor);
         pair.Children.Add(new Border { Background = Brushes.White, CornerRadius = new CornerRadius(5), Padding = new Thickness(10), Child = _qr });
@@ -86,7 +86,7 @@ public sealed class CelularCentralPage : PaginaBase
         var renew = new Button { Content = "Gerar novo código", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 12, 0, 0), Style = (Style)Application.Current.Resources["BotaoPrimario"] }; renew.Click += async (_, _) => await GerarAsync(); details.Children.Add(renew);
         Grid.SetColumn(details, 1); pair.Children.Add(details); stack.Children.Add(CriarCardVidro(conteudo: pair));
         _state = DiagnosticoPage.Label("Abra o Jarvis no telefone para conectar."); stack.Children.Add(_state);
-        stack.Children.Add(DiagnosticoPage.Label("No mesmo Wi-Fi, o app encontra este computador automaticamente. Confirme o PIN uma vez; o pareamento salvo permite reconectar nas próximas vezes. Fora dessa rede, use o endereço HTTPS direto em Conexão direta no app. Redes de convidados podem bloquear a conexão local."));
+        stack.Children.Add(DiagnosticoPage.Label("O PC pode usar cabo Ethernet. Conecte o celular ao Wi-Fi do mesmo roteador. Se o QR não conectar, use o IP exibido acima com o PIN. Redes de convidados podem bloquear a comunicação."));
         var test = new Button { Content = "Verificar servidor e conexão", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 16, 0, 10) };
         test.Click += async (_, _) => { test.IsEnabled = false; try { var items = await ServicosAplicacao.Diagnostico.VerificarAsync(_life.Token); _state.Text = string.Join("\n", items.Where(i => i.Nome is "Servidor local" or "Dados protegidos").Select(i => (i.Ok ? "✓ " : "Atenção: ") + i.Nome + " — " + i.Detalhe)); } catch (OperationCanceledException) { } finally { test.IsEnabled = true; } }; stack.Children.Add(test);
         stack.Children.Add(DiagnosticoPage.Label("Ligar PC usa Wake-on-LAN. O app salva automaticamente MAC e broadcast no pareamento; a BIOS, a placa de rede e a alimentação do PC precisam permitir o despertar."));

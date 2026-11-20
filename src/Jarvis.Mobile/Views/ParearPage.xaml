@@ -5,16 +5,16 @@
   <ScrollView>
     <VerticalStackLayout Padding="20,16,20,28" Spacing="12" MaximumWidthRequest="640">
       <Label Text="Parear computador" Style="{StaticResource Titulo}"/>
-      <Label Text="Abra Dispositivos no Jarvis do computador e use o QR ou PIN exibido."/>
+      <Label Text="Abra Dispositivos no PC. Conecte o celular ao mesmo roteador e escolha QR ou PIN."/>
       <Border Style="{StaticResource Painel}">
         <VerticalStackLayout Spacing="8">
-          <Label Text="Código QR" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
-          <Button Text="Fotografar QR" Style="{StaticResource Primario}" Clicked="Fotografar"/>
+          <Label Text="Conectar por QR" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
+          <Button Text="Escanear com a câmera" Style="{StaticResource Primario}" Clicked="Escanear"/>
         </VerticalStackLayout>
       </Border>
       <Border Style="{StaticResource Painel}">
         <VerticalStackLayout Spacing="10">
-          <Label Text="PIN de seis dígitos" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
+          <Label Text="Conectar por PIN" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
           <Label x:Name="BuscaStatus" Text="Procurando computadores no Wi-Fi…" Style="{StaticResource Cabecalho}"/>
           <Picker x:Name="Computadores" Title="Selecione seu computador" IsVisible="False" SelectedIndexChanged="SelecionarPc"/>
           <Button x:Name="Buscar" Text="Buscar no Wi-Fi" Clicked="Descobrir"/>

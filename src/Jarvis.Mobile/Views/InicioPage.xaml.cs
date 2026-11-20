@@ -6,10 +6,10 @@ public partial class InicioPage : ContentPage
 
     protected override void OnAppearing()
     {
-        base.OnAppearing(); Reator.Animar(true); Player.Ativar(true); App.Conexao.EstadoMudou += Estado; App.Conexao.IniciarMonitor();
+        base.OnAppearing(); Player.Ativar(true); App.Conexao.EstadoMudou += Estado; App.Conexao.IniciarMonitor();
         Estado(this, App.Conexao.Conectado ? "Online" : "Offline");
     }
-    protected override void OnDisappearing() { Reator.Animar(false); Player.Ativar(false); App.Conexao.EstadoMudou -= Estado; base.OnDisappearing(); }
+    protected override void OnDisappearing() { Player.Ativar(false); App.Conexao.EstadoMudou -= Estado; base.OnDisappearing(); }
     private void Estado(object? sender, string text) => MainThread.BeginInvokeOnMainThread(() => { Status.Text = App.Conexao.Conectado ? "Conectado" : App.Conexao.PcAtivo is null ? "Adicione um computador" : "Sem conexão"; Status.TextColor = Color.FromArgb(App.Conexao.Conectado ? "#00D800" : "#BBBBBB"); PcLinha.Text = App.Conexao.Identidade?.Nome ?? "Pareie seu computador"; });
 
     private async void LigarPc(object? s, EventArgs e)
@@ -20,6 +20,7 @@ public partial class InicioPage : ContentPage
 
     private async void MeusPcs(object? s, EventArgs e) => await Shell.Current.GoToAsync("//meus-pcs");
     private async void Agenda(object? s, EventArgs e) => await Shell.Current.GoToAsync("agenda");
+    private async void Painel(object? s, EventArgs e) => await Shell.Current.GoToAsync("painel-atalhos");
     private async void Falar(object? s, EventArgs e) => await Shell.Current.GoToAsync("falar");
     private async void Controles(object? s, EventArgs e) => await Shell.Current.GoToAsync("janelas");
     private async void Apps(object? s, EventArgs e) => await Shell.Current.GoToAsync("//apps");

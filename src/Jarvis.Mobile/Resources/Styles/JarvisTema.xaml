@@ -35,20 +35,20 @@
     <Setter Property="BackgroundColor" Value="{StaticResource Vidro}"/>
     <Setter Property="Stroke" Value="{StaticResource Linha}"/>
     <Setter Property="StrokeThickness" Value="1"/>
-    <Setter Property="StrokeShape" Value="RoundRectangle 14"/>
+    <Setter Property="StrokeShape" Value="RoundRectangle 22"/>
     <Setter Property="Padding" Value="16"/>
     <Setter Property="Margin" Value="0,0,0,12"/>
   </Style>
   <Style x:Key="Primario" TargetType="Button">
     <Setter Property="BackgroundColor" Value="{StaticResource CianoHolo}"/>
     <Setter Property="TextColor" Value="#000000"/>
-    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="CornerRadius" Value="16"/>
     <Setter Property="MinimumHeightRequest" Value="48"/>
     <Setter Property="FontFamily" Value="IBMPlexSansMedium"/>
   </Style>
-  <Style TargetType="Button"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="CornerRadius" Value="12"/><Setter Property="BorderWidth" Value="1"/><Setter Property="BorderColor" Value="#303030"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansMedium"/><Setter Property="FontSize" Value="14"/></Style>
-  <Style TargetType="Entry"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansRegular"/></Style>
-  <Style TargetType="SearchBar"><Setter Property="BackgroundColor" Value="#181818"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/></Style>
+  <Style TargetType="Button"><Setter Property="BackgroundColor" Value="#151515"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="CornerRadius" Value="16"/><Setter Property="BorderWidth" Value="1"/><Setter Property="BorderColor" Value="#303030"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansMedium"/><Setter Property="FontSize" Value="14"/></Style>
+  <Style TargetType="Entry"><Setter Property="BackgroundColor" Value="#151515"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/><Setter Property="MinimumHeightRequest" Value="48"/><Setter Property="FontFamily" Value="IBMPlexSansRegular"/></Style>
+  <Style TargetType="SearchBar"><Setter Property="BackgroundColor" Value="#151515"/><Setter Property="TextColor" Value="#FFFFFF"/><Setter Property="PlaceholderColor" Value="#BBBBBB"/></Style>
   <Style TargetType="Slider">
     <Setter Property="MinimumTrackColor" Value="{StaticResource CianoHolo}"/>
     <Setter Property="MaximumTrackColor" Value="{StaticResource Linha}"/>

@@ -223,6 +223,11 @@ public partial class MainWindow : Window
             {
                 _vidaJanela.Token.ThrowIfCancellationRequested();
                 try { await Task.Run(() => _motor!.Iniciar(), _vidaJanela.Token); _vm.UltimaTranscricao = "Pronto. Diga Jarvis ou pressione Ctrl + Espaço."; break; }
+                catch (Exception ex) when (ex is System.IO.DirectoryNotFoundException or System.IO.FileNotFoundException)
+                {
+                    _vm.UltimaTranscricao = "Modelo Vosk indisponível. Abra Preparar voz para instalar ou reparar os arquivos.";
+                    break;
+                }
                 catch (Exception) when (tentativa < 2) { await Task.Delay(2500, _vidaJanela.Token); }
                 catch (Exception) { _vm.UltimaTranscricao = "Microfone indisponível. Confira o dispositivo em Configurações. Os controles e a leitura de e-mails continuam disponíveis."; }
             }

@@ -7,9 +7,11 @@ public sealed class ControleRemotoPc : IControleRemoto
 {
     private static readonly Lazy<Jarvis.Voice.DictationService> DitadoMobile = new(() =>
     {
-        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null) { var modelo = System.IO.Path.Combine(dir.FullName, "models", "ggml-base.bin"); if (System.IO.File.Exists(modelo)) return new(modelo); dir = dir.Parent; }
-        throw new InvalidOperationException("Modelo Whisper local não encontrado no PC.");
+        var pasta = ServicosAplicacao.PreparacaoVoz.Pasta;
+        var modeloBase = System.IO.Path.Combine(pasta, "ggml-base.bin");
+        return System.IO.File.Exists(modeloBase)
+            ? new(modeloBase, Whisper.net.Ggml.GgmlType.Base)
+            : new(System.IO.Path.Combine(pasta, "ggml-tiny.bin"));
     });
     public Task<string> TranscreverAsync(byte[] pcm, CancellationToken ct) => Task.Run(() => DitadoMobile.Value.TranscreverAsync(pcm, ct), ct);
     public EstadoEntrada Entrada() => new(ServicosAplicacao.Entrada.Permitida && new Permissoes().Obter(TipoAcao.ControlarJanela) != Permissao.Negado, "Ative Compartilhar tela e Permitir controle por toque em Dispositivos no PC.");
