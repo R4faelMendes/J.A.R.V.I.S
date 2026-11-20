@@ -1,5 +1,5 @@
-// JARVIS.Mobile — reator portátil (SkiaSharp, mesmo visual do desktop, leve).
-using SkiaSharp;
+using Jarvis.Core;
+using Jarvis.Desktop.Renderers;
 using SkiaSharp.Views.Maui;
 using SkiaSharp.Views.Maui.Controls;
 
@@ -7,35 +7,68 @@ namespace Jarvis.Mobile.Views;
 
 public sealed class ReatorView : SKCanvasView
 {
-    public static readonly BindableProperty NivelProperty =
-        BindableProperty.Create(nameof(Nivel), typeof(double), typeof(ReatorView), 0.05);
-    public double Nivel { get => (double)GetValue(NivelProperty); set => SetValue(NivelProperty, value); }
-
-    private readonly System.Diagnostics.Stopwatch _rel = System.Diagnostics.Stopwatch.StartNew();
-    private readonly Microsoft.Maui.Dispatching.IDispatcherTimer _timer;
-    private static event Action<bool>? EstadoApp;
-    private bool _ativa;
-    private double _montagem;
-    private double _destino = 1;
-    public void AlternarMontagem() { _destino = _destino == 1 ? 0 : 1; InvalidateSurface(); }
-    private Page? _pagina;
-    private void PaginaApareceu(object? s, EventArgs e) => Animar(true);
-    private void PaginaSaiu(object? s, EventArgs e) => Animar(false);
-    public static void DefinirAppAtivo(bool ativo) => EstadoApp?.Invoke(ativo);
-    public void Animar(bool ativo) { _ativa = ativo; if (ativo) _timer.Start(); else _timer.Stop(); }
-    private void AoMudarApp(bool ativo) { if (ativo && _ativa) _timer.Start(); else _timer.Stop(); }
+    private readonly System.Diagnostics.Stopwatch _relogio = System.Diagnostics.Stopwatch.StartNew();
+    private readonly IDispatcherTimer _timer;
+    private bool _visivel;
+    private bool _ouvindo;
+    private double _nivel, _alvo, _ultimo;
 
     public ReatorView()
     {
-        _timer = Dispatcher.CreateTimer(); _timer.Interval = TimeSpan.FromMilliseconds(1000.0 / 30);
-        _timer.Tick += (_, _) => { _timer.Interval = TimeSpan.FromMilliseconds(Services.EspelhoCelular.Ativo ? 125 : 40); var passo = _timer.Interval.TotalSeconds / 3.0; _montagem = _destino > _montagem ? Math.Min(_destino, _montagem + passo) : Math.Max(_destino, _montagem - passo); InvalidateSurface(); };
-        Loaded += (_, _) => { EstadoApp += AoMudarApp; for (Element? p = Parent; p is not null; p = p.Parent) if (p is Page page) { _pagina = page; page.Appearing += PaginaApareceu; page.Disappearing += PaginaSaiu; break; } Animar(true); };
-        Unloaded += (_, _) => { EstadoApp -= AoMudarApp; if (_pagina is not null) { _pagina.Appearing -= PaginaApareceu; _pagina.Disappearing -= PaginaSaiu; _pagina = null; } Animar(false); };
+        _timer = Dispatcher.CreateTimer();
+        _timer.Interval = TimeSpan.FromMilliseconds(1000d / 30);
+        _timer.Tick += (_, _) =>
+        {
+            var agora = _relogio.Elapsed.TotalSeconds;
+            _nivel = FormaEsferaAudio.Suavizar(_nivel, _ouvindo ? _alvo : 0, agora - _ultimo);
+            _ultimo = agora;
+            if (!_ouvindo && _nivel < .004)
+            {
+                _nivel = 0;
+                _timer.Stop();
+            }
+            InvalidateSurface();
+        };
+        Loaded += (_, _) => App.AtividadeMudou += AoMudarAtividade;
+        Unloaded += (_, _) =>
+        {
+            App.AtividadeMudou -= AoMudarAtividade;
+            Animar(false);
+        };
     }
 
-    protected override void OnPaintSurface(SKPaintSurfaceEventArgs e)
+    private void AoMudarAtividade(bool ativo)
     {
-        Jarvis.Rendering.ReatorRealista.Desenhar(e.Surface.Canvas, e.Info.Width, e.Info.Height, _rel.Elapsed.TotalSeconds, Nivel, _montagem);
+        if (ativo) Ouvir(_ouvindo);
+        else _timer.Stop();
     }
-}
 
+    public double Nivel { get => _alvo; set => _alvo = value; }
+
+    public void Ouvir(bool ativo)
+    {
+        _ouvindo = ativo;
+        if (!ativo) _alvo = 0;
+        if (_visivel && App.EmPrimeiroPlano && !_timer.IsRunning && (ativo || _nivel > 0))
+        {
+            _ultimo = _relogio.Elapsed.TotalSeconds;
+            _timer.Start();
+        }
+    }
+
+    public void Animar(bool visivel)
+    {
+        _visivel = visivel;
+        if (!visivel)
+        {
+            _timer.Stop();
+            _nivel = 0;
+        }
+        else Ouvir(_ouvindo);
+        InvalidateSurface();
+    }
+
+    protected override void OnPaintSurface(SKPaintSurfaceEventArgs e) =>
+        AudioOrbRenderer.Desenhar(e.Surface.Canvas, e.Info.Width, e.Info.Height, _relogio.Elapsed.TotalSeconds, _nivel,
+            _ouvindo || _nivel > 0 ? ReactorState.Ouvindo : ReactorState.Repouso);
+}

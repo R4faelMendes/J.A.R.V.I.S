@@ -26,9 +26,9 @@ public static class MidiaNotificacao
         if (Preferences.Get("controle_spotify", false) && App.Conexao.BaseUrl is not null) SpotifyRemotoService.Iniciar();
 #endif
     }
-    public static void Parar()
+    public static void Parar(bool manterPreferencia = false)
     {
-        Preferences.Set("controle_spotify", false);
+        if (!manterPreferencia) Preferences.Set("controle_spotify", false);
 #if ANDROID
         SpotifyRemotoService.Parar();
 #endif

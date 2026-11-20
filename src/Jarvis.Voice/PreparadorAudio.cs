@@ -4,20 +4,32 @@ public sealed class PreparadorAudio
 {
     private double _anterior, _filtrado, _ganho = 1, _ruido = .0015;
     private int _amostrasRuido;
+    private double[] _amostras = [];
     private double _menorRuido = double.MaxValue;
     public bool Fala { get; private set; }
     public double Nivel { get; private set; }
     public byte[] Processar(byte[] pcm, double sensibilidade = .7)
     {
         if (pcm.Length == 0 || pcm.Length % 2 != 0) return [];
-        var samples = new double[pcm.Length / 2]; double soma = 0;
-        for (var i = 0; i < samples.Length; i++)
+        var saida = new byte[pcm.Length];
+        Processar(pcm, saida, sensibilidade);
+        return saida;
+    }
+
+    internal void ProcessarNoLugar(byte[] pcm, double sensibilidade) => Processar(pcm, pcm, sensibilidade);
+
+    private void Processar(byte[] pcm, byte[] saida, double sensibilidade)
+    {
+        var quantidade = pcm.Length / 2;
+        if (_amostras.Length < quantidade) _amostras = new double[quantidade];
+        double soma = 0;
+        for (var i = 0; i < quantidade; i++)
         {
             var x = BitConverter.ToInt16(pcm, i * 2) / 32768.0;
-            var y = x - _anterior + .995 * _filtrado; _anterior = x; _filtrado = y; samples[i] = y; soma += y * y;
+            var y = x - _anterior + .995 * _filtrado; _anterior = x; _filtrado = y; _amostras[i] = y; soma += y * y;
         }
-        var rms = Math.Sqrt(soma / samples.Length);
-        _amostrasRuido += samples.Length; _menorRuido = Math.Min(_menorRuido, rms);
+        var rms = Math.Sqrt(soma / quantidade);
+        _amostrasRuido += quantidade; _menorRuido = Math.Min(_menorRuido, rms);
         if (_amostrasRuido >= 32000)
         {
             if (_menorRuido < .015) _ruido = Math.Clamp(_menorRuido * 1.2, .0005, .008);
@@ -28,12 +40,10 @@ public sealed class PreparadorAudio
         Fala = rms >= threshold; Nivel = Math.Clamp(rms * 8, 0, 1);
         var desejado = rms > .001 ? Math.Clamp(.075 / rms, 1, 6) : 1;
         _ganho = _ganho * .85 + desejado * .15;
-        var saida = new byte[pcm.Length];
-        for (var i = 0; i < samples.Length; i++)
+        for (var i = 0; i < quantidade; i++)
         {
-            var valor = (short)Math.Round(Math.Clamp(samples[i] * _ganho, -.98, .98) * 32767);
+            var valor = (short)Math.Round(Math.Clamp(_amostras[i] * _ganho, -.98, .98) * 32767);
             saida[2 * i] = (byte)valor; saida[2 * i + 1] = (byte)(valor >> 8);
         }
-        return saida;
     }
 }

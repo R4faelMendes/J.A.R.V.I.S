@@ -15,8 +15,8 @@ public partial class FalarPage : ContentPage
         {
 #if ANDROID
             if (!App.Conexao.Conectado) { await App.Conexao.VerificarAutomaticamenteAsync(); if (!App.Conexao.Conectado) throw new InvalidOperationException("Conecte o celular ao PC para usar o Whisper local."); }
-            _gravacao = new(); BotaoFalar.Text = "Concluir fala"; Transcricao.Text = "Ouvindo… fale seu comando. Uma pausa conclui a gravação.";
-            var pcm = await Services.MicrofoneJarvis.GravarAsync(n => MainThread.BeginInvokeOnMainThread(() => Reator.Nivel = n), _gravacao.Token);
+            _gravacao = new(); Reator.Ouvir(true); BotaoFalar.Text = "Concluir fala"; Transcricao.Text = "Ouvindo… fale seu comando. Uma pausa conclui a gravação.";
+            var pcm = await Services.MicrofoneJarvis.GravarAsync(n => MainThread.BeginInvokeOnMainThread(() => Reator.Nivel = n), _gravacao.Token); Reator.Ouvir(false);
             _gravacao.Dispose(); _gravacao = null; BotaoFalar.IsEnabled = false; Transcricao.Text = "Transcrevendo no seu PC, sem chave de API…";
             texto = await App.Conexao.TranscreverAudioAsync(pcm, _pagina?.Token ?? default);
 #else
@@ -26,7 +26,7 @@ public partial class FalarPage : ContentPage
         }
         catch (OperationCanceledException) { Transcricao.Text = "Gravação encerrada."; }
         catch (Exception ex) { Transcricao.Text = ex.Message; }
-        finally { _gravacao?.Dispose(); _gravacao = null; BotaoFalar.Text = "Falar com Jarvis"; BotaoFalar.IsEnabled = true; }
+        finally { Reator.Ouvir(false); _gravacao?.Dispose(); _gravacao = null; BotaoFalar.Text = "Falar com Jarvis"; BotaoFalar.IsEnabled = true; }
     }
     private async Task ExecutarAsync(string? texto)
     {

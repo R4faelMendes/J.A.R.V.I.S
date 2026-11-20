@@ -18,6 +18,7 @@ public sealed class WakeWordListener : IDisposable
     private bool _processando;
     private string _fraseVosk = "";
     private readonly Timer _vigia;
+    private bool _vigiaAtivo;
     public event EventHandler<SegmentoVoz>? SegmentoPronto;
     public event EventHandler<byte[]>? AudioComandoPronto;
     public event EventHandler<byte[]>? AudioParaVerificarAtivacao;
@@ -25,16 +26,31 @@ public sealed class WakeWordListener : IDisposable
     public event EventHandler<string>? AoTranscrever;
     public event EventHandler<string>? Parcial;
     public event EventHandler<string>? ComandoDetectado;
-    public WakeWordListener(VoiceService voz) { _voz = voz; _vigia = new Timer(_ => VerificarPausa(), null, 200, 200); }
+    public WakeWordListener(VoiceService voz)
+    {
+        _voz = voz;
+        _vigia = new Timer(_ => VerificarPausa());
+    }
+
+    // As pausas só precisam de um temporizador enquanto existe um segmento ativo.
+    private void AtualizarVigia()
+    {
+        var ativo = _rodando && !_suspenso && !_processando && (_captura.Ativo || _verificacao.Ativo);
+        if (_vigiaAtivo == ativo) return;
+        _vigiaAtivo = ativo;
+        _vigia.Change(ativo ? 200 : Timeout.Infinite, ativo ? 200 : Timeout.Infinite);
+    }
     private void VerificarPausa()
     {
         SegmentoVoz? segmento = null;
         lock (_gate)
         {
             if (!_rodando || _suspenso || _processando) return;
-            var audio = _captura.ExtrairPorInatividade(DateTime.UtcNow); var verificar = false;
-            if (audio is null) { audio = _verificacao.ExtrairPorInatividade(DateTime.UtcNow); verificar = true; }
+            var agora = DateTime.UtcNow;
+            var audio = _captura.ExtrairPorInatividade(agora); var verificar = false;
+            if (audio is null) { audio = _verificacao.ExtrairPorInatividade(agora); verificar = true; }
             if (audio is not null) { _processando = true; segmento = new(audio, _fraseVosk, verificar); }
+            AtualizarVigia();
         }
         if (segmento is not null) SegmentoPronto?.Invoke(this, segmento);
     }
@@ -53,19 +69,20 @@ public sealed class WakeWordListener : IDisposable
     }
     public void Suspender(bool suspenso)
     {
-        lock (_gate) { _suspenso = suspenso; _captura.Limpar(); _verificacao.Limpar(); _rec?.Reset(); _ultimaParcial = ""; }
+        lock (_gate) { _suspenso = suspenso; _captura.Limpar(); _verificacao.Limpar(); _rec?.Reset(); _ultimaParcial = ""; AtualizarVigia(); }
     }
     public void AtivarComando()
     {
-        lock (_gate) { _processando = false; _verificacao.Cancelar(); _captura.Iniciar(); }
+        lock (_gate) { _processando = false; _verificacao.Cancelar(); _captura.Iniciar(); AtualizarVigia(); }
         AoOuvirJarvis?.Invoke(this, EventArgs.Empty);
     }
-    public void LiberarComando(bool preservarAudio = false) { lock (_gate) { _processando = false; if (preservarAudio) { _captura.Cancelar(); _verificacao.Cancelar(); } else { _captura.Limpar(); _verificacao.Limpar(); } _rec?.Reset(); _ultimaParcial = _fraseVosk = ""; } }
+    public void LiberarComando(bool preservarAudio = false) { lock (_gate) { _processando = false; if (preservarAudio) { _captura.Cancelar(); _verificacao.Cancelar(); } else { _captura.Limpar(); _verificacao.Limpar(); } _rec?.Reset(); _ultimaParcial = _fraseVosk = ""; AtualizarVigia(); } }
     public void Iniciar()
     {
         if (_rec is null) throw new InvalidOperationException("Carregue o reconhecedor primeiro.");
-        _rodando = true;
-        _voz.Iniciar(bloco => { if (_rodando) ProcessarPcm(bloco, _voz.FalandoVad); });
+        lock (_gate) { _rodando = true; AtualizarVigia(); }
+        try { _voz.Iniciar(bloco => { if (_rodando) ProcessarPcm(bloco, _voz.FalandoVad); }); }
+        catch { Parar(); throw; }
     }
     /// <summary>Entrada PCM16 mono/16 kHz compartilhada pela captura e reprodução de diagnóstico.</summary>
     public void ProcessarPcm(byte[] bloco, bool fala)
@@ -86,6 +103,7 @@ public sealed class WakeWordListener : IDisposable
                 if (!string.IsNullOrWhiteSpace(texto)) _fraseVosk = texto;
                 frase = _fraseVosk;
                 if (audio is not null || verificar is not null) _processando = true;
+                AtualizarVigia();
                 if (audio is null && verificar is null && !final && texto == _ultimaParcial) return;
                 _ultimaParcial = final ? "" : texto;
             }
@@ -121,6 +139,6 @@ public sealed class WakeWordListener : IDisposable
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         return doc.RootElement.TryGetProperty(campo, out var v) ? v.GetString() ?? "" : "";
     }
-    public void Parar() { _rodando = false; _voz.Parar(); }
-    public void Dispose() { _vigia.Dispose(); Parar(); lock (_gate) { _rec?.Dispose(); _rec = null; _modelo?.Dispose(); _modelo = null; } }
+    public void Parar() { lock (_gate) { _rodando = false; AtualizarVigia(); } _voz.Parar(); }
+    public void Dispose() { Parar(); _vigia.Dispose(); lock (_gate) { _rec?.Dispose(); _rec = null; _modelo?.Dispose(); _modelo = null; } }
 }

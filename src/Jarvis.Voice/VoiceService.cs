@@ -113,7 +113,7 @@ public sealed class VoiceService : IVoiceService, IDisposable
             if (!MicrofoneLigado) return;
             var buf = conversor.Converter(e.Buffer, e.BytesRecorded);
             if (buf.Length == 0) return;
-            buf = preparador.Processar(buf, ConfiguracaoApp.SensibilidadeMic);
+            preparador.ProcessarNoLugar(buf, ConfiguracaoApp.SensibilidadeMic);
             lock (_trava) { _nivel = (float)(_nivel * .6 + preparador.Nivel * .4); _falando = preparador.Fala; }
             aoBloco(buf);
         };        _captura.StartRecording();

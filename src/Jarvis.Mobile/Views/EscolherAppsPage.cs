@@ -7,7 +7,7 @@ public sealed class EscolherAppsPage : ContentPage
     public EscolherAppsPage()
     {
         Title = "Meus aplicativos";
-        var root = new Grid { Padding = 18, RowSpacing = 12, RowDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
+        var root = new Grid { Padding = new Thickness(20, 16, 20, 20), RowSpacing = 12, RowDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
         root.Add(_status, 0, 0); root.Add(new ScrollView { Content = _lista }, 0, 1);
         var save = new Button { Text = "Salvar seleção" }; save.Clicked += async (_, _) => { save.IsEnabled = false; try { await App.Conexao.SalvarAppsAsync(_checks.Where(c => c.Value.IsChecked).Select(c => c.Key).ToArray()); await Navigation.PopAsync(); } catch (Exception ex) { _status.Text = ex.Message; } finally { save.IsEnabled = true; } }; root.Add(save, 0, 2); Content = root;
     }

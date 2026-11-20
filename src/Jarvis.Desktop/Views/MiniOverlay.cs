@@ -43,6 +43,7 @@ public sealed class MiniOverlay : Window
         MouseDoubleClick += (_, _) => { Hide(); Owner?.Show(); Owner?.Activate(); };
         _sumir = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _sumir.Tick += (_, _) => Hide();
+        IsVisibleChanged += (_, _) => { if (!IsVisible) _sumir.Stop(); };
         Left = SystemParameters.WorkArea.Right - Width - 16;
         Top = SystemParameters.WorkArea.Bottom - Height - 16;
     }

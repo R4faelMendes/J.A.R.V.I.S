@@ -416,22 +416,24 @@ public sealed class AppsPage : PaginaBase
 // -------------------------------------------------------------------------------------------------
 public sealed class DesempenhoPage : PaginaBase
 {
-    private readonly PerfMonitor _perf = new();
-    private readonly DispatcherTimer _timer;
+    private Window? _janela;
+    private CancellationTokenSource? _monitoramento;
+    private Task? _amostras;
+    private Action<int>? _encerrarProcesso;
     private TextBlock _txtCpu = null!;
     private TextBlock _txtMem = null!;
     private TextBlock _txtGpu = null!;
     private TextBlock _txtDisk = null!;
     private TextBlock _txtProprio = null!;
-    private StackPanel _tabelaProcessos = new();
+    private readonly Grid _tabelaProcessos = new();
+    private readonly Dictionary<int, (Border Cartao, Button Botao, TextBlock Texto)> _linhas = new();
     private TextBlock? _sugestao;
 
     public DesempenhoPage() : base("Sistema", "Desempenho")
     {
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) => Atualizar();
-        _timer.Start();
-        Unloaded += (_, _) => { _timer.Stop(); _perf.Dispose(); };
+        Loaded += AoCarregar;
+        Unloaded += AoDescarregar;
+        IsVisibleChanged += (_, _) => AtualizarMonitoramento();
     }
 
     protected override void Montar(Grid container)
@@ -476,6 +478,7 @@ public sealed class DesempenhoPage : PaginaBase
         };
         var sp = new StackPanel();
         sp.Children.Add(new TextBlock { Text = "Processos mais pesados no Windows", FontSize = 16, FontWeight = FontWeights.Bold, Foreground = (Brush)Application.Current.Resources["TextoGelo"], Margin = new Thickness(0, 0, 0, 12) });
+        KeyboardNavigation.SetTabNavigation(_tabelaProcessos, KeyboardNavigationMode.Local);
         sp.Children.Add(_tabelaProcessos);
         secProc.Child = sp;
         stack.Children.Add(secProc);
@@ -495,78 +498,163 @@ public sealed class DesempenhoPage : PaginaBase
 
         scroll.Content = stack;
         container.Children.Add(scroll);
-        Atualizar();
     }
 
-    private void Atualizar()
+    private void AoCarregar(object sender, RoutedEventArgs e)
+    {
+        _janela = Window.GetWindow(this);
+        if (_janela is not null) _janela.StateChanged += AoMudarJanela;
+        AtualizarMonitoramento();
+    }
+
+    private void AoDescarregar(object sender, RoutedEventArgs e)
+    {
+        if (_janela is not null) _janela.StateChanged -= AoMudarJanela;
+        _janela = null;
+        _ = EncerrarMonitoramentoAsync();
+    }
+
+    private void AoMudarJanela(object? sender, EventArgs e) => AtualizarMonitoramento();
+
+    private void AtualizarMonitoramento()
+    {
+        if (!IsLoaded || !IsVisible || _janela?.WindowState == WindowState.Minimized)
+        {
+            _ = EncerrarMonitoramentoAsync();
+            return;
+        }
+        if (_monitoramento is not null) return;
+        var vida = new CancellationTokenSource();
+        _monitoramento = vida;
+        _amostras = Task.Run(() => LerSistemaAsync(vida.Token));
+    }
+
+    private async Task EncerrarMonitoramentoAsync()
+    {
+        if (_monitoramento is not { } vida) return;
+        var amostras = _amostras;
+        _monitoramento = null;
+        _amostras = null;
+        _encerrarProcesso = null;
+        vida.Cancel();
+        try { if (amostras is not null) await amostras; }
+        finally { vida.Dispose(); }
+    }
+
+    private async Task LerSistemaAsync(CancellationToken ct)
     {
         try
         {
-            var cpu = _perf.CpuPercent;
-            var mem = _perf.MemoriaPercent;
-            var gpu = _perf.GpuPercent;
-            var disk = _perf.DiscoPercent;
-            var prop = _perf.CpuPropria;
-            if (_sugestao is not null) {
-                var leituras = new List<string>();
-                if (double.IsFinite(cpu)) leituras.Add($"CPU em {cpu:0}%" + (cpu >= 85 ? " · uso elevado nesta amostra" : ""));
-                if (double.IsFinite(mem)) leituras.Add($"RAM em {mem:0}%" + (mem >= 85 ? " · uso elevado nesta amostra" : ""));
-                var temperatura = _perf.TemperaturaC;
-                leituras.Add(double.IsFinite(temperatura) && temperatura > 0 ? $"Sensor de temperatura: {temperatura:0} °C" : "Temperatura indisponível neste hardware/permissão");
-                _sugestao.Text = string.Join(". ", leituras) + $". Atualizado às {DateTime.Now:HH:mm:ss}.";
-            }
-
-            if (_txtCpu != null) _txtCpu.Text = double.IsNaN(cpu) ? "—" : $"{cpu:0}%";
-            if (_txtMem != null) _txtMem.Text = double.IsNaN(mem) ? "—" : $"{mem:0}%";
-            if (_txtGpu != null) _txtGpu.Text = double.IsNaN(gpu) ? "—" : $"{gpu:0}%";
-            if (_txtDisk != null) _txtDisk.Text = double.IsNaN(disk) ? "—" : $"{disk:0}%";
-            if (_txtProprio != null) _txtProprio.Text = $"Jarvis · CPU {prop:0.0}% · RAM {_perf.MemoriaPropriaMB:0} MB";
-
-            _tabelaProcessos.Children.Clear();
-            foreach (var p in _perf.TopProcessos())
+            ct.ThrowIfCancellationRequested();
+            using var perf = new PerfMonitor();
+            Action<int> encerrar = perf.EncerrarProcesso;
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            do
             {
-                var card = new Border
+                try
                 {
-                    Style = (Style)Application.Current.Resources["CartaoItem"],
-                    Margin = new Thickness(0, 0, 0, 6),
-                    Padding = new Thickness(12, 8, 12, 8)
-                };
-                var d = new DockPanel();
-
-                var btnKill = new Button
-                {
-                    Content = "Encerrar",
-                    Style = (Style)Application.Current.Resources["BotaoPerigo"],
-                    Padding = new Thickness(12, 5, 12, 5)
-                };
-                btnKill.Click += (_, _) =>
-                {
-                    var res = MessageBox.Show($"Deseja encerrar o processo {p.Nome} (PID {p.Id})?", "Confirmar encerramento", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-                    if (res == MessageBoxResult.Yes)
+                    var leitura = new LeituraDesempenho(perf.CpuPercent, perf.MemoriaPercent, perf.GpuPercent,
+                        perf.DiscoPercent, perf.CpuPropria, perf.MemoriaPropriaMB, perf.TemperaturaC, perf.TopProcessos());
+                    await Dispatcher.InvokeAsync(() =>
                     {
-                        _perf.EncerrarProcesso(p.Id);
-                        MostrarToast($"Processo {p.Nome} encerrado.");
-                        Atualizar();
-                    }
-                };
-                DockPanel.SetDock(btnKill, Dock.Right);
-                d.Children.Add(btnKill);
-
-                var txtInfo = new TextBlock
+                        if (ct.IsCancellationRequested) return;
+                        _encerrarProcesso = encerrar;
+                        Atualizar(leitura);
+                    }, DispatcherPriority.Background, ct).Task.ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    Text = $"{p.Nome}  ·  CPU {(double.IsNaN(p.CpuPercent) ? "—" : p.CpuPercent.ToString("0.0") + "%")}  ·  {p.MemoriaMB:0} MB",
-                    FontSize = 13,
-                    Foreground = (Brush)Application.Current.Resources["TextoGelo"],
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                d.Children.Add(txtInfo);
-
-                card.Child = d;
-                _tabelaProcessos.Children.Add(card);
-            }
+                    Debug.WriteLine(ex);
+                }
+            } while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false));
         }
-        catch { }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) { Debug.WriteLine(ex); }
     }
+
+    private void Atualizar(LeituraDesempenho leitura)
+    {
+        var (cpu, mem, gpu, disco, cpuJarvis, ramJarvis, temperatura, processos) = leitura;
+        if (_sugestao is not null)
+        {
+            var leituras = new List<string>();
+            if (double.IsFinite(cpu)) leituras.Add($"CPU em {cpu:0}%" + (cpu >= 85 ? " · uso elevado nesta amostra" : ""));
+            if (double.IsFinite(mem)) leituras.Add($"RAM em {mem:0}%" + (mem >= 85 ? " · uso elevado nesta amostra" : ""));
+            leituras.Add(double.IsFinite(temperatura) && temperatura > 0 ? $"Sensor de temperatura: {temperatura:0} °C" : "Temperatura indisponível neste hardware/permissão");
+            _sugestao.Text = string.Join(". ", leituras) + $". Atualizado às {DateTime.Now:HH:mm:ss}.";
+        }
+        _txtCpu.Text = double.IsNaN(cpu) ? "—" : $"{cpu:0}%";
+        _txtMem.Text = double.IsNaN(mem) ? "—" : $"{mem:0}%";
+        _txtGpu.Text = double.IsNaN(gpu) ? "—" : $"{gpu:0}%";
+        _txtDisk.Text = double.IsNaN(disco) ? "—" : $"{disco:0}%";
+        _txtProprio.Text = $"Jarvis · CPU {cpuJarvis:0.0}% · RAM {ramJarvis:0} MB";
+
+        foreach (var pid in _linhas.Keys.Where(id => processos.All(p => p.Id != id)).ToArray())
+        {
+            _tabelaProcessos.Children.Remove(_linhas[pid].Cartao);
+            _linhas.Remove(pid);
+        }
+        for (var i = 0; i < processos.Count; i++)
+        {
+            var processo = processos[i];
+            if (!_linhas.TryGetValue(processo.Id, out var linha))
+            {
+                linha = CriarLinhaProcesso();
+                _linhas.Add(processo.Id, linha);
+                _tabelaProcessos.Children.Add(linha.Cartao);
+            }
+            linha.Botao.Tag = processo;
+            if (_tabelaProcessos.RowDefinitions.Count <= i)
+                _tabelaProcessos.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(linha.Cartao, i);
+            KeyboardNavigation.SetTabIndex(linha.Botao, i);
+            linha.Texto.Text = $"{processo.Nome}  ·  CPU {(double.IsNaN(processo.CpuPercent) ? "—" : processo.CpuPercent.ToString("0.0") + "%")}  ·  {processo.MemoriaMB:0} MB";
+        }
+    }
+
+    private (Border Cartao, Button Botao, TextBlock Texto) CriarLinhaProcesso()
+    {
+        var painel = new DockPanel();
+        var botao = new Button
+        {
+            Content = "Encerrar",
+            Style = (Style)Application.Current.Resources["BotaoPerigo"],
+            Padding = new Thickness(12, 5, 12, 5)
+        };
+        botao.Click += (_, _) =>
+        {
+            if (botao.Tag is not ProcessoInfo processo) return;
+            var resposta = MessageBox.Show($"Deseja encerrar o processo {processo.Nome} (PID {processo.Id})?",
+                "Confirmar encerramento", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (resposta != MessageBoxResult.Yes || _encerrarProcesso is not { } encerrar) return;
+            try
+            {
+                encerrar(processo.Id);
+                MostrarToast($"Processo {processo.Nome} encerrado.");
+            }
+            catch (Exception ex) { MostrarToast(ex.Message); }
+        };
+        DockPanel.SetDock(botao, Dock.Right);
+        painel.Children.Add(botao);
+        var texto = new TextBlock
+        {
+            FontSize = 13,
+            Foreground = (Brush)Application.Current.Resources["TextoGelo"],
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        painel.Children.Add(texto);
+        var cartao = new Border
+        {
+            Style = (Style)Application.Current.Resources["CartaoItem"],
+            Margin = new Thickness(0, 0, 0, 6),
+            Padding = new Thickness(12, 8, 12, 8),
+            Child = painel
+        };
+        return (cartao, botao, texto);
+    }
+
+    private sealed record LeituraDesempenho(double Cpu, double Memoria, double Gpu, double Disco,
+        double CpuJarvis, double RamJarvis, double Temperatura, IReadOnlyList<ProcessoInfo> Processos);
 }
 
 // -------------------------------------------------------------------------------------------------

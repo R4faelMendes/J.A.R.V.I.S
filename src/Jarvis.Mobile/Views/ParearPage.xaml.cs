@@ -87,6 +87,7 @@ public partial class ParearPage : ContentPage
                 pars.GetValueOrDefault("ip", ""), int.TryParse(pars.GetValueOrDefault("porta"), out var p) ? p : 5189,
                 pars.GetValueOrDefault("token", ""), pars.GetValueOrDefault("pin", ""), DeviceInfo.Current.Model, pars.GetValueOrDefault("ips", "").Split(',', StringSplitOptions.RemoveEmptyEntries));
             if (!ok) { Msg.Text = "Código expirado. Gere um novo no PC."; return; }
+            await SincronizarPcAsync();
             await DisplayAlert("Jarvis", "Conectado ao PC!", "OK");
             await Shell.Current.GoToAsync("//inicio");
         }
@@ -116,12 +117,29 @@ public partial class ParearPage : ContentPage
                 Msg.Text = "Código inválido ou expirado. Gere um novo no PC.";
                 return;
             }
+            await SincronizarPcAsync();
             await DisplayAlert("Jarvis", "Conectado ao PC com sucesso!", "OK");
             await Shell.Current.GoToAsync("//inicio");
         }
         catch (Exception ex)
         {
             Msg.Text = "Erro: " + ex.Message;
+        }
+    }
+
+    private async Task SincronizarPcAsync()
+    {
+        try
+        {
+            if (await App.Conta.SessaoAsync() is null) return;
+            var id = App.Conexao.PcAtivo;
+            var pc = (await App.Conexao.ListarPcsAsync()).FirstOrDefault(p => p.Id == id);
+            if (pc is not null && (await App.Conta.ListarAsync(default)).All(p => p.Id != pc.Id))
+                await App.Conta.SalvarAsync(new(pc.Id, pc.Nome));
+        }
+        catch (Exception)
+        {
+            await DisplayAlert("Conta Jarvis", "O pareamento foi salvo neste aparelho. Você pode sincronizá-lo em Meus PCs.", "OK");
         }
     }
 }

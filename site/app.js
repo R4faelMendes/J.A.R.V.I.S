@@ -31,7 +31,9 @@ async function loadRelease() {
     document.querySelector('#release-status').textContent = `Última versão: ${release.tag_name}. Consulte as notas e verificações SHA-256 no GitHub.`;
     for (const link of document.querySelectorAll('[data-asset]')) {
       const asset = release.assets.find(item => item.name === link.dataset.asset);
-      if (!asset) {
+      if (asset) {
+        link.href = repository + "/releases/download/" + encodeURIComponent(release.tag_name) + "/" + encodeURIComponent(asset.name);
+      } else {
         link.href = `${repository}/releases`;
         link.textContent = 'Consultar disponibilidade ↗';
       }

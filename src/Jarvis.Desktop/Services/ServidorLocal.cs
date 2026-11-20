@@ -1,50 +1,61 @@
-// JARVIS Desktop — servidor local embutido (Kestrel + SignalR na thread de fundo).
 using System.IO;
 using Jarvis.Server;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Hosting;
 
 namespace Jarvis.Desktop.Services;
 
-/// <summary>Sobe o servidor do celular junto com o app. Nunca trava a UI.</summary>
+/// <summary>Inicia e encerra o servidor local sem trabalho de rede na interface.</summary>
 public sealed class ServidorLocal : IDisposable
 {
-    private WebApplication? _app;
-    private Thread? _fio;
-    private DescobertaUdp? _descoberta;
-    public bool Ativo => _app is not null;
+    private CancellationTokenSource? _vida;
+    private Task? _execucao;
+    private volatile bool _ativo;
+
+    public bool Ativo => _ativo;
 
     public void Iniciar()
     {
-        if (Ativo) return;
+        if (_execucao is { IsCompleted: false }) return;
+        _vida?.Dispose();
+        _vida = new CancellationTokenSource();
+        var ct = _vida.Token;
+        _execucao = Task.Run(() => ExecutarAsync(ct));
+    }
+
+    private async Task ExecutarAsync(CancellationToken ct)
+    {
         try
         {
+            ct.ThrowIfCancellationRequested();
             var pasta = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Jarvis");
-            var cert = CertificadoLocal.ObterOuCriar(pasta);
+            using var cert = CertificadoLocal.ObterOuCriar(pasta);
             CertificadoCache.Impressao = CertificadoLocal.Impressao(cert);
-            _app = HospedeJarvis.Criar(Array.Empty<string>(), HospedeJarvis.PortaHttp, HospedeJarvis.PortaHttps, cert, new ControleRemotoPc(), Path.Combine(AppContext.BaseDirectory, "mobile", "Jarvis.apk"), (CentralAparelhos)ServicosAplicacao.Aparelhos);
-        }
-        catch (Exception ex)
-        {
-            LogServidor("FALHA ao montar: " + ex.GetBaseException().Message);
-            _app = null;
-            return;
-        }
-        var alvo = _app;
-        _fio = new Thread(() =>
-        {
+            await using var app = HospedeJarvis.Criar([], HospedeJarvis.PortaHttp, HospedeJarvis.PortaHttps,
+                cert, new ControleRemotoPc(), Path.Combine(AppContext.BaseDirectory, "mobile", "Jarvis.apk"),
+                (CentralAparelhos)ServicosAplicacao.Aparelhos, ServicosAplicacao.CredenciaisCelulares);
+
+            await app.StartAsync(ct).ConfigureAwait(false);
+            _ativo = true;
+            LogServidor($"Servidor pronto: HTTPS {HospedeJarvis.PortaHttps}; pareamento direto no app.");
+            DescobertaUdp? descoberta = null;
             try
             {
-                alvo.StartAsync().GetAwaiter().GetResult();
-                LogServidor($"Servidor pronto: HTTPS {HospedeJarvis.PortaHttps}; pareamento direto no app.");
-                try { _descoberta = new DescobertaUdp(HospedeJarvis.PortaHttp, HospedeJarvis.PortaHttps); }
+                try { descoberta = new DescobertaUdp(HospedeJarvis.PortaHttp, HospedeJarvis.PortaHttps); }
                 catch (Exception ex) { LogServidor("Descoberta UDP indisponível; QR e PIN continuam ativos: " + ex.GetType().Name); }
-                alvo.WaitForShutdown();
+                using var fim = CancellationTokenSource.CreateLinkedTokenSource(ct, app.Lifetime.ApplicationStopping);
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, fim.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (fim.IsCancellationRequested) { }
             }
-            catch (Exception ex) { LogServidor("FALHA ao rodar: " + ex.GetBaseException().Message); }
-        })
-        { IsBackground = true, Name = "Jarvis-Server" };
-        _fio.Start();
+            finally
+            {
+                _ativo = false;
+                descoberta?.Dispose();
+                using var prazo = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                await app.StopAsync(prazo.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception ex) { LogServidor("Falha no servidor local: " + ex.GetBaseException().Message); }
     }
 
     internal static void LogServidor(string linha)
@@ -61,25 +72,14 @@ public sealed class ServidorLocal : IDisposable
 
     public void Parar()
     {
-        var app = _app;
-        _app = null;
-        if (app is null) return;
-        try
-        {
-            // StopAsync pode capturar o Dispatcher do WPF. Nunca bloquear essa mesma thread
-            // aguardando uma continuação que precisa dela para terminar.
-            Task.Run(async () =>
-            {
-                using var prazo = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-                await app.StopAsync(prazo.Token).ConfigureAwait(false);
-            }).WaitAsync(TimeSpan.FromSeconds(4)).GetAwaiter().GetResult();
-        }
-        catch (Exception ex) { LogServidor("Encerramento: " + ex.GetType().Name); }
+        if (_vida is null) return;
+        var vida = _vida;
+        _vida = null;
+        vida.Cancel();
+        try { _execucao?.WaitAsync(TimeSpan.FromSeconds(4)).GetAwaiter().GetResult(); }
+        catch (TimeoutException) { LogServidor("Encerramento: tempo de espera excedido."); }
+        finally { vida.Dispose(); }
     }
-    public void Dispose()
-    {
-        Parar();
-        try { _descoberta?.Dispose(); } catch { }
-        _descoberta = null;
-    }
+
+    public void Dispose() => Parar();
 }

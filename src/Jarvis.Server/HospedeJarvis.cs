@@ -13,7 +13,7 @@ public static class HospedeJarvis
 
     public static WebApplication Criar(string[] args, int portaHttp = PortaHttp,
         int portaHttps = PortaHttps,
-        System.Security.Cryptography.X509Certificates.X509Certificate2? cert = null, IControleRemoto? controle = null, string? apk = null, CentralAparelhos? central = null)
+        System.Security.Cryptography.X509Certificates.X509Certificate2? cert = null, IControleRemoto? controle = null, string? apk = null, CentralAparelhos? central = null, Aparelhos? credenciais = null)
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.AddSignalR();
@@ -31,7 +31,7 @@ public static class HospedeJarvis
         });
         builder.Services.AddSingleton<IControleRemoto>(controle ?? new ControleRemotoIndisponivel());
         builder.Services.AddSingleton<PareamentoService>();
-        builder.Services.AddSingleton<Aparelhos>();
+        builder.Services.AddSingleton(credenciais ?? new Aparelhos());
         builder.Services.AddSingleton(central ?? new CentralAparelhos());
 
         builder.WebHost.ConfigureKestrel(o =>
@@ -67,11 +67,13 @@ public static class HospedeJarvis
                 await next();
                 return;
             }
-            if (!aparelhos.Validar(ctx.Request.Headers["X-Jarvis-Token"].ToString(), out var nomeCelular))
+            var token = ctx.Request.Headers["X-Jarvis-Token"].ToString();
+            if (!aparelhos.Validar(token, out var nomeCelular))
             {
                 ctx.Response.StatusCode = 401;
                 return;
             }
+            using var revogacao = aparelhos.Acompanhar(token).Register(ctx.Abort);
             PresencaRemota.Registrar(nomeCelular, ctx.Request.Headers["X-Jarvis-Bateria"], ctx.Request.Headers["X-Jarvis-Conexao"]);
             await next();
         });
@@ -194,6 +196,8 @@ public sealed record ParearCodigoReq(string Codigo, string? Nome);
 public sealed class Aparelhos
 {
     private readonly ConcurrentDictionary<string, string> _mapa = new();
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _acessos = new();
+    private readonly object _persistencia = new();
     private readonly string _arquivo;
     public Aparelhos()
     {
@@ -211,17 +215,51 @@ public sealed class Aparelhos
     public string Parear(string nome)
     {
         var t = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24));
-        _mapa[t] = nome;
-        Salvar();
+        lock (_persistencia)
+        {
+            _mapa[t] = nome;
+            try { Salvar(); }
+            catch { _mapa.TryRemove(t, out _); throw; }
+        }
         return t;
     }
     public bool Validar(string token, out string nome) => _mapa.TryGetValue(token, out nome!);
-    public void Remover(string token) { _mapa.TryRemove(token, out _); Salvar(); }
+    public AparelhoPareado[] Listar() => _mapa.Select(p => new AparelhoPareado(Id(p.Key), p.Value)).OrderBy(p => p.Nome).ToArray();
+
+    public void Revogar(string id)
+    {
+        var token = _mapa.Keys.FirstOrDefault(t => Id(t) == id);
+        if (token is not null) Remover(token);
+    }
+
+    public CancellationToken Acompanhar(string token)
+    {
+        var acesso = _acessos.GetOrAdd(token, _ => new CancellationTokenSource());
+        if (!_mapa.ContainsKey(token) && _acessos.TryRemove(token, out var revogado)) revogado.Cancel();
+        return acesso.Token;
+    }
+
+    public void Remover(string token)
+    {
+        lock (_persistencia)
+        {
+            if (!_mapa.TryRemove(token, out var nome)) return;
+            try { Salvar(); }
+            catch { _mapa[token] = nome; throw; }
+        }
+        if (_acessos.TryRemove(token, out var acesso)) acesso.Cancel();
+    }
+
+    private static string Id(string token) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
     private void Salvar()
     {
-        try { File.WriteAllText(_arquivo, System.Text.Json.JsonSerializer.Serialize(_mapa)); } catch { }
+        var temporario = _arquivo + ".tmp";
+        File.WriteAllText(temporario, System.Text.Json.JsonSerializer.Serialize(_mapa));
+        File.Move(temporario, _arquivo, overwrite: true);
     }
 }
+
+public sealed record AparelhoPareado(string Id, string Nome);
 
 public static class AparelhosIp
 {

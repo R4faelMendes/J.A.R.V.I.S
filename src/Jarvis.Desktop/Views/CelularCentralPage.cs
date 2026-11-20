@@ -31,6 +31,30 @@ public sealed class CelularCentralPage : PaginaBase
     {
         var stack = new StackPanel();
         stack.Children.Add(new Jarvis.Desktop.Views.PainelAparelhoView(ServicosAplicacao.Aparelhos));
+        var acessos = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
+        stack.Children.Add(CriarCardVidro(conteudo: acessos));
+        void AtualizarAcessos()
+        {
+            acessos.Children.Clear();
+            acessos.Children.Add(DiagnosticoPage.Label("CELULARES PAREADOS", "#00D800"));
+            var pares = ServicosAplicacao.CredenciaisCelulares.Listar();
+            if (pares.Length == 0) acessos.Children.Add(DiagnosticoPage.Label("Nenhum celular pareado."));
+            foreach (var par in pares)
+            {
+                var revogar = new Button { Content = $"Revogar acesso de {par.Nome}", HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 4) };
+                revogar.Click += (_, _) =>
+                {
+                    if (MessageBox.Show($"Remover o acesso de {par.Nome} a este PC?", "Jarvis", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+                    try { ServicosAplicacao.CredenciaisCelulares.Revogar(par.Id); AtualizarAcessos(); }
+                    catch (IOException ex) { MostrarToast("Não foi possível gravar a revogação. " + ex.Message); }
+                };
+                acessos.Children.Add(revogar);
+            }
+            var atualizar = new Button { Content = "Atualizar celulares pareados", HorizontalAlignment = HorizontalAlignment.Left };
+            atualizar.Click += (_, _) => AtualizarAcessos();
+            acessos.Children.Add(atualizar);
+        }
+        AtualizarAcessos();
         stack.Children.Add(DiagnosticoPage.Label("1 · INSTALAR NO CELULAR SEM USB", "#00D800"));
         var install = ServicosAplicacao.ConexaoCelular.ObterInstalacao();
         var downloadQr = new Image { Width = 180, Height = 180, HorizontalAlignment = HorizontalAlignment.Left };
@@ -85,5 +109,3 @@ public sealed class CelularCentralPage : PaginaBase
         finally { _busy = false; }
     }
 }
-
-

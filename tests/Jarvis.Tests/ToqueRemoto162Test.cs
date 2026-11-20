@@ -63,7 +63,10 @@ public sealed class ToqueRemoto162Test
             Assert.Equal(HttpStatusCode.BadRequest, (await https.PostAsJsonAsync("/api/tela/entrada", gesture with { Acao = "cmd" })).StatusCode);
             fake.Permitida = false;
             Assert.Equal((HttpStatusCode)423, (await https.PostAsJsonAsync("/api/tela/entrada", gesture)).StatusCode);
-            devices.Remover(token);
+            var ativo = devices.Acompanhar(token);
+            var dispositivo = devices.Listar().Single(d => d.Nome == "Teste toque temporário");
+            devices.Revogar(dispositivo.Id);
+            Assert.True(ativo.IsCancellationRequested);
             Assert.Equal(HttpStatusCode.Unauthorized, (await https.PostAsJsonAsync("/api/tela/entrada", gesture)).StatusCode);
         }
         finally { devices.Remover(token); await app.StopAsync(); }
@@ -76,18 +79,22 @@ public sealed class ToqueRemoto162Test
         public IReadOnlyList<AppInfo> Apps() => [];
         public Task<string> ExecutarAsync(string comando, string? id, bool confirmado) => Task.FromResult("");
     }
-    [Fact] public void ReatorMobileRenderizaPosesDistintasSemDependenciaDoAndroid()
+    [Fact] public void EsferaCompartilhadaFicaEstavelEmRepousoEReageAVoz()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory); while (root is not null && !File.Exists(Path.Combine(root.FullName, "Jarvis.sln"))) root = root.Parent;
         var folder = Path.Combine(root!.FullName, "artifacts", "preview"); Directory.CreateDirectory(folder);
-        byte[] Render(double time)
+        byte[] Render(double time, ReactorState estado)
         {
             using var surface = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(720, 720));
-            Jarvis.Mobile.Views.ReatorDetalhado.Desenhar(surface.Canvas, 720, 720, time, .1);
-            using var snapshot = surface.Snapshot(); using var backdrop = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(720, 720)); backdrop.Canvas.Clear(SkiaSharp.SKColor.Parse("#050D18")); backdrop.Canvas.DrawImage(snapshot, 0, 0);
+            Jarvis.Desktop.Renderers.AudioOrbRenderer.Desenhar(surface.Canvas, 720, 720, time, .65, estado);
+            using var snapshot = surface.Snapshot(); using var backdrop = SkiaSharp.SKSurface.Create(new SkiaSharp.SKImageInfo(720, 720)); backdrop.Canvas.Clear(SkiaSharp.SKColors.Black); backdrop.Canvas.DrawImage(snapshot, 0, 0);
             using var opaque = backdrop.Snapshot(); using var png = opaque.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100); return png.ToArray();
         }
-        var a = Render(0); var b = Render(4); Assert.False(a.SequenceEqual(b));
-        File.WriteAllBytes(Path.Combine(folder, "ReatorMobile162.png"), a); File.WriteAllBytes(Path.Combine(folder, "ReatorMobile162-giro.png"), b);
+        var repouso = Render(0, ReactorState.Repouso);
+        var ouvindo = Render(0, ReactorState.Ouvindo);
+        Assert.Equal(repouso, Render(4, ReactorState.Repouso));
+        Assert.False(repouso.SequenceEqual(ouvindo));
+        Assert.False(ouvindo.SequenceEqual(Render(4, ReactorState.Ouvindo)));
+        File.WriteAllBytes(Path.Combine(folder, "ReatorMobile-Repouso.png"), repouso); File.WriteAllBytes(Path.Combine(folder, "ReatorMobile-Ouvindo.png"), ouvindo);
     }
 }

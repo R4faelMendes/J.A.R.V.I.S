@@ -15,6 +15,7 @@ public sealed class SpotifyRemotoService : Service
     private CancellationTokenSource? _life;
     private MediaSession? _session;
     private EstadoMidia _state = new(false, "Conectando ao Spotify do PC…", "", "Spotify", false);
+    private EstadoMidia? _renderizado;
     private Android.Graphics.Bitmap? _cover;
     private readonly VolumeProvider _remoteVolume = new VolumeRemoto();
     public override IBinder? OnBind(Intent? intent) => null;
@@ -30,7 +31,8 @@ public sealed class SpotifyRemotoService : Service
         Ativo = true; App.Conexao.IniciarMonitor();
         if (OperatingSystem.IsAndroidVersionAtLeast(26)) { var manager = (NotificationManager)GetSystemService(NotificationService)!; manager.CreateNotificationChannel(new NotificationChannel(Channel, "Spotify no computador", NotificationImportance.Low)); }
         _session = new MediaSession(this, "JarvisSpotifyRemoto"); _session.SetFlags(MediaSessionFlags.HandlesMediaButtons | MediaSessionFlags.HandlesTransportControls); _session.SetCallback(new Controles(this)); _session.SetPlaybackToRemote(_remoteVolume); _session.Active = true;
-        StartForeground(NotificationId, CriarNotificacao());
+        using var notificacao = CriarNotificacao();
+        StartForeground(NotificationId, notificacao);
         _life = new CancellationTokenSource(); _ = MonitorarAsync(_life.Token);
     }
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
@@ -63,10 +65,43 @@ public sealed class SpotifyRemotoService : Service
     private void Atualizar()
     {
         if (_session is null) return;
-        var old = _cover; _cover = _state.Capa is { Length: > 0 } bytes ? Android.Graphics.BitmapFactory.DecodeByteArray(bytes, 0, bytes.Length) : null;
-        using var metadata = new MediaMetadata.Builder(); metadata.PutString(MediaMetadata.MetadataKeyTitle, _state.Titulo); metadata.PutString(MediaMetadata.MetadataKeyArtist, _state.Artista); if (_cover is not null) metadata.PutBitmap(MediaMetadata.MetadataKeyAlbumArt, _cover); _session.SetMetadata(metadata.Build());
-        using var playback = new PlaybackState.Builder(); playback.SetActions(PlaybackState.ActionPlay | PlaybackState.ActionPause | PlaybackState.ActionPlayPause | PlaybackState.ActionSkipToNext | PlaybackState.ActionSkipToPrevious); playback.SetState(_state.Tocando ? PlaybackStateCode.Playing : PlaybackStateCode.Paused, (long)(_state.PosicaoSegundos * 1000), _state.Tocando ? 1 : 0); _session.SetPlaybackState(playback.Build());
-        ((NotificationManager)GetSystemService(NotificationService)!).Notify(NotificationId, CriarNotificacao()); old?.Dispose();
+        var anterior = _renderizado;
+        var mudouCapa = !ReferenceEquals(anterior?.Capa, _state.Capa);
+        var mudouMetadados = mudouCapa || anterior?.Titulo != _state.Titulo || anterior?.Artista != _state.Artista;
+        var mudouReproducao = anterior?.Tocando != _state.Tocando;
+
+        Android.Graphics.Bitmap? capaAnterior = null;
+        if (mudouCapa)
+        {
+            var capa = _state.Capa is { Length: > 0 } bytes ? Android.Graphics.BitmapFactory.DecodeByteArray(bytes, 0, bytes.Length) : null;
+            capaAnterior = _cover;
+            _cover = capa;
+        }
+        using var liberarCapa = capaAnterior;
+        if (mudouMetadados)
+        {
+            using var builder = new MediaMetadata.Builder();
+            builder.PutString(MediaMetadata.MetadataKeyTitle, _state.Titulo);
+            builder.PutString(MediaMetadata.MetadataKeyArtist, _state.Artista);
+            if (_cover is not null) builder.PutBitmap(MediaMetadata.MetadataKeyAlbumArt, _cover);
+            using var metadata = builder.Build();
+            _session.SetMetadata(metadata);
+        }
+        if (mudouReproducao || anterior?.PosicaoSegundos != _state.PosicaoSegundos)
+        {
+            using var builder = new PlaybackState.Builder();
+            builder.SetActions(PlaybackState.ActionPlay | PlaybackState.ActionPause | PlaybackState.ActionPlayPause | PlaybackState.ActionSkipToNext | PlaybackState.ActionSkipToPrevious);
+            builder.SetState(_state.Tocando ? PlaybackStateCode.Playing : PlaybackStateCode.Paused, (long)(_state.PosicaoSegundos * 1000), _state.Tocando ? 1 : 0);
+            using var playback = builder.Build();
+            _session.SetPlaybackState(playback);
+        }
+        if (mudouMetadados || mudouReproducao)
+        {
+            using var notificacao = CriarNotificacao();
+            using var manager = (NotificationManager)GetSystemService(NotificationService)!;
+            manager.Notify(NotificationId, notificacao);
+        }
+        _renderizado = _state;
     }
     private PendingIntent Acao(string action, int code) => PendingIntent.GetService(this, code, new Intent(this, typeof(SpotifyRemotoService)).SetAction(action), AndroidCompat.IntentFlags)!;
     private Notification CriarNotificacao()

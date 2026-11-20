@@ -72,6 +72,18 @@ public sealed class TransmissaoTela : ITransmissaoTela
         }
         public QuadroTela Capturar()
         {
+            var instante = CapturarNoBuffer();
+            return new QuadroTela(_buffer.ToArray(), _scaled.Width, _scaled.Height, instante);
+        }
+
+        public ReadOnlyMemory<byte> CapturarJpeg()
+        {
+            CapturarNoBuffer();
+            return _buffer.GetBuffer().AsMemory(0, (int)_buffer.Length);
+        }
+
+        private DateTimeOffset CapturarNoBuffer()
+        {
             _owner.VerificarPermissao();
             var old = SetThreadDpiAwarenessContext(-4);
             try
@@ -96,7 +108,7 @@ public sealed class TransmissaoTela : ITransmissaoTela
                 }
                 _buffer.Position = 0; _buffer.SetLength(0); _scaled.Save(_buffer, _codec, _parameters);
                 var instant = DateTimeOffset.UtcNow; lock (_owner._gate) _owner._ultima = instant;
-                return new(_buffer.ToArray(), _scaled.Width, _scaled.Height, instant);
+                return instant;
             }
             finally { if (old != 0) SetThreadDpiAwarenessContext(old); }
         }

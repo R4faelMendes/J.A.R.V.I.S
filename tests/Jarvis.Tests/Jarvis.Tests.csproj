@@ -21,7 +21,6 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Compile Include="..\..\src\Jarvis.Mobile\Services\DecodificadorQr.cs" Link="Mobile\DecodificadorQr.cs" />
-    <Compile Include="..\..\src\Jarvis.Mobile\Views\ReatorDetalhado.cs" Link="Mobile\ReatorDetalhado.cs" />
   </ItemGroup>
 
   <ItemGroup>

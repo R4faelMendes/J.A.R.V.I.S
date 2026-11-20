@@ -4,6 +4,7 @@ public partial class App : Application
 {
     public static event Action<bool>? AtividadeMudou;
     public static Jarvis.Mobile.Services.ConexaoPc Conexao { get; } = new();
+    public static Services.ContaJarvis Conta { get; } = new();
     public static Jarvis.Mobile.Services.AgendaLocal Agenda { get; } = new();
     public static string? PaginaPendente { get; set; }
     public static bool EmPrimeiroPlano { get; private set; } = true;
@@ -35,10 +36,12 @@ public partial class App : Application
         if (_iniciou) return; _iniciou = true;
         try
         {
-            await Conexao.CarregarAsync(); Conexao.IniciarMonitor();
+            await Conexao.CarregarAsync();
+            if (Conexao.Favorito is { } favorito && App.LinkPareamento is null) await Conexao.SelecionarPcAsync(favorito);
+            Conexao.IniciarMonitor();
             Services.Notificacoes.Reagendar(Agenda.Listar()); Services.MidiaNotificacao.Restaurar(); Services.DispositivoCompanheiro.Restaurar();
             if (PaginaPendente is { } destino) { PaginaPendente = null; await Shell.Current.GoToAsync(destino); return; }
-            if (App.LinkPareamento is not null || Conexao.BaseUrl is null)
+            if (App.LinkPareamento is not null)
             {
                 var shell = Shell.Current;
                 if (shell is not null && !(shell.CurrentState?.Location?.ToString().Contains("parear") ?? false)) await shell.GoToAsync("parear");
@@ -50,6 +53,6 @@ public partial class App : Application
             // Falha na restauração de uma conexão não deve derrubar o aplicativo.
         }
     }
-    protected override void OnSleep() { EmPrimeiroPlano = false; AtividadeMudou?.Invoke(false); if (!Services.MidiaNotificacao.EmExecucao && !Services.DispositivoCompanheiro.Ativo && !Services.EspelhoCelular.Ativo) Conexao.PararMonitor(); Views.ReatorView.DefinirAppAtivo(false); Views.ReactorArt.DefinirAppAtivo(false); base.OnSleep(); }
-    protected override void OnResume() { EmPrimeiroPlano = true; AtividadeMudou?.Invoke(true); Conexao.IniciarMonitor(); Services.DispositivoCompanheiro.Restaurar(); Views.ReatorView.DefinirAppAtivo(true); Views.ReactorArt.DefinirAppAtivo(true); base.OnResume(); }
+    protected override void OnSleep() { EmPrimeiroPlano = false; AtividadeMudou?.Invoke(false); if (!Services.MidiaNotificacao.EmExecucao && !Services.DispositivoCompanheiro.Ativo && !Services.EspelhoCelular.Ativo) Conexao.PararMonitor(); base.OnSleep(); }
+    protected override void OnResume() { EmPrimeiroPlano = true; AtividadeMudou?.Invoke(true); Conexao.IniciarMonitor(); Services.DispositivoCompanheiro.Restaurar(); base.OnResume(); }
 }

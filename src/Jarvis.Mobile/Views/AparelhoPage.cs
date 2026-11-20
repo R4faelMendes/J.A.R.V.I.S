@@ -13,14 +13,14 @@ public sealed class AparelhoPage : ContentPage
     public AparelhoPage()
     {
         Title = "Meu aparelho";
-        var root = new VerticalStackLayout { Padding = 20, Spacing = 16 };
-        root.Add(new Label { Text = "Seu celular, no computador", FontSize = 26, FontAttributes = FontAttributes.Bold });
+        var root = new VerticalStackLayout { Padding = new Thickness(20, 16, 20, 28), MaximumWidthRequest = 760, Spacing = 16 };
+        root.Add(new Label { Text = "Meu aparelho", Style = (Style)Application.Current.Resources["Titulo"] });
         root.Add(new Label { Text = "Bateria, carregamento, espaço livre e conexão aparecem em Dispositivos no Jarvis do PC.", FontSize = 13 });
         root.Add(_dados);
         Border Card(string icon, string name, params View[] contents)
         {
             var stack = new VerticalStackLayout { Spacing = 9 }; var heading = new HorizontalStackLayout { Spacing = 10 }; heading.Add(new Image { Source = icon, WidthRequest = 23, HeightRequest = 23 }); heading.Add(new Label { Text = name, FontSize = 12, VerticalOptions = LayoutOptions.Center }); stack.Add(heading); foreach (var view in contents) stack.Add(view);
-            return new Border { Content = stack, Padding = 18, BackgroundColor = Color.FromArgb("#101010"), Stroke = Color.FromArgb("#333333"), StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 5 } };
+            return new Border { Content = stack, Padding = 18, BackgroundColor = Color.FromArgb("#101010"), Stroke = Color.FromArgb("#333333"), StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 } };
         }
         root.Add(Card("battery_icon.png", "BATERIA DO APARELHO", _bateria, _carga, _progresso));
         var info = new Grid { ColumnSpacing = 10, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Star) } }; info.Add(Card("storage_icon.png", "ESPAÇO LIVRE", _armazenamento), 0); info.Add(Card("wifi_icon.png", "CONEXÃO", _rede), 1); root.Add(info); root.Add(_estado); root.Add(_vinculo);
@@ -48,8 +48,27 @@ public sealed class AparelhoPage : ContentPage
         Content = new ScrollView { Content = root };
         _timer = Dispatcher.CreateTimer(); _timer.Interval = TimeSpan.FromSeconds(1); _timer.Tick += (_, _) => Atualizar();
     }
-    protected override void OnAppearing() { base.OnAppearing(); DispositivoCompanheiro.Restaurar(); Atualizar(); _timer.Start(); }
-    protected override void OnDisappearing() { _timer.Stop(); base.OnDisappearing(); }
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        App.AtividadeMudou += Atividade;
+        DispositivoCompanheiro.Restaurar();
+        Atividade(App.EmPrimeiroPlano);
+    }
+
+    protected override void OnDisappearing()
+    {
+        App.AtividadeMudou -= Atividade;
+        _timer.Stop();
+        base.OnDisappearing();
+    }
+
+    private void Atividade(bool ativa)
+    {
+        if (!ativa) { _timer.Stop(); return; }
+        Atualizar();
+        _timer.Start();
+    }
     private void Atualizar()
     {
         var d = DispositivoCompanheiro.Coletar();

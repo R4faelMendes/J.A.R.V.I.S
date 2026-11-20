@@ -3,12 +3,12 @@
        xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
        xmlns:views="clr-namespace:Jarvis.Mobile.Views"
-       Shell.FlyoutBehavior="Disabled" Title="Jarvis" Shell.BackgroundColor="#000000" Shell.ForegroundColor="#FFFFFF" Shell.TitleColor="#FFFFFF" Shell.TabBarBackgroundColor="#04111B" Shell.TabBarForegroundColor="#00D800" Shell.TabBarTitleColor="#00D800" Shell.TabBarUnselectedColor="#BBBBBB">
+       Shell.FlyoutBehavior="Disabled" Title="Jarvis" Shell.BackgroundColor="#000000" Shell.ForegroundColor="#FFFFFF" Shell.TitleColor="#FFFFFF" Shell.TabBarBackgroundColor="#101010" Shell.TabBarForegroundColor="#00D800" Shell.TabBarTitleColor="#00D800" Shell.TabBarUnselectedColor="#BBBBBB">
   <TabBar>
     <ShellContent Title="Início" Icon="home_icon.png" ContentTemplate="{DataTemplate views:InicioPage}" Route="inicio"/>
     <ShellContent Title="Apps" Icon="apps_icon.png" ContentTemplate="{DataTemplate views:AppsPage}" Route="apps"/>
     <ShellContent Title="Controles" Icon="gauge_icon.png" ContentTemplate="{DataTemplate views:ControlePage}" Route="controles"/>
-    <ShellContent Title="Agenda" Icon="calendar_icon.png" ContentTemplate="{DataTemplate views:AgendaPage}" Route="agenda"/>
+    <ShellContent Title="Meus PCs" Icon="windows_icon.png" ContentTemplate="{DataTemplate views:MeusPcsPage}" Route="meus-pcs"/>
     <ShellContent Title="Mais" Icon="more_icon.png" ContentTemplate="{DataTemplate views:MaisPage}" Route="mais"/>
   </TabBar>
 </Shell>

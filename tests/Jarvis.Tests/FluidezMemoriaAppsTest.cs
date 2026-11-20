@@ -36,7 +36,7 @@ public sealed class FluidezMemoriaAppsTest
         new OpcoesTransmissao().Validar();
         Assert.Throws<ArgumentException>(() => new OpcoesTransmissao(1000).Validar());
         Assert.Throws<ArgumentException>(() => new OpcoesTransmissao(Largura: 99999).Validar());
-        var tela = new TransmissaoTela();
+        var tela = new TransmissaoTela { Permitida = false };
         Assert.Throws<InvalidOperationException>(() => tela.AbrirSessao(null, new()));
     }
     [Fact]
@@ -49,10 +49,19 @@ public sealed class FluidezMemoriaAppsTest
             foreach (var width in new[] { 960, 1280 })
             {
                 using var session = tela.AbrirSessao(null, new(60, width));
-                session.Capturar(); var watch = Stopwatch.StartNew(); long bytes = 0;
-                for (var i = 0; i < 60; i++) { var frame = session.Capturar(); Assert.Equal((byte)216, frame.Jpeg[1]); Assert.InRange(frame.Largura, 1, width); bytes += frame.Jpeg.Length; }
+                var foto = session.Capturar();
+                Assert.InRange(foto.Largura, 1, width);
+                var watch = Stopwatch.StartNew();
+                long bytes = 0;
+                for (var i = 0; i < 60; i++)
+                {
+                    var jpeg = session.CapturarJpeg();
+                    Assert.Equal((byte)216, jpeg.Span[1]);
+                    Assert.Equal((byte)217, jpeg.Span[^1]);
+                    bytes += jpeg.Length;
+                }
                 watch.Stop(); measures.Add(new { largura = width, motor = session.Motor, capturasPorSegundo = 60 / watch.Elapsed.TotalSeconds, mediaMs = watch.Elapsed.TotalMilliseconds / 60, mediaBytes = bytes / 60 });
-                tela.Permitida = false; Assert.Throws<InvalidOperationException>(() => session.Capturar()); tela.Permitida = true;
+                tela.Permitida = false; Assert.Throws<InvalidOperationException>(() => session.CapturarJpeg()); tela.Permitida = true;
             }
             var root = new DirectoryInfo(AppContext.BaseDirectory); while (root is not null && !File.Exists(Path.Combine(root.FullName, "Jarvis.sln"))) root = root.Parent;
             var target = Path.Combine(root!.FullName, "artifacts", "verificacao-fluidez.json"); Directory.CreateDirectory(Path.GetDirectoryName(target)!);

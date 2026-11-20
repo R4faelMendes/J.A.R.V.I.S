@@ -33,11 +33,17 @@ internal sealed class QuadroAoVivo : ContentView
         }; _image.GestureRecognizers.Add(tap);
 #endif
     }
-    public async Task ApresentarAsync(byte[] jpeg, CancellationToken ct)
+    public async Task ApresentarAsync(ReadOnlyMemory<byte> jpeg, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
 #if ANDROID
-        var bitmap = await Task.Run(() => Android.Graphics.BitmapFactory.DecodeByteArray(jpeg, 0, jpeg.Length), ct);
+        var bitmap = await Task.Run(() =>
+        {
+            if (System.Runtime.InteropServices.MemoryMarshal.TryGetArray(jpeg, out var bytes))
+                return Android.Graphics.BitmapFactory.DecodeByteArray(bytes.Array!, bytes.Offset, bytes.Count);
+            var copia = jpeg.ToArray();
+            return Android.Graphics.BitmapFactory.DecodeByteArray(copia, 0, copia.Length);
+        }, ct).ConfigureAwait(false);
         if (bitmap is null) throw new InvalidOperationException("Não foi possível decodificar o quadro.");
         try
         {
@@ -51,8 +57,17 @@ internal sealed class QuadroAoVivo : ContentView
         }
         finally { bitmap?.Dispose(); }
 #else
-        using (var decoded = SkiaSharp.SKBitmap.Decode(jpeg)) { _quadroLargura = decoded.Width; _quadroAltura = decoded.Height; }
-        await MainThread.InvokeOnMainThreadAsync(() => { ct.ThrowIfCancellationRequested(); _image.Source = ImageSource.FromStream(() => new MemoryStream(jpeg, false)); });
+        var info = SkiaSharp.SKBitmap.DecodeBounds(jpeg.Span);
+        if (info.Width <= 0 || info.Height <= 0) throw new InvalidOperationException("Não foi possível decodificar o quadro.");
+        // O ImageSource lê o quadro depois da callback voltar à transmissão.
+        var copia = jpeg.ToArray();
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+            _quadroLargura = info.Width;
+            _quadroAltura = info.Height;
+            _image.Source = ImageSource.FromStream(() => new MemoryStream(copia, false));
+        });
 #endif
     }
     public void Limpar()

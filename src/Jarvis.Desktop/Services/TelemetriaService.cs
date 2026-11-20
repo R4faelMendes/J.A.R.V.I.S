@@ -16,7 +16,8 @@ public sealed class TelemetriaService : IDisposable
                 _monitor ??= ServicosAplicacao.CriarMonitor();
                 static double? Validar(double v) => double.IsFinite(v) && v >= 0 ? v : null;
                 var ram = Jarvis.Sistema.MemoriaWindows.Ler();
-                return new TelemetriaPc(Validar(_monitor.CpuPercent), ram?.Percentual ?? Validar(_monitor.MemoriaPercent), Validar(_monitor.GpuPercent), Validar(_monitor.DiscoPercent), _monitor.TemperaturaC > 0 ? Validar(_monitor.TemperaturaC) : null, DateTimeOffset.UtcNow, ram?.UsadaBytes, ram?.TotalBytes);
+                var temperatura = _monitor.TemperaturaC;
+                return new TelemetriaPc(Validar(_monitor.CpuPercent), ram?.Percentual ?? Validar(_monitor.MemoriaPercent), Validar(_monitor.GpuPercent), Validar(_monitor.DiscoPercent), temperatura > 0 ? Validar(temperatura) : null, DateTimeOffset.UtcNow, ram?.UsadaBytes, ram?.TotalBytes);
             });
         }
         finally { _gate.Release(); }

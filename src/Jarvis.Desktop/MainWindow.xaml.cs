@@ -6,7 +6,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Jarvis.Core;
-using Jarvis.Data;
 using Jarvis.Desktop.Services;
 using Jarvis.Desktop.ViewModels;
 using Jarvis.Desktop.Views.Pages;
@@ -18,7 +17,6 @@ public partial class MainWindow : Window
     private readonly MainViewModel _vm = new();
     private DispatcherTimer? _toastTimer;
     private DispatcherTimer? _celularTimer;
-    private readonly BancoJarvis _banco = new();
 
     public MainWindow()
     {
@@ -36,7 +34,10 @@ public partial class MainWindow : Window
             if (e.PropertyName == nameof(MainViewModel.PaginaAtual))
                 AtualizarConteudo(_vm.PaginaAtual);
             if (e.PropertyName == nameof(MainViewModel.EstadoReator))
+            {
                 RotuloEstado.Text = Rotulo(_vm.EstadoReator);
+                SincronizarMedidores();
+            }
         };
 
         AtualizarConteudo(PageType.Nucleo);
@@ -56,29 +57,48 @@ public partial class MainWindow : Window
     {
         _celularTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _celularTimer.Tick += (_, _) => AtualizarStatusCelular();
-        _celularTimer.Start();
-        AtualizarStatusCelular();
+        StateChanged += (_, _) => SincronizarMedidores();
+        IsVisibleChanged += (_, _) => SincronizarMedidores();
+        SincronizarMedidores();
+    }
+
+    private bool PodeAtualizarInterface => !_fechando && IsVisible && WindowState != WindowState.Minimized;
+
+    private void SincronizarMedidores()
+    {
+        if (!PodeAtualizarInterface)
+        {
+            _celularTimer?.Stop();
+            _medidor?.Stop();
+            return;
+        }
+
+        if (_celularTimer is { IsEnabled: false })
+        {
+            AtualizarStatusCelular();
+            _celularTimer.Start();
+        }
+        if (_medidor is not null)
+        {
+            _medidor.Interval = TimeSpan.FromMilliseconds(
+                ConfiguracaoApp.ModoEconomico ? 250 : _vm.EstadoReator == ReactorState.Falando ? 33 : 100);
+            if (!_medidor.IsEnabled)
+            {
+                AtualizarNivelAudio();
+                _medidor.Start();
+            }
+        }
     }
 
     private void AtualizarStatusCelular()
     {
-        try
-        {
-            var celular = ServicosAplicacao.CelularOnline;
-            if (celular is not null)
-            {
-                TxtStatusCelular.Text = $"{celular} conectado";
-                DotStatus.Fill = (Brush)Application.Current.Resources["CorVerde"];
-                TxtStatusCelular.Foreground = (Brush)Application.Current.Resources["CorVerde"];
-            }
-            else
-            {
-                TxtStatusCelular.Text = "Celular desconectado";
-                DotStatus.Fill = (Brush)Application.Current.Resources["TextoNevoa"];
-                TxtStatusCelular.Foreground = (Brush)Application.Current.Resources["TextoGelo"];
-            }
-        }
-        catch { }
+        var celular = ServicosAplicacao.CelularOnline;
+        var texto = celular is null ? "Celular desconectado" : $"{celular} conectado";
+        if (TxtStatusCelular.Text == texto) return;
+
+        TxtStatusCelular.Text = texto;
+        if (TryFindResource(celular is null ? "TextoNevoa" : "CorVerde") is Brush ponto) DotStatus.Fill = ponto;
+        if (TryFindResource(celular is null ? "TextoGelo" : "CorVerde") is Brush textoCor) TxtStatusCelular.Foreground = textoCor;
     }
 
     private void AtualizarConteudo(PageType pagina)
@@ -127,10 +147,6 @@ public partial class MainWindow : Window
         _motor?.Falar(texto);
     }
 
-    private void DockReator_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-    {
-        _vm.AtivarEscutaCommand.Execute(null);
-    }
     private void Interromper_Click(object sender, RoutedEventArgs e) => _motor?.Interromper();
     private void Minimizar_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void Maximizar_Click(object sender, RoutedEventArgs e) => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
@@ -154,7 +170,13 @@ public partial class MainWindow : Window
     private readonly CancellationTokenSource _vidaJanela = new();
     private Task? _inicioVoz;
     private bool _fechando;
-    private void AoAlterarConfiguracao(object? sender, EventArgs e) => Dispatcher.InvokeAsync(AtualizarUsuario);
+    private void AoAlterarConfiguracao(object? sender, EventArgs e) => Dispatcher.InvokeAsync(() =>
+    {
+        AtualizarUsuario();
+        SincronizarMedidores();
+    });
+
+    private void AtualizarNivelAudio() => _vm.NivelAudio = _motor!.NivelAudio;
     private void IniciarVoz()
     {
         _motor = new MotorVoz(LocalizarModelos(), ServicosAplicacao.Email, ServicosAplicacao.Midia, ServicosAplicacao.Apps);
@@ -172,12 +194,9 @@ public partial class MainWindow : Window
             var hwnd = new WindowInteropHelper(this).Handle;
             HwndSource.FromHwnd(hwnd)?.AddHook(HotkeyHook);
             RegisterHotKey(hwnd, 1, 0x4002, 0x20);
-            _medidor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-            _medidor.Tick += (_, _) => {
-                _vm.NivelAudio = _motor.NivelAudio;
-                _medidor.Interval = TimeSpan.FromMilliseconds(_vm.EstadoReator == ReactorState.Falando && !ConfiguracaoApp.ModoEconomico ? 33 : 100);
-            };
-            _medidor.Start();
+            _medidor = new DispatcherTimer(DispatcherPriority.Background);
+            _medidor.Tick += (_, _) => AtualizarNivelAudio();
+            SincronizarMedidores();
             if (ServicosAplicacao.PreparacaoVoz.Verificar().Any(r => !r.Pronto) && !Environment.GetCommandLineArgs().Contains("--startup"))
                 NavegarPara(PageType.PreparacaoVoz);
             _inicioVoz = InicializarServicosAsync();
@@ -192,7 +211,6 @@ public partial class MainWindow : Window
             if (_inicioVoz is { IsCompleted: false }) _ = _inicioVoz.ContinueWith(_ => _motor.Dispose());
             else _motor.Dispose();
             MotorVoz.RegistrarVoz("encerramento", "voz liberada");
-            _banco.Dispose();
         };
     }
     private async Task InicializarServicosAsync()

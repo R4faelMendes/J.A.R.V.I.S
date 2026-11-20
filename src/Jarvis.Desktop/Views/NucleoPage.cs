@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Jarvis.Core;
 using Jarvis.Desktop.Services;
@@ -9,9 +10,39 @@ namespace Jarvis.Desktop.Views.Pages;
 public sealed class NucleoPage : PaginaBase
 {
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(3) };
-    private bool _busy, _saiu; private TextBlock _song = null!, _artist = null!, _device = null!, _connection = null!, _tempo = null!; private TelemetryGauge _cpuGauge = null!, _ramGauge = null!; private TelemetryTrend _cpuTrend = null!, _ramTrend = null!; private Image _cover = null!; private ProgressBar _posicao = null!; private StackPanel _emailRows = null!; private Button _play = null!; private bool _tocando; private DateTime _emailSync = DateTime.MinValue;
+    private bool _busy; private TextBlock _song = null!, _artist = null!, _device = null!, _connection = null!, _tempo = null!; private TelemetryGauge _cpuGauge = null!, _ramGauge = null!; private TelemetryTrend _cpuTrend = null!, _ramTrend = null!; private Image _cover = null!; private ProgressBar _posicao = null!; private StackPanel _emailRows = null!; private TextBlock _iconePlay = null!; private DateTime _emailSync = DateTime.MinValue;
+    private Window? _janela;
+    private byte[]? _ultimaCapa;
+    private int _larguraCapa;
+    private bool Ativo => IsLoaded && IsVisible && _janela?.WindowState != WindowState.Minimized;
     public Action? AtivarEscutaCallback { get; set; }
-    public NucleoPage() : base("", "", false) { _timer.Tick += async (_, _) => await AtualizarAsync(); Loaded += async (_, _) => { _saiu = false; _timer.Start(); await AtualizarAsync(); }; Unloaded += (_, _) => { _saiu = true; _timer.Stop(); }; }
+    public NucleoPage() : base("", "", false)
+    {
+        _timer.Tick += async (_, _) => await AtualizarAsync();
+        IsVisibleChanged += (_, _) => AtualizarVisibilidade();
+        Loaded += (_, _) =>
+        {
+            _janela = Window.GetWindow(this);
+            if (_janela is not null) _janela.StateChanged += AoMudarJanela;
+            AtualizarVisibilidade();
+        };
+        Unloaded += (_, _) =>
+        {
+            _timer.Stop();
+            if (_janela is not null) _janela.StateChanged -= AoMudarJanela;
+            _janela = null;
+        };
+    }
+
+    private void AoMudarJanela(object? sender, EventArgs e) => AtualizarVisibilidade();
+
+    private void AtualizarVisibilidade()
+    {
+        if (!Ativo) { _timer.Stop(); return; }
+        if (_timer.IsEnabled) return;
+        _timer.Start();
+        _ = AtualizarAsync();
+    }
     private static Brush B(string cor) => (Brush)new BrushConverter().ConvertFromString(cor)!;
     private static TextBlock T(string text, double size = 12, string cor = Theme.Nevoa) => new() { Text = text, FontSize = size, Foreground = B(cor), TextWrapping = TextWrapping.Wrap, FontFamily = (FontFamily)Application.Current.Resources["FonteTexto"] };
     private static Border Card(UIElement content) {
@@ -51,7 +82,7 @@ public sealed class NucleoPage : PaginaBase
         _cpuGauge = new TelemetryGauge(); _ramGauge = new TelemetryGauge { Accent = B(Theme.Gelo) }; _cpuTrend = new TelemetryTrend(); _ramTrend = new TelemetryTrend { Accent = B(Theme.Gelo) }; sys.Children.Add(Metric("CPU", _cpuGauge, _cpuTrend)); sys.Children.Add(Metric("RAM", _ramGauge, _ramTrend)); var detail = Go("Desempenho  ›", PageType.Desempenho); detail.FontSize = 10; detail.Margin = new Thickness(0, 12, 0, 0); sys.Children.Add(detail); side.Children.Add(Card(sys));
         var phone = new StackPanel(); phone.Children.Add(T("▯   Seu celular", 13, Theme.Gelo)); _device = T("Nenhum celular conectado", 13, Theme.Gelo); _device.Margin = new Thickness(0, 16, 0, 4); phone.Children.Add(_device); _connection = T("Conecte o app pelo QR code", 10); phone.Children.Add(_connection); phone.Children.Add(Go("Parear aplicativo  ›", PageType.Celular)); var phoneCard = Card(phone); phoneCard.Margin = new Thickness(0, 12, 0, 0); side.Children.Add(phoneCard); root.Children.Add(side);
         var music = new StackPanel(); music.Children.Add(T("♫   Música", 13, Theme.Gelo)); var track = new Grid { Margin = new Thickness(0, 16, 0, 12) }; track.ColumnDefinitions.Add(new() { Width = new GridLength(64) }); track.ColumnDefinitions.Add(new()); _cover = new Image { Stretch = Stretch.UniformToFill }; var album = new Grid(); album.Children.Add(new Border { Background = B("#0D3348"), CornerRadius = new CornerRadius(8) }); album.Children.Add(new TextBlock { Text = "♫", FontSize = 26, Foreground = B(Theme.CianoHolo), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }); album.Children.Add(_cover); album.Width = 54; album.Height = 54; track.Children.Add(album); var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center }; _song = T("Spotify", 15, Theme.Gelo); _artist = T("Conecte seu player para ouvir.", 11); names.Children.Add(_song); names.Children.Add(_artist); Grid.SetColumn(names, 1); track.Children.Add(names); music.Children.Add(track); _posicao = new ProgressBar { Height = 3, Maximum = 100, Margin = new Thickness(0, 0, 0, 5) }; _tempo = T("", 10); music.Children.Add(_posicao); music.Children.Add(_tempo); var controls = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        foreach (var (label, cmd) in new[] { ("|‹", ComandoMidia.Anterior), ("▶", ComandoMidia.Alternar), ("›|", ComandoMidia.Proxima) }) { var b = new Button { Content = T(label,16,Theme.CianoHolo), FontSize = 16, Width = 48, Height = 40, Padding = new Thickness(0), Margin = new Thickness(0, 0, 12, 0), Foreground = B(Theme.CianoHolo), Background = Brushes.Transparent }; b.Click += async (_, _) => await MidiaAsync(cmd); controls.Children.Add(b); if (cmd == ComandoMidia.Alternar) _play = b; }
+        foreach (var (label, cmd) in new[] { ("|‹", ComandoMidia.Anterior), ("▶", ComandoMidia.Alternar), ("›|", ComandoMidia.Proxima) }) { var icone = T(label,16,Theme.CianoHolo); var b = new Button { Content = icone, FontSize = 16, Width = 48, Height = 40, Padding = new Thickness(0), Margin = new Thickness(0, 0, 12, 0), Foreground = B(Theme.CianoHolo), Background = Brushes.Transparent }; b.Click += async (_, _) => await MidiaAsync(cmd); controls.Children.Add(b); if (cmd == ComandoMidia.Alternar) _iconePlay = icone; }
         music.Children.Add(controls); var mc = Card(music); mc.Margin = new Thickness(0, 16, 0, 0); side.Children.Add(mc);
         void Layout(double width) {
             var narrow = width < 940;
@@ -77,17 +108,51 @@ public sealed class NucleoPage : PaginaBase
     private async Task MidiaAsync(ComandoMidia cmd) { try { if (!await ServicosAplicacao.Midia.ExecutarAsync(cmd)) MostrarToast("Abra o Spotify e inicie uma música no PC."); await AtualizarAsync(); } catch (Exception ex) { MostrarToast(ex.Message); } }
     private async Task AtualizarAsync()
     {
-        if (_busy || _saiu) return; _busy = true; try
+        if (_busy || !Ativo) return; _busy = true; try
         {
-            var t = await ServicosAplicacao.Telemetria.ObterAsync(); if (_saiu) return; _cpuGauge.Value = t.Cpu ?? double.NaN; _ramGauge.Value = t.Memoria ?? double.NaN; _cpuTrend.Add(t.Cpu); _ramTrend.Add(t.Memoria);
+            var t = await ServicosAplicacao.Telemetria.ObterAsync(); if (!Ativo) return; _cpuGauge.Value = t.Cpu ?? double.NaN; _ramGauge.Value = t.Memoria ?? double.NaN; _cpuTrend.Add(t.Cpu); _ramTrend.Add(t.Memoria);
             var device = ServicosAplicacao.EstadoCelular; _device.Text = device?.Nome ?? "Nenhum celular conectado"; _connection.Text = device is null ? "Conecte o app pelo QR code" : device.Conexao + (device.Bateria.HasValue ? $" · {device.Bateria}% de bateria" : " · app autenticado");
-            var m = await ServicosAplicacao.Midia.ObterEstadoAsync(); if (_saiu) return; _song.Text = m.Disponivel ? m.Titulo : "Spotify"; _artist.Text = m.Disponivel ? m.Artista : "Abra o player e inicie uma música."; _tocando = m.Tocando; _play.Content = T(_tocando ? "Ⅱ" : "▶",16,Theme.CianoHolo);
-            if (m.Capa is { Length: > 0 }) { using var stream = new System.IO.MemoryStream(m.Capa); var image = new System.Windows.Media.Imaging.BitmapImage(); image.BeginInit(); image.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); _cover.Source = image; } else _cover.Source = null;
+            var m = await ServicosAplicacao.Midia.ObterEstadoAsync(); if (!Ativo) return; _song.Text = m.Disponivel ? m.Titulo : "Spotify"; _artist.Text = m.Disponivel ? m.Artista : "Abra o player e inicie uma música."; _iconePlay.Text = m.Tocando ? "Ⅱ" : "▶";
+            await AtualizarCapaAsync(m.Capa);
+            if (!Ativo) return;
             _posicao.Value = m.DuracaoSegundos > 0 ? Math.Clamp(m.PosicaoSegundos / m.DuracaoSegundos * 100, 0, 100) : 0; _tempo.Text = m.DuracaoSegundos > 0 ? $"{TimeSpan.FromSeconds(m.PosicaoSegundos):m\\:ss}   /   {TimeSpan.FromSeconds(m.DuracaoSegundos):m\\:ss}" : "";
-            if (ServicosAplicacao.Email.Conectado && DateTime.UtcNow - _emailSync > TimeSpan.FromMinutes(1)) { _emailSync = DateTime.UtcNow; var inbox = await ServicosAplicacao.Email.SincronizarAsync(); if (_saiu) return; _emailRows.Children.Clear(); foreach (var email in inbox.Mensagens.Take(3)) { var row = new StackPanel { Margin = new Thickness(0, 7, 0, 7) }; var sender = T(email.Remetente, 11, Theme.CianoHolo); sender.TextTrimming = TextTrimming.CharacterEllipsis; sender.TextWrapping = TextWrapping.NoWrap; row.Children.Add(sender); var subject = T(email.Assunto, 11); subject.TextWrapping = TextWrapping.NoWrap; subject.TextTrimming = TextTrimming.CharacterEllipsis; row.Children.Add(subject); _emailRows.Children.Add(row); } if (inbox.Mensagens.Count == 0) _emailRows.Children.Add(T("Sua caixa de entrada está vazia.")); }
+            if (ServicosAplicacao.Email.Conectado && DateTime.UtcNow - _emailSync > TimeSpan.FromMinutes(1)) { _emailSync = DateTime.UtcNow; var inbox = await ServicosAplicacao.Email.SincronizarAsync(); if (!Ativo) return; _emailRows.Children.Clear(); foreach (var email in inbox.Mensagens.Take(3)) { var row = new StackPanel { Margin = new Thickness(0, 7, 0, 7) }; var sender = T(email.Remetente, 11, Theme.CianoHolo); sender.TextTrimming = TextTrimming.CharacterEllipsis; sender.TextWrapping = TextWrapping.NoWrap; row.Children.Add(sender); var subject = T(email.Assunto, 11); subject.TextWrapping = TextWrapping.NoWrap; subject.TextTrimming = TextTrimming.CharacterEllipsis; row.Children.Add(subject); _emailRows.Children.Add(row); } if (inbox.Mensagens.Count == 0) _emailRows.Children.Add(T("Sua caixa de entrada está vazia.")); }
         }
         catch { }
         finally { _busy = false; }
+    }
+
+    private async Task AtualizarCapaAsync(byte[]? capa)
+    {
+        if (capa is not { Length: > 0 })
+        {
+            _ultimaCapa = null;
+            _cover.Source = null;
+            return;
+        }
+
+        var largura = (int)Math.Ceiling(54 * VisualTreeHelper.GetDpi(_cover).DpiScaleX);
+        if (largura == _larguraCapa && capa.AsSpan().SequenceEqual(_ultimaCapa)) return;
+        var imagem = await Task.Run(() =>
+        {
+            try
+            {
+                using var stream = new System.IO.MemoryStream(capa, false);
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.DecodePixelWidth = largura;
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.StreamSource = stream;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                return bitmap;
+            }
+            catch { return null; }
+        });
+        if (!Ativo) return;
+        _ultimaCapa = capa;
+        _larguraCapa = largura;
+        _cover.Source = imagem;
     }
 }
 

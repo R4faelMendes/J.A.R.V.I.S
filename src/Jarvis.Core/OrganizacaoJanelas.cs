@@ -37,7 +37,14 @@ public sealed record OpcoesTransmissao(int Fps = 60, int Largura = 1280, int Qua
             throw new ArgumentException("Escolha 15, 30 ou 60 FPS e uma resolução suportada.");
     }
 }
-public interface ISessaoTela : IDisposable { string Motor => "indisponível"; QuadroTela Capturar(); }
+public interface ISessaoTela : IDisposable
+{
+    string Motor => "indisponível";
+    QuadroTela Capturar();
+
+    /// <summary>JPEG válido até a próxima captura ou até o descarte da sessão.</summary>
+    ReadOnlyMemory<byte> CapturarJpeg() => Capturar().Jpeg;
+}
 public interface ITransmissaoTela
 {
     bool Permitida { get; set; }

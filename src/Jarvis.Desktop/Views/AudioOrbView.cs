@@ -11,7 +11,7 @@ namespace Jarvis.Desktop.Views;
 public sealed class AudioOrbView : Grid
 {
     public static readonly DependencyProperty EstadoProperty = DependencyProperty.Register(nameof(Estado), typeof(ReactorState), typeof(AudioOrbView), new PropertyMetadata(ReactorState.Repouso, MudouPropriedade));
-    public static readonly DependencyProperty NivelAudioProperty = DependencyProperty.Register(nameof(NivelAudio), typeof(double), typeof(AudioOrbView), new PropertyMetadata(0d, MudouPropriedade));
+    public static readonly DependencyProperty NivelAudioProperty = DependencyProperty.Register(nameof(NivelAudio), typeof(double), typeof(AudioOrbView), new PropertyMetadata(0d, MudouNivelAudio));
     public ReactorState Estado { get => (ReactorState)GetValue(EstadoProperty); set => SetValue(EstadoProperty, value); }
     public double NivelAudio { get => (double)GetValue(NivelAudioProperty); set => SetValue(NivelAudioProperty, value); }
     private readonly SKElement _canvas = new();
@@ -21,8 +21,17 @@ public sealed class AudioOrbView : Grid
     private Window? _window;
     private double _nivel, _ultimo;
     private bool _skia = true;
-    private ReactorState EstadoVisual => _nivel > .004 && Estado is not (ReactorState.Falando or ReactorState.Ouvindo) ? ReactorState.Falando : Estado;
+    private bool VozAtiva => Estado is ReactorState.Falando or ReactorState.Ouvindo;
+    private bool Visivel => IsLoaded && IsVisible && _window?.WindowState != WindowState.Minimized;
+    private double NivelAlvo => VozAtiva && double.IsFinite(NivelAudio) ? Math.Max(0, NivelAudio) : 0;
+    private ReactorState EstadoVisual => _nivel > .004 && !VozAtiva ? ReactorState.Falando : Estado;
     private static void MudouPropriedade(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((AudioOrbView)d).Sincronizar();
+    private static void MudouNivelAudio(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var orb = (AudioOrbView)d;
+        if (orb.VozAtiva && !orb._timer.IsEnabled && !ConfiguracaoApp.ReduzirAnimacoes)
+            orb.Sincronizar();
+    }
     public AudioOrbView()
     {
         IsHitTestVisible = false; ClipToBounds = true; Children.Add(_canvas); Children.Add(_fallback);
@@ -32,10 +41,11 @@ public sealed class AudioOrbView : Grid
         };
         _timer.Tick += (_, _) => {
             var agora = _clock.Elapsed.TotalSeconds;
-            var alvo = Estado is ReactorState.Falando or ReactorState.Ouvindo ? NivelAudio : 0;
+            var alvo = NivelAlvo;
+            var nivelAnterior = _nivel;
             _nivel = FormaEsferaAudio.Suavizar(_nivel, alvo, agora - _ultimo); _ultimo = agora;
-            AtualizarDesenho();
-            if (Estado is not (ReactorState.Falando or ReactorState.Ouvindo) && _nivel < .004) { _nivel = 0; _timer.Stop(); AtualizarDesenho(); }
+            if (alvo == 0 && _nivel < .004) { _nivel = 0; _timer.Stop(); }
+            if (_nivel > 0 || nivelAnterior > 0) AtualizarDesenho();
         };
         Loaded += (_, _) => { _window = Window.GetWindow(this); if (_window is not null) _window.StateChanged += Mudou; ConfiguracaoApp.ConfiguracoesAlteradas += Mudou; TemasJarvis.Alterado += Mudou; Sincronizar(); };
         Unloaded += (_, _) => { _timer.Stop(); if (_window is not null) _window.StateChanged -= Mudou; ConfiguracaoApp.ConfiguracoesAlteradas -= Mudou; TemasJarvis.Alterado -= Mudou; _window = null; };
@@ -44,14 +54,14 @@ public sealed class AudioOrbView : Grid
     private void Mudou(object? s, EventArgs e) => Dispatcher.InvokeAsync(Sincronizar);
     private void Sincronizar()
     {
-        var ativo = IsLoaded && IsVisible && _window?.WindowState != WindowState.Minimized;
-        var animar = Estado is ReactorState.Falando or ReactorState.Ouvindo || _nivel > .004;
-        _timer.Interval = TimeSpan.FromMilliseconds(ConfiguracaoApp.ModoEconomico ? 125 : 1000d / 30);
-        if (ativo && animar && !ConfiguracaoApp.ReduzirAnimacoes) {
+        var animar = NivelAlvo > 0 || _nivel > .004;
+        var intervalo = TimeSpan.FromMilliseconds(ConfiguracaoApp.ModoEconomico ? 125 : 1000d / 30);
+        if (_timer.Interval != intervalo) _timer.Interval = intervalo;
+        if (Visivel && animar && !ConfiguracaoApp.ReduzirAnimacoes) {
             if (!_timer.IsEnabled) { _ultimo = _clock.Elapsed.TotalSeconds; _timer.Start(); }
-        } else { _timer.Stop(); if (ConfiguracaoApp.ReduzirAnimacoes) _nivel = 0; }
+        } else { _timer.Stop(); if (!animar || ConfiguracaoApp.ReduzirAnimacoes) _nivel = 0; }
         // Um nível recebido durante a fala é interpolado pelo timer; não redesenhe a cada binding.
-        if (!_timer.IsEnabled) AtualizarDesenho();
+        if (Visivel && !_timer.IsEnabled) AtualizarDesenho();
     }
     private void AtualizarDesenho()
     {

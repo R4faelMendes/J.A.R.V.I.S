@@ -26,8 +26,8 @@
 		<ApplicationId>com.companyname.jarvis.mobile</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>2.4.0</ApplicationDisplayVersion>
-		<ApplicationVersion>23</ApplicationVersion>
+		<ApplicationDisplayVersion>2.5.0</ApplicationDisplayVersion>
+		<ApplicationVersion>24</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">11.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">13.1</SupportedOSPlatformVersion>
@@ -38,13 +38,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-        <EmbeddedResource Include="..\Jarvis.Rendering.Shared\Assets\reactor-frontal-v3.zip" LogicalName="Jarvis.Rendering.reactor-frontal-v3.zip" />
-		<Compile Include="..\Jarvis.Rendering.Shared\ReatorRealista.cs" Link="Views\ReatorRealista.cs" />
+		<Compile Include="..\Jarvis.Rendering.Shared\AudioOrbRenderer.cs" Link="Views\AudioOrbRenderer.cs" />
 		<!-- App Icon -->
-		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#050D18" />
+		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#000000" />
 
 		<!-- Splash Screen -->
-		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#050D18" BaseSize="128,128" />
+		<MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#000000" BaseSize="128,128" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -80,7 +79,7 @@
     <AndroidResource Remove="Platforms\Android\Resources\xml\jarvis_acessibilidade.xml;Platforms\Android\Resources\values\controle_jarvis.xml" Condition="'$(JarvisControleAvancado)' != 'true'" />
     <PackageReference Include="SkiaSharp.NativeAssets.Android" Version="[2.88.9]" />
   </ItemGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="JarvisAccountsOrigin" Value="$(JarvisAccountsOrigin)" />
+  </ItemGroup>
 </Project>
-
-
-

@@ -2,13 +2,14 @@
 using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Diagnostics;
 using Jarvis.Core;
 using System.Text.Json;
 
 namespace Jarvis.Mobile.Services;
 
 /// <summary>Fala com o servidor do PC. Token no SecureStorage, pinning da impressão.</summary>
-public sealed class ConexaoPc
+public sealed partial class ConexaoPc
 {
 
     public async Task<string> TranscreverAudioAsync(byte[] pcm, CancellationToken ct)
@@ -29,7 +30,11 @@ public sealed class ConexaoPc
     private string[] _enderecos = [];
     public string UltimoDiagnostico { get; private set; } = "Aguardando verificação.";
     public bool Verificando { get; private set; }
-    public async Task CarregarSeNecessarioAsync() { if (_http is null) await CarregarAsync(); }
+    public async Task CarregarSeNecessarioAsync()
+    {
+        if (_http is null) await CarregarAsync();
+        await MainThread.InvokeOnMainThreadAsync(IniciarMonitor);
+    }
     public string IdentificadorPareamento => _pin is null ? "local" : _pin[..Math.Min(16, _pin.Length)];
     public async Task<List<Compromisso>> ListarAgendaAsync() => await (_http ?? throw new InvalidOperationException("Pareie primeiro.")).GetFromJsonAsync<List<Compromisso>>("/api/agenda") ?? [];
     public async Task<Compromisso> SalvarCompromissoAsync(Compromisso item)
@@ -39,7 +44,37 @@ public sealed class ConexaoPc
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest) { var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>(); throw new ArgumentException(error?.GetValueOrDefault("mensagem") ?? "Revise as datas do compromisso."); }
         response.EnsureSuccessStatusCode(); return await response.Content.ReadFromJsonAsync<Compromisso>() ?? throw new InvalidOperationException("Compromisso inválido.");
     }
-    public async Task<EstadoMidia> MidiaAsync(CancellationToken ct = default) => await (_http ?? throw new InvalidOperationException("Pareie primeiro.")).GetFromJsonAsync<EstadoMidia>("/api/midia", ct) ?? new(false, "Spotify indisponível", "", "Spotify", false);
+    private readonly SemaphoreSlim _gateMidia = new(1, 1);
+    private AmostraMidia? _midia;
+    private int _versaoMidia;
+
+    private sealed record AmostraMidia(HttpClient Cliente, EstadoMidia Estado, int Versao, long LidaEm);
+
+    public async Task<EstadoMidia> MidiaAsync(CancellationToken ct = default)
+    {
+        await _gateMidia.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var cliente = _http ?? throw new InvalidOperationException("Pareie primeiro.");
+            var versao = Volatile.Read(ref _versaoMidia);
+            var anterior = _midia;
+            if (anterior?.Cliente == cliente && anterior.Versao == versao &&
+                Stopwatch.GetElapsedTime(anterior.LidaEm) < TimeSpan.FromSeconds(2))
+                return anterior.Estado;
+
+            var estado = await cliente.GetFromJsonAsync<EstadoMidia>("/api/midia", ct).ConfigureAwait(false)
+                ?? new(false, "Spotify indisponível", "", "Spotify", false);
+            if (anterior?.Cliente == cliente && anterior.Estado.Capa is { } capa &&
+                estado.Capa is { } atual && atual.AsSpan().SequenceEqual(capa))
+                estado = estado with { Capa = capa };
+
+            if (!ReferenceEquals(cliente, _http))
+                throw new InvalidOperationException("A conexão do computador mudou durante a atualização.");
+            _midia = new(cliente, estado, versao, Stopwatch.GetTimestamp());
+            return estado;
+        }
+        finally { _gateMidia.Release(); }
+    }
     public async Task<EstadoEntrada> EntradaAsync() => await (_http ?? throw new InvalidOperationException("Pareie primeiro.")).GetFromJsonAsync<EstadoEntrada>("/api/tela/entrada") ?? new(false, "Atualize o Jarvis no PC.");
     public async Task<OrdemAparelho[]> PulsoAparelhoAsync(DadosAparelho dados, CancellationToken ct)
     {
@@ -84,7 +119,8 @@ public sealed class ConexaoPc
             throw new InvalidOperationException(error?.GetValueOrDefault("mensagem") ?? "O PC recusou o gesto.");
         }
     }
-    public async Task TransmitirTelaAsync(string monitor, OpcoesTransmissao opcoes, Func<byte[], Task> apresentar, CancellationToken ct)
+    // O quadro pertence à transmissão e fica disponível até a conclusão de apresentar.
+    public async Task TransmitirTelaAsync(string monitor, OpcoesTransmissao opcoes, Func<ReadOnlyMemory<byte>, Task> apresentar, CancellationToken ct)
     {
         opcoes.Validar();
         if (BaseUrl is null || _token is null || _pin is null) throw new InvalidOperationException("Pareie com o PC primeiro.");
@@ -93,23 +129,24 @@ public sealed class ConexaoPc
         socket.Options.SetRequestHeader("X-Jarvis-Token", _token);
         socket.Options.RemoteCertificateValidationCallback = (_, cert, _, _) => cert is not null && Convert.ToHexString(SHA256.HashData(cert.GetRawCertData())).Equals(pin, StringComparison.OrdinalIgnoreCase);
         var uri = new UriBuilder(BaseUrl) { Scheme = "wss", Path = "/api/tela/stream", Query = $"monitor={Uri.EscapeDataString(monitor)}&fps={opcoes.Fps}&largura={opcoes.Largura}&qualidade={opcoes.Qualidade}" };
-        try { await socket.ConnectAsync(uri.Uri, ct); }
+        try { await socket.ConnectAsync(uri.Uri, ct).ConfigureAwait(false); }
         catch (System.Net.WebSockets.WebSocketException ex) { throw new InvalidOperationException("Não foi possível transmitir. Confira se o Jarvis está aberto no PC, se a conexão está ativa e se ambos os apps estão atualizados.", ex); }
         var buffer = new byte[64 * 1024];
+        ReadOnlyMemory<byte> ack = new byte[] { 1 };
         using var frame = new MemoryStream();
         while (!ct.IsCancellationRequested)
         {
             frame.SetLength(0);
-            System.Net.WebSockets.WebSocketReceiveResult part;
+            System.Net.WebSockets.ValueWebSocketReceiveResult part;
             do
             {
-                part = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
-                if (part.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) throw new InvalidOperationException(part.CloseStatusDescription ?? "Transmissão encerrada no PC.");
+                part = await socket.ReceiveAsync(buffer.AsMemory(), ct).ConfigureAwait(false);
+                if (part.MessageType == System.Net.WebSockets.WebSocketMessageType.Close) throw new InvalidOperationException(socket.CloseStatusDescription ?? "Transmissão encerrada no PC.");
                 if (part.MessageType != System.Net.WebSockets.WebSocketMessageType.Binary || frame.Length + part.Count > 8 * 1024 * 1024) throw new InvalidOperationException("Quadro inválido.");
                 frame.Write(buffer, 0, part.Count);
             } while (!part.EndOfMessage);
-            await apresentar(frame.ToArray());
-            await socket.SendAsync(new ArraySegment<byte>(new byte[] { 1 }), System.Net.WebSockets.WebSocketMessageType.Binary, true, ct);
+            await apresentar(frame.GetBuffer().AsMemory(0, (int)frame.Length)).ConfigureAwait(false);
+            await socket.SendAsync(ack, System.Net.WebSockets.WebSocketMessageType.Binary, true, ct).ConfigureAwait(false);
         }
     }
     private const string ChaveToken = "jarvis_token";
@@ -123,6 +160,7 @@ public sealed class ConexaoPc
     private readonly SemaphoreSlim _gate = new(1, 1);
     private CancellationTokenSource? _monitor;
     private int _versao;
+    private DateTimeOffset? _ultimaRespostaPc;
     public IdentidadePc? Identidade { get; private set; }
     public TelemetriaPc? Telemetria { get; private set; }
     public event EventHandler<TelemetriaPc>? TelemetriaMudou;
@@ -161,6 +199,11 @@ public sealed class ConexaoPc
     {
         _versao++;
         if (_pin is not null && !_pin.Equals(pinEsperado, StringComparison.OrdinalIgnoreCase)) { Identidade = null; SecureStorage.Remove("jarvis_identidade"); }
+        if (!string.Equals(_pin, pinEsperado, StringComparison.OrdinalIgnoreCase))
+        {
+            _ultimaRespostaPc = null;
+            Telemetria = null;
+        }
         _pin = pinEsperado; _token = token;
         _fabricaHandler = () => new HttpClientHandler
         {
@@ -173,6 +216,7 @@ public sealed class ConexaoPc
         };
         var handler = (HttpClientHandler)_fabricaHandler();
         var antigo = _http; _http = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl!), Timeout = TimeSpan.FromSeconds(5) };
+        _midia = null;
         if (antigo is not null) _ = LiberarClienteAsync(antigo);
         _http.DefaultRequestHeaders.Add("X-Jarvis-Token", token);
     }
@@ -194,13 +238,14 @@ public sealed class ConexaoPc
     /// <summary>Pareia via QR (url|token|pin vindos do código escaneado).</summary>
     public async Task<bool> ParearAsync(string ip, int porta, string tokenUnico, string pin, string nome, IEnumerable<string>? candidatos = null)
     {
+        await SalvarPcAtivoAsync();
         EspelhoCelular.Parar(); DispositivoCompanheiro.Parar(true);
         Exception? erro = null;
 
         var destinos = new[] { ip }.Concat(candidatos ?? []).Where(c => System.Net.IPAddress.TryParse(c, out _)).Distinct().Where(c => !EnderecosJarvis.Tailscale(new UriBuilder("https", c, porta).Uri.ToString())).Take(8);
         foreach (var candidato in destinos)
         {
-            try { if (await ParearEnderecoAsync(candidato, porta, tokenUnico, pin, nome)) { IniciarMonitor(); return true; } }
+            try { if (await ParearEnderecoAsync(candidato, porta, tokenUnico, pin, nome)) { await SalvarPcAtivoAsync(); IniciarMonitor(); return true; } }
             catch (HttpRequestException ex) { erro = ex; }
             catch (TaskCanceledException ex) { erro = ex; }
         }
@@ -236,6 +281,7 @@ public sealed class ConexaoPc
     /// <summary>Pareia via código PIN de 6 dígitos + IP.</summary>
     public async Task<bool> ParearPorCodigoAsync(string ip, int porta, string codigo, string nome)
     {
+        await SalvarPcAtivoAsync();
         EspelhoCelular.Parar(); DispositivoCompanheiro.Parar(true);
         if (!System.Net.IPAddress.TryParse(ip, out _) || porta is < 1 or > 65535 || codigo.Length != 6 || !codigo.All(char.IsAsciiDigit)) throw new ArgumentException("Digite um IP válido e o código de seis dígitos.");
         var endereco = new UriBuilder("https", ip, porta).Uri.GetLeftPart(UriPartial.Authority);
@@ -263,16 +309,20 @@ public sealed class ConexaoPc
         await SecureStorage.SetAsync(ChaveToken, duradouro);
         MontarHttp(pin, duradouro);
         await AprenderPareamentoAsync(corpo.RootElement);
-        IniciarMonitor();
         await TestarAsync(true);
+        if (Conectado) await SalvarPcAtivoAsync();
+        IniciarMonitor();
         return Conectado;
     }
 
-    public Task TestarAsync() => TestarAsync(false);
-    private async Task TestarAsync(bool aguardar)
+    public Task TestarAsync(CancellationToken ct = default) => TestarAsync(false, ct);
+
+    public Task AtualizarTelemetriaAsync(CancellationToken ct) => TestarAsync(true, ct);
+
+    private async Task TestarAsync(bool aguardar, CancellationToken ct = default)
     {
-        if (aguardar) await _gate.WaitAsync();
-        else if (!await _gate.WaitAsync(0)) return;
+        if (aguardar) await _gate.WaitAsync(ct);
+        else if (!await _gate.WaitAsync(0, ct)) return;
         var version = _versao;
         try
         {
@@ -286,26 +336,40 @@ public sealed class ConexaoPc
                 identityRequest.Headers.Add("X-Jarvis-Conexao", Connectivity.Current.ConnectionProfiles.Contains(ConnectionProfile.WiFi) ? "Wi-Fi" : Connectivity.Current.ConnectionProfiles.Contains(ConnectionProfile.Cellular) ? "Dados moveis" : "Rede privada");
             }
             catch { }
-            using var identityResponse = await client.SendAsync(identityRequest);
+            using var identityResponse = await client.SendAsync(identityRequest, ct);
             if (identityResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized) { if (version == _versao) { Conectado = false; UltimoDiagnostico = "Token recusado pelo PC. Leia um novo QR de pareamento."; } return; }
             identityResponse.EnsureSuccessStatusCode();
-            var identity = await identityResponse.Content.ReadFromJsonAsync<IdentidadePc>();
+            var identity = await identityResponse.Content.ReadFromJsonAsync<IdentidadePc>(cancellationToken: ct);
             if (version != _versao) return;
             Conectado = identity is not null;
-            if (Conectado)
+            if (identity is not null)
             {
-                if (version != _versao) return;
-                if (JsonSerializer.Serialize(identity) != JsonSerializer.Serialize(Identidade))
+                _ultimaRespostaPc = DateTimeOffset.UtcNow;
+                var anterior = Identidade;
+                if (anterior is null || anterior.Nome != identity.Nome || anterior.Mac != identity.Mac ||
+                    anterior.Broadcast != identity.Broadcast || anterior.EnderecoRemoto != identity.EnderecoRemoto ||
+                    !(anterior.Enderecos ?? []).SequenceEqual(identity.Enderecos ?? []))
                 {
                     Identidade = identity;
-                    if (identity is not null) await SecureStorage.SetAsync("jarvis_identidade", JsonSerializer.Serialize(identity));
+                    await SecureStorage.SetAsync("jarvis_identidade", JsonSerializer.Serialize(identity));
+                    await AprenderEnderecosAsync(identity);
                 }
-                if (identity is not null) await AprenderEnderecosAsync(identity);
                 UltimoDiagnostico = RedeDireta.Publico(BaseUrl) ? "Online · internet direta" : "Online · conexão direta";
-                try { Telemetria = await client.GetFromJsonAsync<TelemetriaPc>("/api/telemetria"); if (version == _versao && Telemetria is not null) TelemetriaMudou?.Invoke(this, Telemetria); }
-                catch { Telemetria = null; }
+                if (App.EmPrimeiroPlano && TelemetriaMudou is not null)
+                {
+                    TelemetriaPc? amostra;
+                    try { amostra = await client.GetFromJsonAsync<TelemetriaPc>("/api/telemetria", ct); }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+                    catch { amostra = null; }
+                    if (version == _versao)
+                    {
+                        Telemetria = amostra;
+                        if (amostra is not null) TelemetriaMudou?.Invoke(this, amostra);
+                    }
+                }
             }
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { if (version == _versao) { Conectado = false; UltimoDiagnostico = "Endereço atual sem resposta. Verificando as alternativas…"; } }
         finally { _gate.Release(); }
         if (version == _versao) EstadoMudou?.Invoke(this, UltimoDiagnostico);
@@ -313,7 +377,7 @@ public sealed class ConexaoPc
 
     public void IniciarMonitor()
     {
-        if (_monitor is not null) return;
+        if (_http is null || _monitor is not null) return;
         var cts = new CancellationTokenSource(); _monitor = cts; _ = RodarMonitorAsync(cts);
     }
     private async Task RodarMonitorAsync(CancellationTokenSource cts)
@@ -329,7 +393,7 @@ public sealed class ConexaoPc
         {
             while (!ct.IsCancellationRequested)
             {
-                await TestarAsync();
+                await TestarAsync(ct);
                 if (Conectado && DateTimeOffset.UtcNow - ultimaAgenda > TimeSpan.FromMinutes(1)) { ultimaAgenda = DateTimeOffset.UtcNow; await App.Agenda.SincronizarAsync(); }
                 if (!Conectado) await VerificarAutomaticamenteAsync(ct);
                 await Task.Delay(TimeSpan.FromSeconds(Conectado ? 3 : 10), ct);
@@ -353,7 +417,7 @@ public sealed class ConexaoPc
             var results = (await ConexaoPareada.ProcurarAsync(urls, pin, token, ct)).ToList();
             if (!results.Any(r => r.Conectado))
             {
-                var discovered = (await DescobrirAsync(1800)).Select(c => $"https://{c.Ip}:5189").Except(urls, StringComparer.OrdinalIgnoreCase);
+                var discovered = (await DescobrirAsync(1800, ct)).Select(c => $"https://{c.Ip}:5189").Except(urls, StringComparer.OrdinalIgnoreCase);
                 results.AddRange(await ConexaoPareada.ProcurarAsync(discovered, pin, token, ct));
             }
             var success = results.FirstOrDefault(r => r.Conectado);
@@ -365,7 +429,7 @@ public sealed class ConexaoPc
                 {
                     if (_pin != pin || _token != token) return [];
                     BaseUrl = success.Endereco; await SecureStorage.SetAsync(ChaveBase, BaseUrl); MontarHttp(pin, token);
-                    Identidade = identity; Conectado = true; await SecureStorage.SetAsync("jarvis_identidade", JsonSerializer.Serialize(identity)); await AprenderEnderecosAsync(identity);
+                    Identidade = identity; Conectado = true; _ultimaRespostaPc = DateTimeOffset.UtcNow; await SecureStorage.SetAsync("jarvis_identidade", JsonSerializer.Serialize(identity)); await AprenderEnderecosAsync(identity);
                     UltimoDiagnostico = success.Mensagem;
                 }
                 finally { _gate.Release(); }
@@ -420,24 +484,25 @@ public sealed class ConexaoPc
         using var resposta = await _http.PostAsJsonAsync("/api/comando", new { nome, argumento, confirmado });
         var corpo = await resposta.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         if (!resposta.IsSuccessStatusCode) throw new InvalidOperationException(corpo?.GetValueOrDefault("mensagem") ?? $"O PC respondeu HTTP {(int)resposta.StatusCode}.");
+        if (nome.StartsWith("midia_", StringComparison.Ordinal)) Interlocked.Increment(ref _versaoMidia);
         return corpo?.GetValueOrDefault("mensagem") ?? "Sem resposta do PC.";
     }
     /// <summary>Redescoberta automática: UDP broadcast JARVIS_DISCOVER (porta 5187).</summary>
     public static async Task<List<(string Ip, string Nome)>> DescobrirAsync(int timeoutMs = 2500, CancellationToken ct = default)
         => (await DescobertaRede.ProcurarAsync(timeoutMs, ct)).Select(p => (p.Ip, p.Nome)).ToList();
-    public void Esquecer()
+    private void Esquecer(bool manterPreferencias = false)
     {
-        EspelhoCelular.Parar(); DispositivoCompanheiro.Parar();
-        MidiaNotificacao.Parar(); Notificacoes.Reagendar([]);
+        EspelhoCelular.Parar(); DispositivoCompanheiro.Parar(manterPreferencias);
+        MidiaNotificacao.Parar(manterPreferencias); Notificacoes.Reagendar([]);
         _versao++;
-        PararMonitor(); Identidade = null; Telemetria = null; _pin = _token = null;
+        PararMonitor(); Identidade = null; Telemetria = null; _ultimaRespostaPc = null; _pin = _token = null;
         SecureStorage.Remove("jarvis_identidade");
         SecureStorage.Remove(ChaveToken);
         SecureStorage.Remove(ChaveBase);
         SecureStorage.Remove(ChavePin);
         SecureStorage.Remove(ChaveRemota); EnderecoRemoto = null;
         SecureStorage.Remove(ChaveEnderecos); _enderecos = [];
-        _http?.Dispose(); _http = null; BaseUrl = null;
+        _http?.Dispose(); _http = null; BaseUrl = null; _midia = null;
         Conectado = false;
         EstadoMudou?.Invoke(this, "PC removido");
     }
@@ -469,4 +534,3 @@ public sealed class ConexaoPc
 }
 
 public sealed record AppRemoto(string Id, string Nome, bool Aberto, bool EhJogo, string ApelidoVoz = "");
-

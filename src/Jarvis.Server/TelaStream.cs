@@ -21,7 +21,7 @@ internal static class TelaStream
             using var socket = await ctx.WebSockets.AcceptWebSocketAsync();
             using var life = CancellationTokenSource.CreateLinkedTokenSource(ctx.RequestAborted);
             using var window = new SemaphoreSlim(2, 2);
-            var acknowledgements = Task.Run(async () =>
+            async Task LerConfirmacoesAsync()
             {
                 var ack = new byte[1];
                 try
@@ -37,17 +37,19 @@ internal static class TelaStream
                 catch (OperationCanceledException) { }
                 catch (WebSocketException) { }
                 finally { life.Cancel(); }
-            });
+            }
+            var confirmacoes = LerConfirmacoesAsync();
+            var intervalo = TimeSpan.FromSeconds(1d / options.Fps);
             try
             {
                 while (!life.IsCancellationRequested)
                 {
-                    var frameTime = Stopwatch.StartNew();
+                    var inicioQuadro = Stopwatch.GetTimestamp();
                     if (!await window.WaitAsync(TimeSpan.FromSeconds(5), life.Token))
                         throw new InvalidOperationException("Celular sem responder. Reinicie a visualização.");
-                    var frame = session.Capturar();
-                    await socket.SendAsync(new ArraySegment<byte>(frame.Jpeg), WebSocketMessageType.Binary, true, life.Token);
-                    var delay = TimeSpan.FromSeconds(1d / options.Fps) - frameTime.Elapsed;
+                    var jpeg = session.CapturarJpeg();
+                    await socket.SendAsync(jpeg, WebSocketMessageType.Binary, true, life.Token);
+                    var delay = intervalo - Stopwatch.GetElapsedTime(inicioQuadro);
                     if (delay > TimeSpan.Zero) await Task.Delay(delay, life.Token);
                 }
             }
@@ -58,7 +60,7 @@ internal static class TelaStream
                 if (socket.State == WebSocketState.Open)
                     await socket.CloseOutputAsync(WebSocketCloseStatus.PolicyViolation, ex.Message[..Math.Min(60, ex.Message.Length)], CancellationToken.None);
             }
-            finally { life.Cancel(); await acknowledgements; }
+            finally { life.Cancel(); await confirmacoes; }
         }
         catch (InvalidOperationException ex) when (!ctx.Response.HasStarted)
         { ctx.Response.StatusCode = 423; await ctx.Response.WriteAsJsonAsync(new { mensagem = ex.Message }); }

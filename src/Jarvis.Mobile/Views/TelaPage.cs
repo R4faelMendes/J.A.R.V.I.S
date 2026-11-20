@@ -21,8 +21,7 @@ public sealed class TelaPage : ContentPage
         var root = new Grid { Padding = 12, RowSpacing = 10, RowDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto), new(GridLength.Auto) } };
         var header = new VerticalStackLayout { Spacing = 4 };
         _root = root; _header = header;
-        var fullscreen = new Button { Text = "⛶ Tela cheia" }; fullscreen.Clicked += (_, _) => TelaCheia(true); header.Add(fullscreen);
-        header.Add(new Label { Text = "Suas telas · ao vivo", FontSize = 22 });
+        var fullscreen = new Button { Text = "Tela cheia" }; fullscreen.Clicked += (_, _) => TelaCheia(true); header.Add(fullscreen);
         var select = new Grid { ColumnSpacing = 8, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Auto) } }; select.Add(_monitor, 0);
         var refresh = new Button { Text = "Atualizar", FontSize = 12 }; refresh.Clicked += async (_, _) => await MonitoresAsync(); select.Add(refresh, 1); header.Add(select);
         var options = new Grid { ColumnSpacing = 12, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } }; options.Add(_fps, 0); options.Add(_resolucao, 1); header.Add(options);

@@ -6,7 +6,7 @@ public sealed class AgendaPage : ContentPage
     private DateTime _day = DateTime.Today;
     private readonly Grid _calendar = new() { ColumnSpacing = 3, RowSpacing = 4 };
     private readonly Label _heading = new() { FontSize = 21, HorizontalTextAlignment = TextAlignment.Center };
-    private readonly Label _status = new() { FontSize = 12, TextColor = Color.FromArgb("#7DBBD3") };
+    private readonly Label _status = new() { FontSize = 12, TextColor = Color.FromArgb("#BBBBBB") };
     private readonly VerticalStackLayout _events = new() { Spacing = 10 };
     private readonly Button _previous = new() { Text = "‹" };
     private readonly VerticalStackLayout _board = new() { Spacing = 16 };
@@ -14,8 +14,8 @@ public sealed class AgendaPage : ContentPage
     public AgendaPage()
     {
         Title = "Agenda";
-        var root = new VerticalStackLayout { Padding = 18, Spacing = 14 };
-        root.Add(new Label { Text = "Seu tempo, organizado", FontSize = 26 }); root.Add(_status);
+        var root = new VerticalStackLayout { Padding = new Thickness(20, 16, 20, 28), MaximumWidthRequest = 760, Spacing = 14 };
+        root.Add(new Label { Text = "Agenda", Style = (Style)Application.Current.Resources["Titulo"] }); root.Add(_status);
         var nav = new Grid { ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star), new(GridLength.Auto) } };
         _previous.Clicked += (_, _) => { _month = _month.AddMonths(-1); Render(); }; nav.Add(_previous, 0); nav.Add(_heading, 1);
         var next = new Button { Text = "›" }; next.Clicked += (_, _) => { _month = _month.AddMonths(1); Render(); }; nav.Add(next, 2); root.Add(nav);
@@ -39,14 +39,14 @@ public sealed class AgendaPage : ContentPage
         {
             var date = _month.AddDays(day - 1); var has = items.Any(c => c.Inicio.LocalDateTime.Date == date);
             var valid = AgendaDatas.PodeSelecionar(date, DateTime.Today);
-            var button = new Button { Text = day.ToString() + (has ? " •" : ""), IsEnabled = valid, Opacity = valid ? 1 : .28, FontSize = 12, Padding = 0, MinimumHeightRequest = 42, CornerRadius = 5, BackgroundColor = date == _day ? Color.FromArgb("#146987") : Color.FromArgb("#0A1D2C") }; button.Clicked += (_, _) => { if (!AgendaDatas.PodeSelecionar(date, DateTime.Today)) return; _day = date; Render(); }; var index = offset + day - 1; _calendar.Add(button, index % 7, index / 7 + 1);
+            var button = new Button { Text = day.ToString() + (has ? " •" : ""), IsEnabled = valid, Opacity = valid ? 1 : .28, FontSize = 12, Padding = 0, MinimumHeightRequest = 42, CornerRadius = 12, BackgroundColor = date == _day ? Color.FromArgb("#174017") : Color.FromArgb("#121212") }; button.Clicked += (_, _) => { if (!AgendaDatas.PodeSelecionar(date, DateTime.Today)) return; _day = date; Render(); }; var index = offset + day - 1; _calendar.Add(button, index % 7, index / 7 + 1);
         }
         _events.Clear(); _events.Add(new Label { Text = _day.ToString("dd/MM/yyyy"), FontSize = 20 });
         var selected = items.Where(c => c.Inicio.LocalDateTime.Date <= _day && c.Fim.LocalDateTime.Date >= _day).ToArray();
         if (selected.Length == 0) _events.Add(new Label { Text = "Sem compromissos neste dia." });
         foreach (var item in selected)
         {
-            var card = new VerticalStackLayout { Padding = 16, Spacing = 8, BackgroundColor = Color.FromArgb("#0A1D2C") };
+            var card = new VerticalStackLayout { Padding = 16, Spacing = 8, BackgroundColor = Color.FromArgb("#121212") };
             card.Add(new Label { Text = item.Titulo, FontSize = 18 }); card.Add(new Label { Text = $"{item.Inicio.LocalDateTime:HH:mm} – {item.Fim.LocalDateTime:HH:mm}" + (App.Agenda.Pendente(item.Id) ? " · pendente de sincronização" : ""), FontSize = 12 });
             card.Add(new Label { Text = item.AvisoMinutos < 0 ? "Sem lembrete" : $"Aviso {item.AvisoMinutos} minutos antes · offline", FontSize = 12, TextColor = Color.FromArgb("#00D800") }); if (!string.IsNullOrWhiteSpace(item.Notas)) card.Add(new Label { Text = item.Notas });
             var edit = new Button { Text = "Editar / excluir" }; edit.Clicked += async (_, _) => await EditarAsync(item); card.Add(edit);
@@ -88,7 +88,7 @@ internal sealed class EditorCompromissoPage : ContentPage
         var title = new Entry { Placeholder = "Título", Text = item?.Titulo, MaxLength = 160 }; var date = new DatePicker { MinimumDate = DateTime.Today, Date = start.Date < DateTime.Today ? DateTime.Today : start.Date }; var time = new TimePicker { Time = start.TimeOfDay, Format = "HH:mm" }; var until = new DatePicker { MinimumDate = DateTime.Today, Date = end.Date < DateTime.Today ? DateTime.Today : end.Date }; var endTime = new TimePicker { Time = end.TimeOfDay, Format = "HH:mm" };
         var values = new[] { -1, 0, 5, 10, 15, 30, 60, 1440 }; var reminder = new Picker { Title = "Lembrete", ItemsSource = values.Select(v => v < 0 ? "Sem lembrete" : $"{v} minutos antes").ToArray(), SelectedIndex = Array.IndexOf(values, item?.AvisoMinutos ?? 15) };
         var notes = new Editor { Placeholder = "Notas", Text = item?.Notas, HeightRequest = 100, MaxLength = 4000 }; var status = new Label { TextColor = Colors.Orange }; var save = new Button { Text = "Salvar compromisso" };
-        var root = new VerticalStackLayout { Padding = 20, Spacing = 12 }; root.Add(title); root.Add(new Label { Text = "Início" }); root.Add(date); root.Add(time); root.Add(new Label { Text = "Fim" }); root.Add(until); root.Add(endTime); root.Add(reminder); root.Add(notes); root.Add(status); root.Add(save);
+        var root = new VerticalStackLayout { Padding = new Thickness(20, 16, 20, 28), MaximumWidthRequest = 760, Spacing = 12 }; root.Add(title); root.Add(new Label { Text = "Início" }); root.Add(date); root.Add(time); root.Add(new Label { Text = "Fim" }); root.Add(until); root.Add(endTime); root.Add(reminder); root.Add(notes); root.Add(status); root.Add(save);
         save.Clicked += async (_, _) => { save.IsEnabled = false; try { var value = new Compromisso(item?.Id ?? Guid.NewGuid().ToString(), title.Text ?? "", new DateTimeOffset(date.Date + time.Time), new DateTimeOffset(until.Date + endTime.Time), values[Math.Max(0, reminder.SelectedIndex)], notes.Text ?? "", item?.Versao ?? 0, Etapa: item?.Etapa ?? EtapaCompromisso.Planejado); await App.Agenda.SalvarAsync(value); await Services.Notificacoes.AtivarAsync(); await App.Agenda.SincronizarAsync(); await Navigation.PopAsync(); } catch (Exception ex) { status.Text = ex.Message; } finally { save.IsEnabled = true; } };
         if (item is not null) { var remove = new Button { Text = "Excluir compromisso", TextColor = Colors.OrangeRed }; remove.Clicked += async (_, _) => { if (!await DisplayAlert("Agenda", "Excluir este compromisso?", "Excluir", "Cancelar")) return; await App.Agenda.SalvarAsync(item with { Excluido = true }); await App.Agenda.SincronizarAsync(); await Navigation.PopAsync(); }; root.Add(remove); }
         Content = new ScrollView { Content = root };

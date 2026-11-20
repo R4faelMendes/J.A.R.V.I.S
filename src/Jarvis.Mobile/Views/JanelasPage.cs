@@ -17,8 +17,8 @@ public sealed class JanelasPage : ContentPage
     {
         Title = "Janelas do PC";
         _layout.SelectedIndexChanged += async (_, _) => { _posicoes.Clear(); await CarregarAsync(); };
-        var stack = new VerticalStackLayout { Padding = 18, Spacing = 12 };
-        stack.Add(new Label { Text = "Organize seu desktop", FontSize = 26 }); stack.Add(_status);
+        var stack = new VerticalStackLayout { Padding = new Thickness(20, 16, 20, 28), MaximumWidthRequest = 760, Spacing = 12 };
+        stack.Add(new Label { Text = "Janelas abertas", Style = (Style)Application.Current.Resources["Titulo"] }); stack.Add(_status);
         stack.Add(new Label { Text = "Escolha o monitor, a grade e a posição de cada janela. Uma única janela pode ocupar a direita ou qualquer canto da grade.", FontSize = 13 });
         var top = new Grid { ColumnSpacing = 8, ColumnDefinitions = { new(GridLength.Star), new(GridLength.Star) } };
         var refresh = Botao("Atualizar", async () => await CarregarAsync()); var open = Botao("Abrir aplicativo", async () => await Shell.Current.GoToAsync("//apps")); top.Add(refresh, 0); top.Add(open, 1); stack.Add(top);
@@ -51,7 +51,7 @@ public sealed class JanelasPage : ContentPage
         _ordem.RemoveAll(id => !windows.Any(w => w.Id == id)); _lista.Clear(); _numbers.Clear();
         foreach (var window in windows)
         {
-            var row = new VerticalStackLayout { Spacing = 8, Padding = 12, BackgroundColor = Color.FromArgb("#0A1D2C") };
+            var row = new VerticalStackLayout { Spacing = 8, Padding = 12, BackgroundColor = Color.FromArgb("#121212") };
             var header = new Grid { ColumnSpacing = 8, ColumnDefinitions = { new(GridLength.Auto), new(GridLength.Star) } };
             var check = new CheckBox { IsChecked = _ordem.Contains(window.Id), Color = Color.FromArgb("#00D800") };
             check.CheckedChanged += (_, e) => { if (e.Value && !_ordem.Contains(window.Id)) _ordem.Add(window.Id); if (!e.Value) _ordem.Remove(window.Id); Numerar(); };

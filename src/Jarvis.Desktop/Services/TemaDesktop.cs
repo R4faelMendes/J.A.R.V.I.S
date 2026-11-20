@@ -1,125 +1,197 @@
-using System.Runtime.CompilerServices;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Jarvis.Core;
+
 namespace Jarvis.Desktop.Services;
+
 public static class TemaDesktop
 {
-    private sealed record CorAplicada(Brush Original, Brush Aplicado);
-    private static readonly ConditionalWeakTable<DependencyObject, Dictionary<DependencyProperty, CorAplicada>> Originais = new();
-    private sealed class Observacao { public bool Aplicando; public bool Agendado; public Dictionary<DependencyProperty, (DependencyPropertyDescriptor Descriptor, EventHandler Handler)> Eventos = new(); }
-    private static readonly ConditionalWeakTable<DependencyObject, Observacao> Observacoes = new();
-    private static readonly Dictionary<object, object> RecursosOriginais = new();
+    private sealed class Observacao
+    {
+        public bool Aplicando;
+        public bool Agendado;
+        public Dictionary<DependencyProperty, DependencyPropertyDescriptor> Propriedades { get; } = new();
+    }
+
+    private static readonly ConditionalWeakTable<FrameworkElement, Observacao> Observacoes = new();
+    private static readonly EventHandler PincelAlterado = AoAlterarPincel;
+    private static readonly DependencyProperty[] PinceisBorda = [Border.BackgroundProperty, Border.BorderBrushProperty, TextElement.ForegroundProperty];
+    private static readonly DependencyProperty[] PinceisTexto = [TextBlock.ForegroundProperty];
+    private static readonly DependencyProperty[] PinceisCampo = [Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty, TextBoxBase.CaretBrushProperty, TextBoxBase.SelectionBrushProperty];
+    private static readonly DependencyProperty[] PinceisSenha = [Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty, PasswordBox.CaretBrushProperty, PasswordBox.SelectionBrushProperty];
+    private static readonly DependencyProperty[] PinceisControle = [Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty];
+    private static readonly DependencyProperty[] PinceisPainel = [Panel.BackgroundProperty, TextElement.ForegroundProperty];
+    private static readonly DependencyProperty[] PinceisForma = [Shape.FillProperty, Shape.StrokeProperty];
+    private static readonly DependencyProperty[] PinceisElemento = [TextElement.ForegroundProperty];
+    private static bool _iniciado;
+
+    public static void Iniciar()
+    {
+        if (_iniciado) return;
+
+        _iniciado = true;
+        AtualizarRecursos();
+        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent,
+            new RoutedEventHandler((sender, _) =>
+            {
+                if (sender is FrameworkElement elemento) AplicarElemento(elemento);
+            }));
+        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.UnloadedEvent,
+            new RoutedEventHandler((sender, _) =>
+            {
+                if (sender is not FrameworkElement elemento || !Observacoes.TryGetValue(elemento, out var estado)) return;
+                foreach (var descriptor in estado.Propriedades.Values) descriptor.RemoveValueChanged(elemento, PincelAlterado);
+                estado.Propriedades.Clear();
+            }));
+    }
+
+    public static void Aplicar(DependencyObject raiz)
+    {
+        if (raiz is FrameworkElement elemento) AplicarElemento(elemento);
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(raiz); i++)
+            Aplicar(VisualTreeHelper.GetChild(raiz, i));
+    }
+
     private static void AtualizarRecursos()
     {
         if (Application.Current is not { } app) return;
-        foreach (var key in app.Resources.Keys.Cast<object>().ToArray()) {
-            if (!RecursosOriginais.TryGetValue(key, out var original)) {
-                var value = app.Resources[key];
-                if (value is not (Brush or Color)) continue;
-                RecursosOriginais[key] = original = value is Brush brush ? brush.CloneCurrentValue() : value;
+        foreach (var key in app.Resources.Keys.Cast<object>().ToArray())
+        {
+            switch (app.Resources[key])
+            {
+                case Brush pincel:
+                    var novo = Mapear(pincel);
+                    if (!ReferenceEquals(pincel, novo)) app.Resources[key] = novo;
+                    break;
+                case Color cor:
+                    var mapeada = Mapear(cor);
+                    if (mapeada != cor) app.Resources[key] = mapeada;
+                    break;
             }
-            app.Resources[key] = original is Color c ? Mapear(c) : Mapear((Brush)original);
         }
     }
-    private static Color Mapear(Color c) { var rgb = TemasJarvis.Colorir((uint)((c.R << 16) | (c.G << 8) | c.B)); return Color.FromArgb(c.A, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb); }
-    private static Brush Mapear(Brush original) {
-        var brush = original.CloneCurrentValue();
-        if (brush is SolidColorBrush solid) solid.Color = Mapear(solid.Color);
-        if (brush is GradientBrush gradient) foreach (var stop in gradient.GradientStops) stop.Color = Mapear(stop.Color);
-        if (brush.CanFreeze) brush.Freeze(); return brush;
-    }
-    private static Brush GuardarBase(Brush value)
+
+    private static Color Mapear(Color cor)
     {
-        var brush = value.CloneCurrentValue();
-        static Color Base(Color c) { var rgb = TemasJarvis.CorBase((uint)((c.R << 16) | (c.G << 8) | c.B)); return Color.FromArgb(c.A, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb); }
-        if (brush is SolidColorBrush solid) solid.Color = Base(solid.Color);
-        if (brush is GradientBrush gradient) foreach (var stop in gradient.GradientStops) stop.Color = Base(stop.Color);
-        return brush;
+        var rgb = TemasJarvis.Colorir((uint)((cor.R << 16) | (cor.G << 8) | cor.B));
+        return Color.FromArgb(cor.A, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
-    private static bool _iniciado;
-    public static void Iniciar()
+
+    private static Brush Mapear(Brush pincel)
     {
-        if (_iniciado) return; _iniciado = true; AtualizarRecursos();
-        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) => {
-            if (sender is Window janela) Aplicar(janela);
-            else AplicarElemento((DependencyObject)sender);
-        }));
-        EventManager.RegisterClassHandler(typeof(FrameworkElement), FrameworkElement.UnloadedEvent, new RoutedEventHandler((sender, _) => {
-            if (!Observacoes.TryGetValue((DependencyObject)sender, out var state)) return;
-            foreach (var entry in state.Eventos.Values) entry.Descriptor.RemoveValueChanged(sender, entry.Handler);
-            state.Eventos.Clear();
-        }));
-        TemasJarvis.Alterado += (_, _) => {
-            if (Application.Current is not { } app) return;
-            void Atualizar() { AtualizarRecursos(); foreach (Window w in app.Windows) Aplicar(w); }
-            if (app.Dispatcher.CheckAccess()) Atualizar(); else app.Dispatcher.InvokeAsync(Atualizar);
-        };
-    }
-    public static void Aplicar(DependencyObject root)
-    {
-        AplicarElemento(root); for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++) Aplicar(VisualTreeHelper.GetChild(root, i));
-    }
-    private static void AplicarElemento(DependencyObject element)
-    {
-        var properties = element switch {
-            Border => new[] { Border.BackgroundProperty, Border.BorderBrushProperty, System.Windows.Documents.TextElement.ForegroundProperty },
-            TextBlock => new[] { TextBlock.ForegroundProperty },
-            System.Windows.Controls.Primitives.TextBoxBase => new[] { Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty, System.Windows.Controls.Primitives.TextBoxBase.CaretBrushProperty, System.Windows.Controls.Primitives.TextBoxBase.SelectionBrushProperty },
-            PasswordBox => new[] { Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty, PasswordBox.CaretBrushProperty, PasswordBox.SelectionBrushProperty },
-            Control => new[] { Control.BackgroundProperty, Control.ForegroundProperty, Control.BorderBrushProperty },
-            Panel => new[] { Panel.BackgroundProperty, System.Windows.Documents.TextElement.ForegroundProperty },
-            Shape => new[] { Shape.FillProperty, Shape.StrokeProperty }, FrameworkElement => new[] { System.Windows.Documents.TextElement.ForegroundProperty }, _ => Array.Empty<DependencyProperty>() };
-        var state = Observacoes.GetOrCreateValue(element);
-        if (state.Aplicando) return;
-        state.Aplicando = true;
-        try { foreach (var property in properties)
+        if (pincel is SolidColorBrush solido)
         {
-            if (element is FrameworkElement { IsLoaded: true } && !state.Eventos.ContainsKey(property))
+            var cor = Mapear(solido.Color);
+            if (cor == solido.Color) return pincel;
+
+            var novo = solido.CloneCurrentValue();
+            novo.Color = cor;
+            return Congelar(novo);
+        }
+
+        if (pincel is GradientBrush gradiente)
+        {
+            foreach (var ponto in gradiente.GradientStops)
             {
-                var descriptor = DependencyPropertyDescriptor.FromProperty(property, element.GetType());
-                if (descriptor is not null) { EventHandler changed = (_, _) => {
-                    if (state.Aplicando || state.Agendado) return;
-                    state.Agendado = true;
-                    element.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.DataBind, new Action(() => {
-                        state.Agendado = false;
-                        if (element is FrameworkElement { IsLoaded: true }) AplicarElemento(element);
-                    }));
-                }; descriptor.AddValueChanged(element, changed); state.Eventos[property] = (descriptor, changed); }
+                if (Mapear(ponto.Color) == ponto.Color) continue;
+
+                var novo = gradiente.CloneCurrentValue();
+                foreach (var item in novo.GradientStops) item.Color = Mapear(item.Color);
+                return Congelar(novo);
             }
-            if (DependencyPropertyHelper.GetValueSource(element, property).BaseValueSource == BaseValueSource.Inherited) continue;
-            if (element.GetValue(property) is not Brush value || value is not (SolidColorBrush or GradientBrush)) continue;
-            // Mantenha os tokens vivos. Copiar um recurso já colorido para um
-            // valor local fazia cartões e templates prenderem a paleta anterior.
-            if (element is FrameworkElement tokenElement && Application.Current is { } application && !System.Windows.Data.BindingOperations.IsDataBound(element, property)) {
-                var token = new[] { "FundoAbismo", "PainelVidroFundo", "PainelVidroEscuroFundo", "BordaLinha", "AcaoCiano", "TextoGelo", "TextoNevoa" }
-                    .FirstOrDefault(key => ReferenceEquals(value, application.Resources[key]));
-                if (token is not null && RecursosOriginais.TryGetValue(token, out var recursoOriginal) && recursoOriginal is Brush originalToken) {
-                    var themed = Mapear(originalToken);
-                    element.SetCurrentValue(property, themed);
-                    Originais.GetOrCreateValue(element)[property] = new(originalToken, themed);
-                    continue;
-                }
-                if (value is SolidColorBrush solid && solid.Color.A > 0) {
-                    var c = solid.Color;
-                    var blue = c.B > c.R * 1.18 && c.B >= c.G * .82 && c.B - c.R > 10;
-                    var background = property == Border.BackgroundProperty || property == Control.BackgroundProperty || property == Panel.BackgroundProperty;
-                    var border = property == Border.BorderBrushProperty || property == Control.BorderBrushProperty;
-                    if (blue && c.A == 255 && (background && c.B < 110 || border)) {
-                        var key = border ? "BordaLinha" : c.B <= 26 ? "FundoAbismo" : "PainelVidroEscuroFundo";
-                        var originalTokenBrush = (Brush)RecursosOriginais[key]; var themed = Mapear(originalTokenBrush);
-                        element.SetCurrentValue(property, themed); Originais.GetOrCreateValue(element)[property] = new(originalTokenBrush, themed); continue;
+        }
+
+        return pincel;
+    }
+
+    private static Brush Congelar(Brush pincel)
+    {
+        if (pincel.CanFreeze) pincel.Freeze();
+        return pincel;
+    }
+
+    private static void AoAlterarPincel(object? sender, EventArgs e)
+    {
+        if (sender is not FrameworkElement elemento || !Observacoes.TryGetValue(elemento, out var estado) ||
+            estado.Aplicando || estado.Agendado) return;
+
+        estado.Agendado = true;
+        elemento.Dispatcher.BeginInvoke(DispatcherPriority.DataBind, new Action(() =>
+        {
+            estado.Agendado = false;
+            if (elemento.IsLoaded) AplicarElemento(elemento);
+        }));
+    }
+
+    private static void AplicarElemento(FrameworkElement elemento)
+    {
+        var propriedades = elemento switch
+        {
+            Border => PinceisBorda,
+            TextBlock => PinceisTexto,
+            TextBoxBase => PinceisCampo,
+            PasswordBox => PinceisSenha,
+            Control => PinceisControle,
+            Panel => PinceisPainel,
+            Shape => PinceisForma,
+            _ => PinceisElemento
+        };
+        var estado = Observacoes.GetOrCreateValue(elemento);
+        if (estado.Aplicando) return;
+
+        estado.Aplicando = true;
+        var alterou = false;
+        try
+        {
+            foreach (var propriedade in propriedades)
+            {
+                if (elemento.IsLoaded && !estado.Propriedades.ContainsKey(propriedade))
+                {
+                    var descriptor = DependencyPropertyDescriptor.FromProperty(propriedade, elemento.GetType());
+                    if (descriptor is not null)
+                    {
+                        descriptor.AddValueChanged(elemento, PincelAlterado);
+                        estado.Propriedades[propriedade] = descriptor;
                     }
                 }
+
+                if (DependencyPropertyHelper.GetValueSource(elemento, propriedade).BaseValueSource == BaseValueSource.Inherited)
+                    continue;
+                if (elemento.GetValue(propriedade) is not Brush pincel) continue;
+
+                var token = TokenDeFundoOuBorda(elemento, propriedade, pincel);
+                var mapeado = Mapear(token ?? pincel);
+                if (ReferenceEquals(pincel, mapeado)) continue;
+
+                elemento.SetCurrentValue(propriedade, mapeado);
+                alterou = true;
             }
-            var originals = Originais.GetOrCreateValue(element); if (!originals.TryGetValue(property, out var saved) || !ReferenceEquals(saved.Aplicado, value)) saved = new(GuardarBase(value), value);
-            var original = saved.Original;
-            var brush = Mapear(original); element.SetCurrentValue(property, brush); originals[property] = new(original, brush);
         }
-        } finally { state.Aplicando = false; }
-        if (element is FrameworkElement visual) visual.InvalidateVisual();
+        finally { estado.Aplicando = false; }
+
+        if (alterou) elemento.InvalidateVisual();
+    }
+
+    private static Brush? TokenDeFundoOuBorda(FrameworkElement elemento, DependencyProperty propriedade, Brush pincel)
+    {
+        if (pincel is not SolidColorBrush solido) return null;
+
+        var cor = solido.Color;
+        if (cor.A != 255 || cor.B <= cor.R * 1.18 || cor.B < cor.G * .82 || cor.B - cor.R <= 10) return null;
+
+        var borda = propriedade == Border.BorderBrushProperty || propriedade == Control.BorderBrushProperty;
+        var fundo = propriedade == Border.BackgroundProperty || propriedade == Control.BackgroundProperty || propriedade == Panel.BackgroundProperty;
+        if ((!borda && (!fundo || cor.B >= 110)) || BindingOperations.IsDataBound(elemento, propriedade)) return null;
+
+        var chave = borda ? "BordaLinha" : cor.B <= 26 ? "FundoAbismo" : "PainelVidroEscuroFundo";
+        return Application.Current?.Resources[chave] as Brush;
     }
 }

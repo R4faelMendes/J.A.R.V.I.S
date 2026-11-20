@@ -1,17 +1,29 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Jarvis.Mobile.Views.ParearPage" Title="Parear">
-  <ScrollView><VerticalStackLayout Padding="24" Spacing="12" VerticalOptions="Center">
-    <Label Text="Parear com o PC" Style="{StaticResource Titulo}" HorizontalTextAlignment="Center"/>
-    <Label Text="O Jarvis procura seu PC automaticamente neste Wi-Fi. Confirme uma vez com o PIN de Dispositivos no computador; depois ele reconecta sozinho." HorizontalTextAlignment="Center"/>
-    <Label x:Name="BuscaStatus" Text="Procurando seu PC…" TextColor="#00D800" HorizontalTextAlignment="Center"/>
-    <Picker x:Name="Computadores" Title="Selecione seu computador" IsVisible="False" SelectedIndexChanged="SelecionarPc"/>
-    <Button Text="Fotografar QR code" Style="{StaticResource Primario}" Clicked="Fotografar"/>
-    <Button x:Name="Buscar" Text="Buscar novamente no Wi-Fi" Clicked="Descobrir"/>
-    <Entry x:Name="Codigo" Placeholder="Código de 6 dígitos" Keyboard="Numeric" MaxLength="6"/>
-    <Entry x:Name="Ip" Placeholder="IP do PC (ex. 192.168.0.64)"/>
-    <Button Text="Parear" Clicked="ParearCodigo"/>
-    <Label x:Name="Msg" HorizontalTextAlignment="Center"/>
-  </VerticalStackLayout></ScrollView>
+             x:Class="Jarvis.Mobile.Views.ParearPage" Title="Adicionar PC">
+  <ScrollView>
+    <VerticalStackLayout Padding="20,16,20,28" Spacing="12" MaximumWidthRequest="640">
+      <Label Text="Parear computador" Style="{StaticResource Titulo}"/>
+      <Label Text="Abra Dispositivos no Jarvis do computador e use o QR ou PIN exibido."/>
+      <Border Style="{StaticResource Painel}">
+        <VerticalStackLayout Spacing="8">
+          <Label Text="Código QR" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
+          <Button Text="Fotografar QR" Style="{StaticResource Primario}" Clicked="Fotografar"/>
+        </VerticalStackLayout>
+      </Border>
+      <Border Style="{StaticResource Painel}">
+        <VerticalStackLayout Spacing="10">
+          <Label Text="PIN de seis dígitos" FontFamily="ChakraPetchSemiBold" FontSize="20"/>
+          <Label x:Name="BuscaStatus" Text="Procurando computadores no Wi-Fi…" Style="{StaticResource Cabecalho}"/>
+          <Picker x:Name="Computadores" Title="Selecione seu computador" IsVisible="False" SelectedIndexChanged="SelecionarPc"/>
+          <Button x:Name="Buscar" Text="Buscar no Wi-Fi" Clicked="Descobrir"/>
+          <Entry x:Name="Ip" Placeholder="Endereço IP do computador"/>
+          <Entry x:Name="Codigo" Placeholder="PIN" Keyboard="Numeric" MaxLength="6"/>
+          <Button Text="Confirmar pareamento" Clicked="ParearCodigo"/>
+        </VerticalStackLayout>
+      </Border>
+      <Label x:Name="Msg"/>
+    </VerticalStackLayout>
+  </ScrollView>
 </ContentPage>

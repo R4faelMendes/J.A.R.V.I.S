@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\Jarvis.Rendering.Shared\Assets\reactor-frontal-v3.zip" LogicalName="Jarvis.Rendering.reactor-frontal-v3.zip" />
+    <Compile Include="..\Jarvis.Rendering.Shared\AudioOrbRenderer.cs" Link="Renderers\AudioOrbRenderer.cs" />
     <Compile Include="..\Jarvis.Rendering.Shared\ReatorRealista.cs" Link="Renderers\ReatorRealista.cs" />
     <Resource Include="Assets\Fonts\*.ttf" />
     <Resource Include="Assets\jarvis.ico" />

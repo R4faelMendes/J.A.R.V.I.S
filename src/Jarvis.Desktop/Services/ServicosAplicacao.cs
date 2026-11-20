@@ -25,6 +25,7 @@ public static class ServicosAplicacao
     public static IAppController Apps { get; } = new AppController();
     public static IWindowController Janelas { get; } = new WindowController();
     public static ITransmissaoTela Tela { get; } = new TransmissaoTela();
+    internal static Jarvis.Server.Aparelhos CredenciaisCelulares { get; } = new();
     public static ICentralAparelhos Aparelhos { get; } = new Jarvis.Server.CentralAparelhos();
     public static IEntradaRemota Entrada { get; } = new EntradaRemota(Tela);
     public static string? CelularOnline => Jarvis.Server.PresencaRemota.NomeOnline;

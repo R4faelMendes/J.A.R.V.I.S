@@ -47,3 +47,8 @@ dotnet test Jarvis.sln
 - Jarvis.Voice: TtsTextSanitizer (horas, datas, porcento, reais, links, emojis) aplicado em PiperTts.Falar; WakeWordMatcher tolerante (edit distance <= 1) no WakeWordListener.
 - Nao portado (avaliar depois): Brain/MemoryExtractor, DigestService, AnalystEngine, CommandRouter, SelfTest.
 - Atalho atualizado: Desktop Jarvis.lnk -> Release atual, com icone jarvis.ico.
+
+## Publicação e commits
+- Ao concluir alterações no Jarvis, valide o trabalho e faça um commit com as mudanças da tarefa.
+- Em cada nova versão, atualize o destaque da release em site/index.html. Os downloads do site acompanham a última release publicada no GitHub.
+- O site usa vercel.json na raiz e a integração Git da Vercel para publicar atualizações a partir da branch main.

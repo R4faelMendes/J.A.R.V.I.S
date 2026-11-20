@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Jarvis.Mobile.Views.MaisPage" Title="Mais">
-  <ScrollView><VerticalStackLayout Padding="16" Spacing="8">
-    <Label Text="MARK IV / MÓDULOS" Style="{StaticResource Cabecalho}"/>
-    <Label Text="Sua central" Style="{StaticResource Titulo}"/>
+             x:Class="Jarvis.Mobile.Views.MaisPage" Title="Mais" Shell.NavBarIsVisible="False">
+  <ScrollView><VerticalStackLayout Padding="20,16,20,28" Spacing="12" MaximumWidthRequest="640">
+
+    <Label Text="Ferramentas" Style="{StaticResource Titulo}"/>
+    <Button Text="Painel de atalhos" Clicked="Ir" ClassId="painel-atalhos"/>
     <Button Text="Meu aparelho" Clicked="Ir" ClassId="aparelho"/>
     <Button Text="Falar com o Jarvis" Clicked="Ir" ClassId="falar"/>
     <Button Text="Adicionar widget à tela inicial" Clicked="AdicionarWidget"/>
     <Button Text="Parear com o PC" Clicked="Ir" ClassId="parear"/>
     <Button Text="Opções avançadas · rede, janelas e espelhamento" Clicked="Ir" ClassId="avancado"/>
-    <Button Text="Esquecer PC" TextColor="{StaticResource Vermelho}" Clicked="Esquecer"/>
+    <Button Text="Agenda" Clicked="Ir" ClassId="agenda"/>
   </VerticalStackLayout></ScrollView>
 </ContentPage>
-

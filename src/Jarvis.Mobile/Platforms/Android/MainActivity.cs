@@ -77,7 +77,7 @@ public class MainActivity : MauiAppCompatActivity
     {
         if (intent?.GetStringExtra("pagina") is { } pagina)
         {
-            var route = pagina == "agenda" ? "//agenda" : pagina == "falar" ? "falar" : pagina == "aparelho" ? "aparelho" : "//controles"; App.PaginaPendente = route;
+            var route = pagina == "agenda" ? "agenda" : pagina == "falar" ? "falar" : pagina == "aparelho" ? "aparelho" : "//controles"; App.PaginaPendente = route;
             MainThread.BeginInvokeOnMainThread(async () => { try { if (Shell.Current?.Handler is not null) { await Shell.Current.GoToAsync(route); App.PaginaPendente = null; } } catch { } });
         }
         if (intent?.DataString is { } link && link.StartsWith("jarvis://parear?", StringComparison.Ordinal))

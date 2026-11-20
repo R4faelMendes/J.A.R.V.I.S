@@ -15,18 +15,9 @@ public partial class MaisPage : ContentPage
         var destino = (s as Button)?.ClassId ?? "";
         if (destino == "falar") await Shell.Current.GoToAsync("falar");
         else if (destino == "parear") await Shell.Current.GoToAsync("parear");
-        else if (destino is "janelas" or "tela") await Shell.Current.GoToAsync(destino);
+        else if (destino is "janelas" or "tela" or "agenda" or "painel-atalhos") await Shell.Current.GoToAsync(destino);
         else if (destino == "vpn") await Shell.Current.GoToAsync("rede-privada");
         else if (destino == "avancado") await Navigation.PushAsync(new AvancadasPage());
         else if (destino == "aparelho") await Shell.Current.GoToAsync("aparelho");
     }
-    private void Esquecer(object? s, EventArgs e)
-    {
-        App.Conexao.Esquecer();
-#if ANDROID
-        JarvisWidget.PublicarAgenda([]);
-#endif
-        DisplayAlert("Jarvis", "PC removido.", "OK");
-    }
 }
-

@@ -6,8 +6,8 @@ public sealed class RedePrivadaPage : ContentPage
     public RedePrivadaPage()
     {
         Title = "Conexão automática";
-        var root = new VerticalStackLayout { Padding = 20, Spacing = 16 };
-        root.Add(new Label { Text = "Jarvis encontra seu PC", FontSize = 25 }); root.Add(_status);
+        var root = new VerticalStackLayout { Padding = new Thickness(20, 16, 20, 28), MaximumWidthRequest = 760, Spacing = 16 };
+        root.Add(new Label { Text = "Conexão automática", Style = (Style)Application.Current.Resources["Titulo"] }); root.Add(_status);
         _check.Clicked += async (_, _) => await VerificarAsync(); root.Add(_check);
         root.Add(new Label { Text = "O app usa o Wi-Fi ou se conecta diretamente ao endereço HTTPS do seu PC, com certificado pareado e token. Nenhum app de VPN é necessário.", FontSize = 13 });
         root.Add(new Label { Text = "Conecte no Wi-Fi uma vez para registrar o endereço público detectado pelo PC. Fora de casa, ambos precisam alcançar esse endereço. IPv6 requer IPv6 no celular e porta 5189 liberada no roteador; IPv4 exige IP público e redirecionamento da porta. CGNAT pode impedir o acesso direto.", FontSize = 12 });
