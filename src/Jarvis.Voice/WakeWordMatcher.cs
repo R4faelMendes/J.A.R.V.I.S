@@ -61,7 +61,7 @@ public static class WakeWordMatcher
     private static string NormalizarApelidos(string heard, string wake)
     {
         if (!Normalize(wake).Equals("jarvis")) return heard;
-        return System.Text.RegularExpressions.Regex.Replace(Normalize(heard), @"^\s*(?:(?:ei|oi|ola)\s+)?(?:jarvis|jarbas|jarves|javis|ja vi[sz]|eerviz|erviz|gervis|jerviz|jarviz|pervis|quervis)\b", "jarvis");
+        return System.Text.RegularExpressions.Regex.Replace(Normalize(heard), @"^\s*(?:(?:ei|oi|ola)\s+)?(?:jarvis|jarbas|jarves|javis|ja vi[sz]|eerviz|erviz|chervis|gervis|jerviz|jarviz|pervis|quervis)\b", "jarvis");
     }
     public static bool AtivacaoNoInicio(string heard, string wakeWord)
     {
