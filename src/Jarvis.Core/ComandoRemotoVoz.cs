@@ -13,7 +13,7 @@ public sealed record ComandoRemotoVoz(string Nome, string? Argumento = null, boo
     }
     public static ComandoRemotoVoz? Traduzir(string texto)
     {
-        var t = Normalizar(texto); var espaco = t.IndexOf(' ');
+        var t = Regex.Replace(Normalizar(texto), "^ja vi[sz] ", "jarvis "); var espaco = t.IndexOf(' ');
         if (espaco > 0 && NomeJarvis(t[..espaco])) t = t[(espaco + 1)..];
         t = Regex.Replace(t, @"^(?:voce pode|pode|por favor)\s+", "");
         t = Regex.Replace(t, @"(?:\s+(?:por favor|pra mim|para mim|agora))+$", "");
